@@ -1,7 +1,7 @@
 @extends('layouts.auth')
 
-@section('title', 'Sign In')
-@section('subtitle', 'Human Resource Workspace')
+@section('title', 'ZamPayroll Sign In')
+@section('subtitle', 'Payroll Workspace')
 
 @section('content')
 

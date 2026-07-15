@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Tradesmart Supplies Limited - HR Management System">
-    <title>@yield('title', 'Auth') | Tradesmart Supplies Limited - HR Management System</title>
+    <meta name="description" content="ZamPayroll - Payroll Management System">
+    <title>@yield('title', 'Auth') | ZamPayroll - Payroll Management System</title>
 
     <link rel="stylesheet" href="{{ asset('assets/css/bootstrap.min.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/vendors/bootstrap-icons/bootstrap-icons.css') }}">
@@ -24,12 +24,12 @@
 
             {{-- BRAND --}}
             <a class="auth-brand" href="#">
-                <img src="http://misc.tradesmartzm.com/logo.png" width="36" height="36" alt="Tradesmart Supplies Logo"
+                <img src="http://misc.zampayroll.com/logo.png" width="36" height="36" alt="ZamPayroll Logo"
                     class="brand-logo">
 
                 <span>
-                    <strong>Tradesmart Supplies Limited</strong>
-                    <small>@yield('subtitle', 'HR Management System')</small>
+                    <strong>ZamPayroll</strong>
+                    <small>@yield('subtitle', 'Payroll Management System')</small>
                 </span>
             </a>
 

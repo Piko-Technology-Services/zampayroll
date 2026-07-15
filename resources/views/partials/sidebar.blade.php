@@ -5,11 +5,11 @@
 
         <a class="brand-mark" href="{{ route('dashboard') }}">
 
-            <img src="http://misc.tradesmartzm.com/logo.png" width="36" height="36" alt="Tradesmart Supplies Logo" class="brand-logo">
+            <img src="http://misc.zampayroll.com/logo.png" width="36" height="36" alt="ZamPayroll Logo" class="brand-logo">
 
             <span class="brand-copy">
-                <span class="brand-title">Tradesmart Supplies</span>
-                <span class="brand-subtitle">HR Platform</span>
+                <span class="brand-title">ZamPayroll</span>
+                <span class="brand-subtitle">Payroll Management System</span>
             </span>
 
         </a>

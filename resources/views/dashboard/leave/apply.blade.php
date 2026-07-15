@@ -358,11 +358,11 @@
         {{-- ===== LETTERHEAD ===== --}}
         <div class="lf-header">
             <div class="lf-logo">
-                <img src="http://misc.tradesmartzm.com/logo.png" alt="Logo"
+                <img src="http://misc.zampayroll.com/logo.png" alt="Logo"
                     onerror="this.parentElement.innerHTML='<div class=\'lf-logo-fallback\'>Trade<br>Smart</div>'">
             </div>
             <div>
-                <div class="lf-company-name">Tradesmart Supplies Limited</div>
+                <div class="lf-company-name">ZamPayroll</div>
                 <div class="lf-company-meta">HR - Leave Application System
                 </div>
             </div>

@@ -8,7 +8,7 @@
         </span>
 
         <span>
-            Powered by Tradesmart Supplies Limited
+            Powered by ZamPayroll
         </span>
 
     </div>

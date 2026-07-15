@@ -396,11 +396,9 @@
                 onerror="this.parentElement.innerHTML='<div class=\'lv-logo-text\'>TS</div>'">
         </div>
         <div>
-            <div class="lv-company-name">Tradesmart Supplies Limited</div>
+            <div class="lv-company-name">ZamPayroll</div>
             <div class="lv-company-meta">
-                Head Quarters, Stand No 36, Emporium, 3rd Floor, Buteko Avenue, Ndola, Zambia <br>
-                +243 999 000 005 &nbsp;·&nbsp; +260 968 668 012 &nbsp;·&nbsp; +256 780 262 194
-                &nbsp;·&nbsp; andrew@tradesmartzm.com &nbsp;·&nbsp; info@tradesmartzm.com
+                address here....
             </div>
         </div>
     </div>

@@ -47,7 +47,7 @@
             <div class="ps-company">
                 <!-- <div class="ps-company-mark">{{ strtoupper(substr($payroll->company ?? 'TS', 0, 2)) }}</div> -->
                 <div>
-                    <div class="ps-company-name">{{ $payroll->company ?? 'TRADESMART SUPPLIES LIMITED' }}</div>
+                    <div class="ps-company-name">{{ $payroll->company ?? 'ZamPayroll' }}</div>
                     <div class="ps-company-tag">Official employee payslip</div>
                 </div>
             </div>

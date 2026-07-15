@@ -10,8 +10,8 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'name' => env('COMPANY_NAME', 'TRADESMART SUPPLIES LIMITED'),
+    'name' => env('COMPANY_NAME', 'ZAMPAYROLL SYSTEM'),
 
-    'logo_url' => env('COMPANY_LOGO_URL', 'http://misc.tradesmartzm.com/logo.png'),
+    'logo_url' => env('COMPANY_LOGO_URL', 'http://misc.zampayroll.com/logo.png'),
 
 ];

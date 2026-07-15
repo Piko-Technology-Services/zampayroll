@@ -3,7 +3,7 @@
 @section('content')
 
 {{-- =====================================================================
-     DASHBOARD — TRADESMART HR
+     DASHBOARD — ZamPayroll 
      Palette  : indigo #3B4FE8 · slate #1E293B · green #10B981 · amber #F59E0B
      Signature: payroll health strip (gross → deductions → net proportion)
 ====================================================================== --}}
