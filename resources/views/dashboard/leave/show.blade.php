@@ -45,7 +45,7 @@
     {{-- LETTERHEAD --}}
     <div class="lv-header">
         <div class="lv-logo">
-            <img src="{{ asset('assets/images/logo.png') }}" alt="Logo"
+            <img src="https://misc.zampayroll.com/logo.png" alt="Logo"
                 onerror="this.parentElement.innerHTML='<div class=\'lv-logo-text\'>TS</div>'">
         </div>
         <div>
