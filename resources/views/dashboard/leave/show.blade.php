@@ -51,7 +51,7 @@
         <div>
             <div class="lv-company-name">ZamPayroll</div>
             <div class="lv-company-meta">
-                address here....
+                Company Address : 123 Main Street, City, Country<br>
             </div>
         </div>
     </div>
