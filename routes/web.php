@@ -16,6 +16,12 @@ use App\Http\Controllers\PayslipMailController;
 | GUEST ROUTES (NOT LOGGED IN)
 |--------------------------------------------------------------------------
 */
+
+
+Route::get('/', function () {
+    return view('welcome');
+});
+
 Route::middleware('guest')->group(function () {
 
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
