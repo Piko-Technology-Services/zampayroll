@@ -393,7 +393,7 @@
     <div class="lv-header">
         <div class="lv-logo">
             <img src="{{ asset('assets/images/logo.png') }}" alt="Logo"
-                onerror="this.parentElement.innerHTML='<div class=\'lv-logo-text\'>TS</div>'">
+                onerror="this.parentElement.innerHTML='<div class=\'lv-logo-text\'>ZP</div>'">
         </div>
         <div>
             <div class="lv-company-name">ZamPayroll</div>
