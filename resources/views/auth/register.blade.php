@@ -37,7 +37,7 @@
                    name="name"
                    value="{{ old('name') }}"
                    class="form-control border-start-0"
-                   placeholder="John Doe"
+                   placeholder="John Chimfwembe"
                    required>
 
         </div>
