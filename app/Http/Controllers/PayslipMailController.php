@@ -9,8 +9,8 @@ use Illuminate\Http\Request;
 
 class PayslipMailController extends Controller
 {
-    private const COMPANY_NAME = 'TRADESMART SUPPLIES LIMITED';
-    private const COMPANY_LOGO = 'http://misc.tradesmartzm.com/logo.png';
+    private const COMPANY_NAME = 'ZAMPAYROLL';
+    private const COMPANY_LOGO = 'http://misc.zampayroll.com/logo.png';
 
     /*
     |==========================================================================

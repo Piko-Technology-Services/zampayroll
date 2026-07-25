@@ -54,7 +54,7 @@ class PayrollController extends Controller
         $payroll = Payroll::create([
             'employee_id'   => $employee->id,
             'pay_period'    => $request->pay_period,
-            'company'       => 'TRADESMART SUPPLIES LIMITED',
+            'company'       => 'ZAMPAYROLL',
             'branch'        => $employee->branch,
             'cost_centre'   => $employee->department,
             'date_engaged'  => $employee->contract_start,
@@ -86,8 +86,8 @@ class PayrollController extends Controller
         $run = $payroll->run;
         $run->setRelation('payrolls', collect([$payroll]));
 
-        $companyName = 'TRADESMART SUPPLIES LIMITED';
-        $companyLogo = 'http://misc.tradesmartzm.com/logo.png';
+        $companyName = 'ZAMPAYROLL';
+        $companyLogo = 'http://misc.zampayroll.com/logo.png';
 
         return view('dashboard.payroll.runs.payslip_single', compact('run', 'companyName', 'companyLogo', 'payroll'));
     }
@@ -100,8 +100,8 @@ class PayrollController extends Controller
  
         $pdf = Pdf::loadView('dashboard.payroll.runs.payslip_pdf', [
             'run'         => $run,
-            'companyName' => 'TRADESMART SUPPLIES LIMITED',
-            'companyLogo' => 'http://misc.tradesmartzm.com/logo.png',
+            'companyName' => 'ZAMPAYROLL',
+            'companyLogo' => 'http://misc.zampayroll.com/logo.png',
             'payroll' => $payroll
         ])->setPaper('a4', 'portrait');
  

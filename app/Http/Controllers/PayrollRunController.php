@@ -41,8 +41,8 @@ class PayrollRunController extends Controller
         $run = PayrollRun::with(['payrolls.employee', 'payrolls.items'])
             ->findOrFail($runId);
 
-        $companyName = 'TRADESMART SUPPLIES LIMITED';
-        $companyLogo = 'http://misc.tradesmartzm.com/logo.png';
+        $companyName = 'ZAMPAYROLL';
+        $companyLogo = 'http://misc.zampayroll.com/logo.png';
         
 
         return view('dashboard.payroll.runs.payslips', compact('run', 'companyName' ,'companyLogo'));
@@ -117,7 +117,7 @@ class PayrollRunController extends Controller
                 ],
                 [
                     'pay_period'   => $run->period,
-                    'company'      => 'TRADESMART SUPPLIES LIMITED',
+                    'company'      => 'ZAMPAYROLL',
                     'branch'       => $employee->branch,
                     'cost_centre'  => $employee->department,
                     'date_engaged' => $employee->contract_start,

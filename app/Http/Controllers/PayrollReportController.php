@@ -135,7 +135,7 @@ class PayrollReportController extends Controller
             abort(404, 'Unknown report type.');
         }
 
-        $companyName = 'TRADESMART SUPPLIES LIMITED';
+        $companyName = 'ZAMPAYROLL';
 
         $pdf = Pdf::loadView('dashboard.payroll.reports.pdf.management', [
             'run'         => $run,
