@@ -48,6 +48,34 @@
 
     </div>
 
+    {{-- COMPANY NAME --}}
+    <div class="mb-3">
+
+        <label class="form-label small fw-semibold text-muted">
+            Company Name
+        </label>
+
+        <div class="input-group">
+
+            <span class="input-group-text bg-light border-end-0">
+                <i class="bi bi-person"></i>
+            </span>
+
+            <input type="text"
+                   name="company_name"
+                   value="{{ old('company_name') }}"
+                   class="form-control border-start-0"
+                   placeholder="Chigayo Milling Limited"
+                   required>
+
+        </div>
+
+        @error('name')
+            <small class="text-danger">{{ $message }}</small>
+        @enderror
+
+    </div>
+
     {{-- POSITION / ROLE --}}
     <div class="mb-3">
 
@@ -61,12 +89,22 @@
                 <i class="bi bi-briefcase"></i>
             </span>
 
-            <input type="text"
-                   name="role"
-                   value="{{ old('role') }}"
-                   class="form-control border-start-0"
-                   placeholder="HR Manager"
-                   required>
+            <select name="role"
+                    class="form-select border-start-0"
+                    required>
+                <option value="" disabled {{ old('role') ? '' : 'selected' }}>
+                    Select a role
+                </option>
+                <option value="admin" {{ old('role') == 'Human Resource Manager' ? 'selected' : '' }}>
+                    Human Resource Manager
+                </option>
+                <option value="Staff" {{ old('role') == 'Staff' ? 'selected' : '' }}>
+                    Staff
+                </option>
+                <option value="Other" {{ old('role') == 'Other' ? 'selected' : '' }}>
+                    Other
+                </option>
+            </select>
 
         </div>
 

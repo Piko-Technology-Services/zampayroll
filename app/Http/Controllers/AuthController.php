@@ -56,13 +56,15 @@ class AuthController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
+            'company_name' => 'nullable|string|max:255',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|min:6|confirmed',
-            'role' => 'required|in:admin,hr'
+            'role' => 'required|string|max:255'
         ]);
 
         $user = User::create([
             'name' => $request->name,
+            'company_name' => $request->company_name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => $request->role
