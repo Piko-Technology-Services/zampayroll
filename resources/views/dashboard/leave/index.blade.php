@@ -4,6 +4,12 @@
 
 <div class="panel">
 
+    {{-- BETA BANNER --}}
+    <div class="alert alert-primary mb-3" role="alert">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        <strong>Beta Mode - Under development</strong> (Data maybe lost if used, use only for testing purposes)
+    </div>
+
     {{-- HEADER --}}
     <div class="panel-header d-flex justify-content-between align-items-center">
 

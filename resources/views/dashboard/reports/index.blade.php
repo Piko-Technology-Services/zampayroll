@@ -6,6 +6,12 @@
 
 <div class="panel p-3">
 
+{{-- BETA BANNER --}}
+    <div class="alert alert-primary mb-3" role="alert">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        <strong>Beta Mode - Under development</strong> (Data maybe lost if used, use only for testing purposes)
+    </div>
+
     <div class="row g-3">
 
         <div class="col-md-4">

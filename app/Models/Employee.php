@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
+use App\Models\Company;
 
 class Employee extends Model
 {
@@ -15,7 +16,7 @@ class Employee extends Model
         |--------------------------------------------------------------------------
         */
         'employee_id',
-
+        'company_id',
         /*
         |--------------------------------------------------------------------------
         | PERSONAL INFO
@@ -172,5 +173,9 @@ class Employee extends Model
             $this->uploads = array_values($uploads);
             $this->save();
         }
+    }
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
     }
 }

@@ -908,7 +908,7 @@ html[data-theme="dark"] .profile-button .avatar-sm {
 
 .auth-card,
 .error-card {
-  width: min(100%, 460px);
+  width: min(100%, 860px);
   border: 1px solid var(--admin-border);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.96);
