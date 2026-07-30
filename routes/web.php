@@ -10,6 +10,10 @@ use App\Http\Controllers\PayrollRunController;
 use App\Http\Controllers\PayrollRuleController;
 use App\Http\Controllers\PayrollReportController;
 use App\Http\Controllers\PayslipMailController;
+use App\Http\Controllers\CompanyAccessCodeController;
+use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\InvitationController;
+use App\Http\Controllers\ProfileController;
 
 /*
 |--------------------------------------------------------------------------
@@ -104,11 +108,37 @@ Route::middleware('auth')->group(function () {
     Route::get('/payroll/runs/all', [DashboardController::class, 'payroll'])->name('payroll.index');
     Route::get('/reports', [DashboardController::class, 'reports'])->name('reports.index');
 
-    Route::view('/profile', 'dashboard.profile')->name('profile.index');
+    Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
     Route::view('/settings', 'dashboard.settings')->name('settings.index');
 
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });
+
+Route::middleware('auth')->group(function () {
+
+    // My Profile / Password & Security (any authenticated user)
+    Route::get('/profile-edit', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('/profile', [ProfileController::class, 'updateProfile'])->name('profile.update');
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
+
+    // Company Info / Access Code / Team invites (company_admin only)
+    Route::middleware('company_admin')->group(function () {
+        Route::put('/company', [CompanyController::class, 'update'])->name('company.update');
+
+        Route::post('/company/access-code/generate', [CompanyAccessCodeController::class, 'generate'])->name('company.access-code.generate');
+        Route::post('/company/access-code/regenerate', [CompanyAccessCodeController::class, 'regenerate'])->name('company.access-code.regenerate');
+        Route::post('/company/access-code/deactivate', [CompanyAccessCodeController::class, 'deactivate'])->name('company.access-code.deactivate');
+
+        Route::post('/team/invite', [InvitationController::class, 'store'])->name('invitations.store');
+        Route::delete('/team/invite/{invitation}', [InvitationController::class, 'revoke'])->name('invitations.revoke');
+    });
+});
+
+// Public invitation acceptance flow (token-protected, not auth-gated —
+// a not-yet-registered invitee has no account to authenticate with).
+Route::get('/invitations/{token}/accept', [InvitationController::class, 'accept'])->name('invitations.accept');
+Route::post('/invitations/{token}/complete', [InvitationController::class, 'complete'])->name('invitations.complete');
+
 
 /*
 |--------------------------------------------------------------------------

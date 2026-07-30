@@ -15,6 +15,16 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     /**
+     * Roles that a company admin is allowed to assign to invited team members.
+     * super_admin is a platform-level role and is never assignable via invitations.
+     */
+    public const INVITABLE_ROLES = [
+        'company_admin' => 'Company Admin',
+        'manager'       => 'Manager',
+        'employee'      => 'Employee',
+    ];
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var list<string>
@@ -50,6 +60,7 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
     public function company()
     {
         return $this->belongsTo(Company::class);
@@ -63,5 +74,14 @@ class User extends Authenticatable
     public function isCompanyAdmin(): bool
     {
         return $this->role === 'company_admin';
+    }
+
+    /**
+     * Whether this user belongs to the same company as the given company id.
+     * Used throughout the app to enforce company data isolation.
+     */
+    public function belongsToCompany(?int $companyId): bool
+    {
+        return $companyId !== null && $this->company_id === $companyId;
     }
 }
