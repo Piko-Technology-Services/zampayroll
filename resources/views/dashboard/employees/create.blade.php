@@ -268,12 +268,12 @@
           </div>
 
           <div class="col-md-6">
-            <label class="form-label">NSSF Number</label>
+            <label class="form-label">NAPSA Number</label>
             <input class="form-control" name="nssf_number">
           </div>
 
           <div class="col-md-6">
-            <label class="form-label">TIN Number</label>
+            <label class="form-label">TPIN Number</label>
             <input class="form-control" name="tin_number">
           </div>
 
