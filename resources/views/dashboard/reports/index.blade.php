@@ -14,20 +14,6 @@
 
     <div class="row g-3">
 
-        <div class="col-md-4">
-            <div class="border rounded p-3">
-                <i class="bi bi-people"></i>
-                <h6>Employee Report</h6>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="border rounded p-3">
-                <i class="bi bi-calendar-check"></i>
-                <h6>Leave Report</h6>
-            </div>
-        </div>
-
         <div class="col-md-4 mouse-pointer" onclick="window.location='{{ route('payroll.reports.index') }}'" style="cursor: pointer;">
             <div class="border rounded p-3">
                 <i class="bi bi-calendar-check"></i>

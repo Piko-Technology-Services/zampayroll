@@ -7,8 +7,8 @@
   --admin-border: #dbe4ef;
   --admin-text: #1f2937;
   --admin-muted: #6b7280;
-  --admin-primary: #2563eb;
-  --admin-primary-dark: #1d4ed8;
+  --admin-primary: #00742D;
+  --admin-primary-dark: #00742D;
   --admin-success: #0f766e;
   --admin-warning: #d97706;
   --admin-danger: #dc2626;
@@ -95,7 +95,7 @@ a {
   width: 42px;
   height: 42px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #2563eb, #0f766e);
+  background: linear-gradient(135deg, #0f766e, #0f766e);
   color: #ffffff;
 }
 
@@ -1119,7 +1119,7 @@ html[data-theme="dark"] {
   --admin-text: #e5edf7;
   --admin-muted: #9aa8bd;
   --admin-primary: #60a5fa;
-  --admin-primary-dark: #3b82f6;
+  --admin-primary-dark: #00742D;
   --admin-success: #2dd4bf;
   --admin-warning: #fbbf24;
   --admin-danger: #f87171;
@@ -1156,7 +1156,7 @@ html[data-theme="dark"] body {
 }
 
 html[data-theme="dark"] .admin-navbar.bg-white {
-  background-color: rgba(24, 34, 53, 0.92) !important;
+  background-color: 1e3a5f !important;
 }
 
 html[data-theme="dark"] .profile-avatar {
@@ -1424,7 +1424,7 @@ body,
 }
 
 html[data-theme="dark"] .alert-primary {
-  border-color: #1d4ed8;
+  border-color: #00742D;
   background: rgba(37, 99, 235, 0.16);
   color: #bfdbfe;
 }
@@ -1563,14 +1563,14 @@ html[data-theme="dark"] .text-bg-danger {
 }
 
 html:not([data-theme="dark"]) {
-  --admin-sidebar: #ffffff;
-  --admin-sidebar-soft: #eef4ff;
+  --admin-sidebar: #00742E;
+  --admin-sidebar-soft: #009507;
   --admin-sidebar-border: #dbe4ef;
-  --admin-sidebar-text: #475569;
-  --admin-sidebar-text-strong: #0f172a;
-  --admin-sidebar-muted: #64748b;
-  --admin-sidebar-icon-bg: #eaf2ff;
-  --admin-sidebar-icon: #2563eb;
+  --admin-sidebar-text: #ffffff;
+  --admin-sidebar-text-strong: #ffffff;
+  --admin-sidebar-muted: #ffffff;
+  --admin-sidebar-icon-bg: #ffffff;
+  --admin-sidebar-icon: #00742E;
   --admin-sidebar-shadow: 18px 0 42px rgba(15, 23, 42, 0.08);
 }
 
@@ -1680,7 +1680,7 @@ html[data-theme="dark"] {
 .run-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 12px 30px rgba(0,0,0,0.12);
-    border-color: #1d4ed8;
+    border-color: #00742D;
 }
 
 /* KPI STRIP */

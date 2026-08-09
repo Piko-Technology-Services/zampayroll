@@ -379,7 +379,7 @@
     width: 90px;
     height: 90px;
     border-radius: 50%;
-    border: 3px solid #185FA5;
+    border: 3px solid #00742D;
     background: #E6F1FB;
     display: flex;
     align-items: center;
@@ -396,7 +396,7 @@
 .resume-photo-initials {
     font-size: 26px;
     font-weight: 500;
-    color: #185FA5;
+    color: #00742D;
 }
 
 .resume-badges {
@@ -415,7 +415,7 @@
     border-radius: 20px;
 }
 
-.resume-badge-id        { background: #E6F1FB; color: #0C447C; }
+.resume-badge-id        { background: #E6F1FB; color: #00742D; }
 .resume-badge-active    { background: #EAF3DE; color: #3B6D11; }
 .resume-badge-inactive  { background: #f1f1f1; color: #555; }
 
@@ -424,8 +424,8 @@
     font-weight: 600;
     letter-spacing: 0.07em;
     text-transform: uppercase;
-    color: #185FA5;
-    border-bottom: 1.5px solid #185FA5;
+    color: #00742D;
+    border-bottom: 1.5px solid #00742D;
     padding-bottom: 4px;
     margin: 18px 0 10px;
 }
@@ -476,7 +476,7 @@
 }
 
 .resume-name span {
-    color: #185FA5;
+    color: #00742D;
 }
 
 .resume-role {
@@ -496,8 +496,8 @@
     font-weight: 600;
     letter-spacing: 0.07em;
     text-transform: uppercase;
-    color: #185FA5;
-    border-bottom: 1.5px solid #185FA5;
+    color: #00742D;
+    border-bottom: 1.5px solid #00742D;
     padding-bottom: 4px;
     margin: 16px 0 12px;
 }

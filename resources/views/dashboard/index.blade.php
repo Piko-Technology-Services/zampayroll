@@ -3,256 +3,258 @@
 @section('content')
 
 {{-- =====================================================================
-     DASHBOARD — ZamPayroll 
-     Palette  : indigo #3B4FE8 · slate #1E293B · green #10B981 · amber #F59E0B
-     Signature: payroll health strip (gross → deductions → net proportion)
+     DASHBOARD — ZamPayroll
+     Redesign: minimal light cards, thin borders, single accent color,
+     hover-reactive surfaces, sparkline payroll trend, anomalies panel.
 ====================================================================== --}}
 
 <style>
-/* ── Reset scope ── */
-.hrdash * { box-sizing: border-box; }
+.hrd * { box-sizing: border-box; }
 
-/* ── Layout ── */
-.hrdash {
+.hrd {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    color: #1E293B;
-    padding: 0 0 2rem;
+    color: #0F172A;
+    background: #F8FAFC;
+    padding: 1.5rem 0 2.5rem;
 }
 
 /* ── Header ── */
-.hrdash-header {
+.hrd-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 1.75rem;
+    margin-bottom: 1.5rem;
     flex-wrap: wrap;
     gap: .75rem;
 }
-.hrdash-header h1 {
-    font-size: 1.35rem;
+.hrd-header h1 {
+    font-size: 1.4rem;
     font-weight: 700;
     letter-spacing: -.02em;
     margin: 0;
     color: #0F172A;
 }
-.hrdash-header .subtitle {
-    font-size: .8rem;
-    color: #64748B;
-    margin-top: .1rem;
+.hrd-header .subtitle {
+    font-size: .82rem;
+    color: #94A3B8;
+    margin-top: .15rem;
 }
-.hrdash-timestamp {
+.hrd-timestamp {
     font-size: .75rem;
     color: #94A3B8;
-    background: #F1F5F9;
-    padding: .35rem .75rem;
+    background: #fff;
+    border: 1px solid #E5E9F0;
+    padding: .4rem .85rem;
     border-radius: 20px;
 }
 
-/* ── KPI grid ── */
-.kpi-grid {
+/* ── Base card ── */
+.hrd-card {
+    background: #fff;
+    border: 1px solid #E9EDF2;
+    border-radius: 16px;
+    padding: 1.35rem 1.5rem;
+    transition: box-shadow .2s ease, border-color .2s ease, transform .2s ease;
+}
+.hrd-card:hover {
+    box-shadow: 0 8px 24px rgba(15, 23, 42, .07);
+    border-color: #D7DEE8;
+    transform: translateY(-2px);
+}
+
+/* ── Stat row (top 4 cards) ── */
+.stat-row {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 1rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
 }
-@media (max-width: 900px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 540px) { .kpi-grid { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .stat-row { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 540px) { .stat-row { grid-template-columns: 1fr; } }
 
-.kpi-card {
-    background: #fff;
-    border-radius: 12px;
-    padding: 1.1rem 1.25rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,.07), 0 1px 8px rgba(0,0,0,.04);
+.stat-label {
+    font-size: .74rem;
+    font-weight: 600;
+    color: #94A3B8;
+    margin-bottom: .5rem;
+}
+.stat-value {
+    font-size: 1.55rem;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    color: #0F172A;
+    line-height: 1.15;
+}
+.stat-sub {
+    font-size: .74rem;
+    margin-top: .35rem;
+    color: #94A3B8;
+}
+.stat-sub.good { color: #10B981; font-weight: 600; }
+.stat-sub.warn { color: #D97706; font-weight: 600; }
+
+.compliance-card { display: flex; flex-direction: column; }
+.compliance-value {
     display: flex;
-    align-items: flex-start;
-    gap: 1rem;
-    border-top: 3px solid transparent;
-    transition: box-shadow .18s;
-}
-.kpi-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.1); }
-.kpi-card.blue  { border-top-color: #3B4FE8; }
-.kpi-card.green { border-top-color: #10B981; }
-.kpi-card.amber { border-top-color: #F59E0B; }
-.kpi-card.rose  { border-top-color: #F43F5E; }
-
-.kpi-icon {
-    width: 40px; height: 40px;
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
+    align-items: center;
+    gap: .5rem;
     font-size: 1.15rem;
+    font-weight: 800;
+}
+.compliance-value.ok   { color: #10B981; }
+.compliance-value.warn { color: #F43F5E; }
+.compliance-dot {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .8rem;
     flex-shrink: 0;
 }
-.kpi-icon.blue  { background: #EEF2FF; color: #3B4FE8; }
-.kpi-icon.green { background: #ECFDF5; color: #10B981; }
-.kpi-icon.amber { background: #FFFBEB; color: #D97706; }
-.kpi-icon.rose  { background: #FFF1F2; color: #F43F5E; }
+.compliance-dot.ok   { background: #ECFDF5; color: #10B981; }
+.compliance-dot.warn { background: #FFF1F2; color: #F43F5E; }
 
-.kpi-body { flex: 1; }
-.kpi-label { font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: #64748B; }
-.kpi-value { font-size: 1.8rem; font-weight: 800; letter-spacing: -.03em; color: #0F172A; line-height: 1.15; }
-.kpi-sub { font-size: .74rem; margin-top: .2rem; }
-.kpi-sub.good   { color: #10B981; }
-.kpi-sub.warn   { color: #D97706; }
-.kpi-sub.muted  { color: #94A3B8; }
-
-/* ── Main 2-col grid ── */
-.main-grid {
+/* ── Main row: chart + anomalies ── */
+.main-row {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1.6fr 1fr;
     gap: 1rem;
     margin-bottom: 1rem;
 }
-@media (max-width: 768px) { .main-grid { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .main-row { grid-template-columns: 1fr; } }
 
-/* ── Cards ── */
-.panel {
-    background: #fff;
-    border-radius: 12px;
-    padding: 1.25rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,.07), 0 1px 8px rgba(0,0,0,.04);
-}
 .panel-title {
-    font-size: .8rem;
+    font-size: .88rem;
     font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .07em;
-    color: #64748B;
+    color: #0F172A;
     margin: 0 0 1rem;
-    display: flex;
-    align-items: center;
-    gap: .4rem;
 }
-
-/* ── Alerts ── */
-.alert-item {
+.panel-title-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: .6rem 0;
-    border-bottom: 1px solid #F1F5F9;
-    font-size: .85rem;
-    color: #334155;
-    gap: .5rem;
+    margin-bottom: .75rem;
 }
-.alert-item:last-child { border-bottom: none; }
-.badge-pill {
-    font-size: .68rem;
-    font-weight: 700;
-    padding: .2rem .6rem;
-    border-radius: 20px;
-    white-space: nowrap;
+.panel-link {
+    font-size: .74rem;
+    font-weight: 600;
+    color: #00742D;
+    text-decoration: none;
 }
-.badge-danger  { background: #FFF1F2; color: #F43F5E; }
-.badge-warning { background: #FFFBEB; color: #D97706; }
-.badge-primary { background: #EEF2FF; color: #3B4FE8; }
-.badge-success { background: #ECFDF5; color: #059669; }
+.panel-link:hover { text-decoration: underline; }
 
-/* ── No-alerts state ── */
-.no-alerts {
+/* Sparkline chart */
+.chart-wrap { width: 100%; }
+.chart-empty {
     text-align: center;
-    padding: 1.5rem 0;
     color: #94A3B8;
     font-size: .85rem;
+    padding: 2.25rem 0;
 }
-.no-alerts .icon { font-size: 1.75rem; }
-
-/* ── Department bars ── */
-.dept-row {
-    margin-bottom: .85rem;
-}
-.dept-row:last-child { margin-bottom: 0; }
-.dept-meta {
+.chart-labels {
     display: flex;
     justify-content: space-between;
-    font-size: .8rem;
-    color: #334155;
-    margin-bottom: .3rem;
+    font-size: .68rem;
+    color: #B4BECC;
+    margin-top: .4rem;
 }
-.dept-count { font-weight: 700; color: #0F172A; }
-.dept-bar-track {
-    height: 6px;
-    background: #F1F5F9;
-    border-radius: 99px;
-    overflow: hidden;
+.chart-point {
+    transition: r .15s ease;
 }
-.dept-bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #3B4FE8, #6366F1);
-    border-radius: 99px;
-    transition: width .6s ease;
-}
+.chart-point:hover { r: 6; }
 
-/* ── SIGNATURE: Payroll health strip ── */
-.payroll-panel {}
-.payroll-period {
+/* Anomalies panel */
+.anomaly-count-row {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    margin-bottom: 1rem;
+}
+.anomaly-icon {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    background: #FFF1F2;
+    color: #F43F5E;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+.anomaly-icon.clear { background: #ECFDF5; color: #10B981; }
+.anomaly-count {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #0F172A;
+    line-height: 1;
+}
+.anomaly-list { list-style: none; margin: 0 0 1rem; padding: 0; }
+.anomaly-list li {
+    font-size: .8rem;
+    color: #475569;
+    padding: .5rem 0;
+    border-bottom: 1px solid #F1F5F9;
+}
+.anomaly-list li:last-child { border-bottom: none; }
+.anomaly-badge {
+    display: inline-block;
+    font-size: .64rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    padding: .12rem .5rem;
+    border-radius: 20px;
+    margin-right: .5rem;
+    vertical-align: middle;
+}
+.anomaly-badge.danger  { background: #FFF1F2; color: #F43F5E; }
+.anomaly-badge.warning { background: #FFFBEB; color: #D97706; }
+.anomaly-badge.primary { background: #EEF2FF; color: #00742D; }
+
+.review-link {
+    display: block;
+    text-align: right;
+    font-size: .78rem;
+    font-weight: 700;
+    color: #00742D;
+    text-decoration: none;
+}
+.review-link:hover { text-decoration: underline; }
+
+/* ── Recent payroll run row ── */
+.payroll-run-card { margin-bottom: 1rem; }
+.payroll-run-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 1rem;
+    margin-bottom: 1.1rem;
 }
-.payroll-period-label { font-size: .95rem; font-weight: 700; color: #0F172A; }
+.payroll-run-head .period {
+    font-size: .95rem;
+    font-weight: 700;
+    color: #0F172A;
+}
 .status-chip {
     font-size: .68rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: .05em;
-    padding: .2rem .7rem;
+    padding: .25rem .75rem;
     border-radius: 20px;
+    border: 1px solid transparent;
 }
-.status-chip.approved { background: #ECFDF5; color: #059669; }
-.status-chip.processed { background: #EEF2FF; color: #3B4FE8; }
-.status-chip.draft { background: #FFF7ED; color: #D97706; }
+.status-chip.approved,
+.status-chip.finalized { background: #ECFDF5; color: #059669; border-color: #A7F3D0; }
+.status-chip.processed { background: #EEF2FF; color: #00742D; border-color: #C7D2FE; }
+.status-chip.draft { background: #FFF7ED; color: #D97706; border-color: #FED7AA; }
 
-/* The health strip — signature element */
-.health-strip-label {
-    font-size: .7rem;
-    color: #94A3B8;
-    margin-bottom: .5rem;
-    text-transform: uppercase;
-    letter-spacing: .05em;
-}
-.health-strip {
-    display: flex;
-    height: 18px;
-    border-radius: 6px;
-    overflow: hidden;
-    margin-bottom: .65rem;
-}
-.hs-gross      { background: #3B4FE8; }
-.hs-deductions { background: #F43F5E; }
-.hs-net        { background: #10B981; }
-
-.health-legend {
-    display: flex;
-    gap: 1.25rem;
-    font-size: .75rem;
-    color: #64748B;
-    flex-wrap: wrap;
-}
-.hl-dot {
-    display: inline-block;
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    margin-right: .3rem;
-    vertical-align: middle;
-}
-.hl-dot.blue  { background: #3B4FE8; }
-.hl-dot.red   { background: #F43F5E; }
-.hl-dot.green { background: #10B981; }
-.health-legend span { font-weight: 700; color: #0F172A; }
-
-.payroll-figures {
+.payroll-run-figures {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: .75rem;
-    margin-top: 1rem;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
 }
-.pf-item { text-align: center; }
-.pf-label { font-size: .68rem; color: #94A3B8; text-transform: uppercase; letter-spacing: .05em; }
-.pf-value { font-size: 1rem; font-weight: 800; color: #0F172A; letter-spacing: -.02em; }
-.pf-value.earnings   { color: #3B4FE8; }
-.pf-value.deductions { color: #F43F5E; }
-.pf-value.net        { color: #10B981; }
+@media (max-width: 700px) { .payroll-run-figures { grid-template-columns: repeat(2, 1fr); } }
+.prf-label { font-size: .7rem; color: #94A3B8; text-transform: uppercase; letter-spacing: .05em; margin-bottom: .3rem; }
+.prf-value { font-size: 1.05rem; font-weight: 800; color: #0F172A; letter-spacing: -.01em; }
+.prf-value.net { color: #10B981; }
+.prf-value.deductions { color: #F43F5E; }
 
 .payroll-empty {
     text-align: center;
@@ -260,345 +262,333 @@
     font-size: .85rem;
     padding: 1.5rem 0;
 }
+.payroll-empty a { font-weight: 600; color: #00742D; display: block; margin-top: .5rem; }
 
-/* ── Recent leave table ── */
-.leave-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
-.leave-table th {
-    text-align: left;
-    font-size: .68rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .06em;
-    color: #94A3B8;
-    padding: 0 .5rem .6rem;
-    border-bottom: 1px solid #F1F5F9;
+/* ── Quick actions ── */
+.quick-actions {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1rem;
 }
-.leave-table td {
-    padding: .55rem .5rem;
-    border-bottom: 1px solid #F8FAFC;
-    color: #334155;
-    vertical-align: middle;
-}
-.leave-table tr:last-child td { border-bottom: none; }
-.leave-name { font-weight: 600; color: #0F172A; }
-.leave-type { color: #64748B; }
-.leave-days { font-weight: 700; color: #3B4FE8; }
-
-/* ── Recent employees ── */
-.emp-list { list-style: none; margin: 0; padding: 0; }
-.emp-list li {
+@media (max-width: 700px) { .quick-actions { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px) { .quick-actions { grid-template-columns: 1fr; } }
+.qa-btn {
     display: flex;
     align-items: center;
-    gap: .75rem;
+    gap: .65rem;
+    padding: 1rem 1.1rem;
+    text-decoration: none;
+    color: #0F172A;
+    font-weight: 600;
+    font-size: .82rem;
+}
+.qa-icon {
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    background: #ECFDF5;
+    color: #00742D;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+/* ── Lower grid: departments / employees ── */
+.lower-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+@media (max-width: 700px) { .lower-grid { grid-template-columns: 1fr; } }
+
+.dept-row { margin-bottom: .85rem; }
+.dept-row:last-child { margin-bottom: 0; }
+.dept-meta { display: flex; justify-content: space-between; font-size: .8rem; color: #334155; margin-bottom: .3rem; }
+.dept-count { font-weight: 700; color: #0F172A; }
+.dept-bar-track { height: 6px; background: #F1F5F9; border-radius: 99px; overflow: hidden; }
+.dept-bar-fill { height: 100%; background: #00742D; border-radius: 99px; transition: width .6s ease; }
+
+.mini-list { list-style: none; margin: 0; padding: 0; }
+.mini-list li {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
     padding: .55rem 0;
     border-bottom: 1px solid #F8FAFC;
 }
-.emp-list li:last-child { border-bottom: none; }
-.emp-avatar {
-    width: 34px; height: 34px;
+.mini-list li:last-child { border-bottom: none; }
+.mini-avatar {
+    width: 32px; height: 32px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #3B4FE8 0%, #6366F1 100%);
+    background: #00742D;
     color: #fff;
     font-weight: 700;
-    font-size: .8rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    font-size: .75rem;
+    display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
 }
-.emp-info { flex: 1; }
-.emp-name { font-size: .85rem; font-weight: 600; color: #0F172A; }
-.emp-meta { font-size: .72rem; color: #94A3B8; }
-.emp-dept {
-    font-size: .7rem;
-    padding: .15rem .55rem;
+.mini-info { flex: 1; min-width: 0; }
+.mini-name { font-size: .82rem; font-weight: 600; color: #0F172A; }
+.mini-meta { font-size: .7rem; color: #94A3B8; }
+.mini-tag {
+    font-size: .68rem;
+    padding: .14rem .5rem;
     border-radius: 20px;
     background: #F1F5F9;
     color: #64748B;
     font-weight: 600;
     white-space: nowrap;
 }
-
-/* ── Full-width bottom row ── */
-.bottom-row {
-    display: grid;
-    grid-template-columns: 1.5fr 1fr;
-    gap: 1rem;
-    margin-top: 0;
-}
-@media (max-width: 768px) { .bottom-row { grid-template-columns: 1fr; } }
+.no-data { text-align: center; color: #94A3B8; font-size: .82rem; padding: 1.25rem 0; }
 </style>
 
-<div class="hrdash">
+<div class="hrd">
 
     {{-- ===== HEADER ===== --}}
-    <div class="hrdash-header">
+    <div class="hrd-header">
         <div>
-            <h1>HR Dashboard</h1>
-            <div class="subtitle">Workforce overview · {{ now()->format('l, d F Y') }}</div>
+            <h1>Dashboard</h1>
+            <div class="subtitle">Workforce &amp; payroll overview · {{ now()->format('l, d F Y') }}</div>
         </div>
-        <div class="hrdash-timestamp">
+        <div class="hrd-timestamp">
             <i class="bi bi-arrow-clockwise me-1"></i>Updated {{ now()->format('H:i') }}
         </div>
     </div>
 
-    {{-- ===== KPI CARDS ===== --}}
-    <div class="kpi-grid">
+    {{-- ===== TOP STAT ROW ===== --}}
+    <div class="stat-row">
 
-        <div class="kpi-card blue">
-            <div class="kpi-icon blue"><i class="bi bi-people-fill"></i></div>
-            <div class="kpi-body">
-                <div class="kpi-label">Total Employees</div>
-                <div class="kpi-value">{{ $stats['employees'] }}</div>
-                <div class="kpi-sub {{ $stats['new_this_month'] > 0 ? 'good' : 'muted' }}">
-                    @if($stats['new_this_month'] > 0)
-                        +{{ $stats['new_this_month'] }} this month
-                    @else
-                        {{ $stats['active_employees'] }} active
-                    @endif
-                </div>
+        <div class="hrd-card">
+            <div class="stat-label">Total Employees</div>
+            <div class="stat-value">{{ $stats['employees'] }}</div>
+            <div class="stat-sub {{ $stats['new_this_month'] > 0 ? 'good' : '' }}">
+                {{ $stats['new_this_month'] > 0 ? '+'.$stats['new_this_month'].' this month' : $stats['active_employees'].' active' }}
             </div>
         </div>
 
-        <div class="kpi-card amber">
-            <div class="kpi-icon amber"><i class="bi bi-calendar-x-fill"></i></div>
-            <div class="kpi-body">
-                <div class="kpi-label">Pending Leave</div>
-                <div class="kpi-value">{{ $stats['pending_leave'] }}</div>
-                <div class="kpi-sub {{ $stats['pending_leave'] > 0 ? 'warn' : 'muted' }}">
-                    {{ $stats['on_leave_today'] }} on leave today
-                </div>
-            </div>
+        <div class="hrd-card">
+            <div class="stat-label">Total Payroll Cost</div>
+            <div class="stat-value">K{{ $payrollSummary ? number_format($payrollSummary['total_earnings'], 0) : '0' }}</div>
+            <div class="stat-sub">{{ $payrollSummary['period'] ?? 'No run yet' }}</div>
         </div>
 
-        <div class="kpi-card green">
-            <div class="kpi-icon green"><i class="bi bi-diagram-3-fill"></i></div>
-            <div class="kpi-body">
-                <div class="kpi-label">Departments</div>
-                <div class="kpi-value">{{ $stats['departments'] }}</div>
-                <div class="kpi-sub muted">{{ $stats['branches'] }} branch(es)</div>
-            </div>
+        <div class="hrd-card">
+            <div class="stat-label">Net Pay</div>
+            <div class="stat-value">K{{ $payrollSummary ? number_format($payrollSummary['net_pay'], 0) : '0' }}</div>
+            <div class="stat-sub">{{ $payrollSummary['employee_count'] ?? 0 }} employees paid</div>
         </div>
 
-        <div class="kpi-card rose">
-            <div class="kpi-icon rose"><i class="bi bi-file-earmark-x-fill"></i></div>
-            <div class="kpi-body">
-                <div class="kpi-label">Expiring Contracts</div>
-                <div class="kpi-value">{{ $stats['contracts_expiring'] }}</div>
-                <div class="kpi-sub {{ $stats['contracts_expiring'] > 0 ? 'warn' : 'good' }}">
-                    {{ $stats['contracts_expiring'] > 0 ? 'Within 30 days' : 'None due soon' }}
-                </div>
+        <div class="hrd-card compliance-card">
+            <div class="stat-label">Compliance</div>
+            <div class="compliance-value {{ $compliance['ok'] ? 'ok' : 'warn' }}">
+                <span class="compliance-dot {{ $compliance['ok'] ? 'ok' : 'warn' }}">
+                    <i class="bi {{ $compliance['ok'] ? 'bi-check-lg' : 'bi-exclamation-lg' }}"></i>
+                </span>
+                {{ $compliance['ok'] ? 'All Clear' : $compliance['count'].' Issue'.($compliance['count'] > 1 ? 's' : '') }}
             </div>
         </div>
 
     </div>
 
-    {{-- ===== MAIN ROW: Alerts + Payroll Health ===== --}}
-    <div class="main-grid mb-3">
+        {{-- ===== QUICK ACTIONS ===== --}}
+    <div class="quick-actions">
+        <a href="{{ route('payroll.runs.create') }}" class="hrd-card qa-btn">
+            <span class="qa-icon"><i class="bi bi-cash-coin"></i></span>
+            Start Payroll Run
+        </a>
+        <a href="{{ route('employees.create') }}" class="hrd-card qa-btn">
+            <span class="qa-icon"><i class="bi bi-person-plus-fill"></i></span>
+            Add Employee
+        </a>
+        <a href="{{ route('reports.index') }}" class="hrd-card qa-btn">
+            <span class="qa-icon"><i class="bi bi-bar-chart-fill"></i></span>
+            View Reports
+        </a>
+    </div>
 
-        {{-- HR Alerts --}}
-        <div class="panel">
-            <div class="panel-title">
-                <i class="bi bi-bell-fill text-warning"></i> HR Alerts
-            </div>
+    {{-- ===== LOWER GRID: Departments / New Employees ===== --}}
+    <div class="lower-grid mb-3">
 
-            @if($alerts->isEmpty())
-                <div class="no-alerts">
-                    <div class="icon">✅</div>
-                    <div class="mt-1">No active alerts — all clear</div>
-                </div>
+        {{-- Headcount by Department --}}
+        <div class="hrd-card">
+            <div class="panel-title">Headcount by Department</div>
+            @if($departmentBreakdown->isEmpty())
+                <div class="no-data">No department data</div>
             @else
-                @foreach($alerts as $alert)
-                    <div class="alert-item">
-                        <span>{{ $alert['message'] }}</span>
-                        <span class="badge-pill badge-{{ $alert['severity'] }}">{{ $alert['label'] }}</span>
+                @php $maxCount = $departmentBreakdown->max('count'); @endphp
+                @foreach($departmentBreakdown as $dept)
+                    <div class="dept-row">
+                        <div class="dept-meta">
+                            <span>{{ $dept->department }}</span>
+                            <span class="dept-count">{{ $dept->count }}</span>
+                        </div>
+                        <div class="dept-bar-track">
+                            <div class="dept-bar-fill" style="width: {{ $maxCount > 0 ? round(($dept->count / $maxCount) * 100) : 0 }}%"></div>
+                        </div>
                     </div>
                 @endforeach
             @endif
         </div>
 
-        {{-- Payroll Health Strip (SIGNATURE ELEMENT) --}}
-        <div class="panel payroll-panel">
-            <div class="panel-title">
-                <i class="bi bi-currency-dollar text-success"></i> Payroll Health
+        {{-- Recently Added Employees --}}
+        <div class="hrd-card">
+            <div class="panel-title-row">
+                <div class="panel-title" style="margin:0;">Recently Added</div>
+                <a href="{{ route('employees.index') }}" class="panel-link">View all</a>
             </div>
-
-            @if($payrollSummary)
-                <div class="payroll-period">
-                    <span class="payroll-period-label">{{ $payrollSummary['period'] }}</span>
-                    <span class="status-chip {{ strtolower($payrollSummary['status']) }}">
-                        {{ $payrollSummary['status'] }}
-                    </span>
-                </div>
-
-                @php
-                    $gross = $payrollSummary['total_earnings'];
-                    $deductions = $payrollSummary['total_deductions'];
-                    $net = $payrollSummary['net_pay'];
-
-                    // proportions relative to gross
-                    $grossPct = $gross > 0 ? 100 : 0;
-                    $dedPct   = $gross > 0 ? round(($deductions / $gross) * 100, 1) : 0;
-                    $netPct   = $gross > 0 ? round(($net / $gross) * 100, 1) : 0;
-                    // normalise widths so they sum to 100%
-                    $dedW = $dedPct;
-                    $netW = $netPct;
-                    $grossW = max(0, 100 - $dedW - $netW);
-                @endphp
-
-                <div class="health-strip-label">Gross → Deductions → Net</div>
-                <div class="health-strip">
-                    <div class="hs-gross"      style="width: {{ $grossW }}%"></div>
-                    <div class="hs-deductions" style="width: {{ $dedW }}%"></div>
-                    <div class="hs-net"        style="width: {{ $netW }}%"></div>
-                </div>
-                <div class="health-legend">
-                    <div><span class="hl-dot blue"></span>Gross <span>{{ $dedW + $netW + $grossW > 0 ? ($grossW + $dedW).'%' : '' }}</span></div>
-                    <div><span class="hl-dot red"></span>Deductions <span>{{ $dedPct }}%</span></div>
-                    <div><span class="hl-dot green"></span>Net <span>{{ $netPct }}%</span></div>
-                </div>
-
-                <div class="payroll-figures">
-                    <div class="pf-item">
-                        <div class="pf-label">Gross</div>
-                        <div class="pf-value earnings">K{{ number_format($gross, 0) }}</div>
-                    </div>
-                    <div class="pf-item">
-                        <div class="pf-label">Deductions</div>
-                        <div class="pf-value deductions">K{{ number_format($deductions, 0) }}</div>
-                    </div>
-                    <div class="pf-item">
-                        <div class="pf-label">Net Pay</div>
-                        <div class="pf-value net">K{{ number_format($net, 0) }}</div>
-                    </div>
-                </div>
-
-                <div class="mt-3" style="font-size:.74rem; color:#94A3B8; text-align:right;">
-                    {{ $payrollSummary['employee_count'] }} employees · 
-                    @if($payrollSummary['finalized_at'])
-                        Finalized {{ \Carbon\Carbon::parse($payrollSummary['finalized_at'])->format('d M Y') }}
-                    @else
-                        Not yet finalized
-                    @endif
-                </div>
+            @if($recentEmployees->isEmpty())
+                <div class="no-data">No employees yet</div>
             @else
-                <div class="payroll-empty">
-                    <i class="bi bi-receipt fs-2 d-block mb-2"></i>
-                    No payroll run found yet.
-                    <a href="{{ route('payroll.runs.create') }}" class="d-block mt-2 text-primary" style="font-weight:600;">Start a payroll run →</a>
-                </div>
-            @endif
-        </div>
-
-    </div>
-
-    {{-- ===== BOTTOM ROW: Recent Leave + Depts + New Employees ===== --}}
-    <div class="bottom-row">
-
-        {{-- Recent Leave Requests --}}
-        <div class="panel">
-            <div class="panel-title">
-                <i class="bi bi-clock-history"></i> Recent Leave Requests
-                <a href="{{ route('leave.index') }}" style="margin-left:auto; font-size:.72rem; color:#3B4FE8; font-weight:600; text-transform:none; letter-spacing:0;">View all</a>
-            </div>
-
-            @if($recentLeave->isEmpty())
-                <div class="no-alerts">
-                    <div class="icon">📭</div>
-                    <div class="mt-1">No leave requests yet</div>
-                </div>
-            @else
-                <table class="leave-table">
-                    <thead>
-                        <tr>
-                            <th>Employee</th>
-                            <th>Type</th>
-                            <th>Days</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($recentLeave as $leave)
-                            <tr>
-                                <td class="leave-name">{{ $leave->employee_name }}</td>
-                                <td class="leave-type">{{ $leave->leave_type }}</td>
-                                <td class="leave-days">{{ $leave->total_days }}</td>
-                                <td>
-                                    @php
-                                        $sc = match($leave->status) {
-                                            'Approved' => 'success',
-                                            'Rejected' => 'danger',
-                                            default    => 'warning',
-                                        };
-                                    @endphp
-                                    <span class="badge-pill badge-{{ $sc }}">{{ $leave->status }}</span>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            @endif
-        </div>
-
-        {{-- Right column: dept breakdown + new employees --}}
-        <div style="display: flex; flex-direction: column; gap: 1rem;">
-
-            {{-- Department Breakdown --}}
-            <div class="panel">
-                <div class="panel-title">
-                    <i class="bi bi-pie-chart-fill"></i> Headcount by Department
-                </div>
-
-                @if($departmentBreakdown->isEmpty())
-                    <div class="no-alerts"><div>No department data</div></div>
-                @else
-                    @php $maxCount = $departmentBreakdown->max('count'); @endphp
-                    @foreach($departmentBreakdown as $dept)
-                        <div class="dept-row">
-                            <div class="dept-meta">
-                                <span>{{ $dept->department }}</span>
-                                <span class="dept-count">{{ $dept->count }}</span>
+                <ul class="mini-list">
+                    @foreach($recentEmployees as $emp)
+                        <li>
+                            <div class="mini-avatar">
+                                {{ strtoupper(substr($emp->first_name, 0, 1)) }}{{ strtoupper(substr($emp->last_name, 0, 1)) }}
                             </div>
-                            <div class="dept-bar-track">
-                                <div class="dept-bar-fill" style="width: {{ $maxCount > 0 ? round(($dept->count / $maxCount) * 100) : 0 }}%"></div>
+                            <div class="mini-info">
+                                <div class="mini-name">{{ $emp->first_name }} {{ $emp->last_name }}</div>
+                                <div class="mini-meta">{{ $emp->position ?? '—' }} · {{ $emp->created_at->diffForHumans() }}</div>
                             </div>
-                        </div>
+                            @if($emp->department)
+                                <span class="mini-tag">{{ $emp->department }}</span>
+                            @endif
+                        </li>
                     @endforeach
-                @endif
-            </div>
-
-            {{-- New Employees --}}
-            <div class="panel">
-                <div class="panel-title">
-                    <i class="bi bi-person-plus-fill"></i> Recently Added
-                    <a href="{{ route('employees.index') }}" style="margin-left:auto; font-size:.72rem; color:#3B4FE8; font-weight:600; text-transform:none; letter-spacing:0;">View all</a>
-                </div>
-
-                @if($recentEmployees->isEmpty())
-                    <div class="no-alerts"><div>No employees yet</div></div>
-                @else
-                    <ul class="emp-list">
-                        @foreach($recentEmployees as $emp)
-                            <li>
-                                <div class="emp-avatar">
-                                    {{ strtoupper(substr($emp->first_name, 0, 1)) }}{{ strtoupper(substr($emp->last_name, 0, 1)) }}
-                                </div>
-                                <div class="emp-info">
-                                    <div class="emp-name">{{ $emp->first_name }} {{ $emp->last_name }}</div>
-                                    <div class="emp-meta">{{ $emp->position ?? '—' }} · Added {{ $emp->created_at->diffForHumans() }}</div>
-                                </div>
-                                @if($emp->department)
-                                    <span class="emp-dept">{{ $emp->department }}</span>
-                                @endif
-                            </li>
-                        @endforeach
-                    </ul>
-                @endif
-            </div>
-
+                </ul>
+            @endif
         </div>
 
     </div>
+
+    {{-- ===== MAIN ROW: Payroll trend + Anomalies ===== --}}
+    <div class="main-row">
+
+        {{-- Payroll Overview (sparkline) --}}
+        <div class="hrd-card">
+            <div class="panel-title-row">
+                <div class="panel-title">Payroll Overview</div>
+                <a href="{{ route('payroll.runs.index') }}" class="panel-link">View all runs</a>
+            </div>
+
+            @if($payrollTrend->count() >= 2)
+                @php
+                    $values = $payrollTrend->pluck('net_pay')->map(fn($v) => (float) $v);
+                    $max = $values->max();
+                    $min = $values->min();
+                    $range = ($max - $min) > 0 ? ($max - $min) : 1;
+                    $w = 600; $h = 170; $pad = 16;
+                    $n = $values->count();
+                    $points = [];
+                    foreach ($values->values() as $i => $v) {
+                        $x = $pad + $i * (($w - 2*$pad) / max(1, $n - 1));
+                        $y = ($h - $pad) - (($v - $min) / $range) * ($h - 2*$pad);
+                        $points[] = [round($x, 1), round($y, 1)];
+                    }
+                    $polyline = collect($points)->map(fn($p) => "{$p[0]},{$p[1]}")->implode(' ');
+                    $areaPoints = $polyline . " {$points[count($points)-1][0]},{$h} {$points[0][0]},{$h}";
+                @endphp
+                <div class="chart-wrap">
+                    <svg viewBox="0 0 {{ $w }} {{ $h }}" width="100%" height="170" preserveAspectRatio="none">
+                        <defs>
+                            <linearGradient id="payrollFade" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#00742D" stop-opacity="0.18"/>
+                                <stop offset="100%" stop-color="#00742D" stop-opacity="0"/>
+                            </linearGradient>
+                        </defs>
+                        <polygon points="{{ $areaPoints }}" fill="url(#payrollFade)"></polygon>
+                        <polyline points="{{ $polyline }}" fill="none" stroke="#00742D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                        @foreach($points as $p)
+                            <circle class="chart-point" cx="{{ $p[0] }}" cy="{{ $p[1] }}" r="4" fill="#00742D"></circle>
+                        @endforeach
+                    </svg>
+                    <div class="chart-labels">
+                        @foreach($payrollTrend as $t)
+                            <span>{{ $t['label'] }}</span>
+                        @endforeach
+                    </div>
+                </div>
+            @else
+                <div class="chart-empty">
+                    <i class="bi bi-graph-up fs-3 d-block mb-2"></i>
+                    Not enough payroll runs yet to show a trend.
+                </div>
+            @endif
+        </div>
+
+        {{-- Anomalies Detected --}}
+        <div class="hrd-card">
+            <div class="panel-title">Anomalies Detected</div>
+
+            <div class="anomaly-count-row">
+                <div class="anomaly-icon {{ $alerts->isEmpty() ? 'clear' : '' }}">
+                    <i class="bi {{ $alerts->isEmpty() ? 'bi-check-lg' : 'bi-exclamation-triangle-fill' }}"></i>
+                </div>
+                <div class="anomaly-count">{{ $alerts->count() }}</div>
+            </div>
+
+            @if($alerts->isEmpty())
+                <div class="no-data" style="padding: .5rem 0 1rem;">No issues flagged — everything looks good.</div>
+            @else
+                <ul class="anomaly-list">
+                    @foreach($alerts as $alert)
+                        <li>
+                            <span class="anomaly-badge {{ $alert['severity'] }}">{{ $alert['label'] }}</span>
+                            {{ $alert['message'] }}
+                        </li>
+                    @endforeach
+                </ul>
+                <a href="{{ route('employees.index') }}" class="review-link">Review Now →</a>
+            @endif
+        </div>
+
+    </div>
+
+    {{-- ===== RECENT PAYROLL RUN ===== --}}
+    <div class="hrd-card payroll-run-card">
+        <div class="panel-title-row" style="margin-bottom:.9rem;">
+            <div class="panel-title" style="margin:0;">Recent Payroll Run</div>
+            @if($payrollSummary)
+                <span class="status-chip {{ strtolower($payrollSummary['status']) }}">{{ $payrollSummary['status'] }}</span>
+            @endif
+        </div>
+
+        @if($payrollSummary)
+            <div class="payroll-run-head" style="margin-bottom: .9rem;">
+                <span class="period">{{ $payrollSummary['period'] }}</span>
+            </div>
+            <div class="payroll-run-figures">
+                <div>
+                    <div class="prf-label">Employees</div>
+                    <div class="prf-value">{{ $payrollSummary['employee_count'] }}</div>
+                </div>
+                <div>
+                    <div class="prf-label">Gross Pay</div>
+                    <div class="prf-value">K{{ number_format($payrollSummary['total_earnings'], 2) }}</div>
+                </div>
+                <div>
+                    <div class="prf-label">Deductions</div>
+                    <div class="prf-value deductions">K{{ number_format($payrollSummary['total_deductions'], 2) }}</div>
+                </div>
+                <div>
+                    <div class="prf-label">Net Pay</div>
+                    <div class="prf-value net">K{{ number_format($payrollSummary['net_pay'], 2) }}</div>
+                </div>
+            </div>
+            <div class="mt-3" style="font-size:.74rem; color:#94A3B8;">
+                {{ $payrollSummary['finalized_at']
+                    ? 'Finalized '.\Carbon\Carbon::parse($payrollSummary['finalized_at'])->format('d M Y')
+                    : 'Not yet finalized' }}
+            </div>
+        @else
+            <div class="payroll-empty">
+                <i class="bi bi-receipt fs-2 d-block mb-2"></i>
+                No payroll run found yet.
+                <a href="{{ route('payroll.runs.create') }}">Start a payroll run →</a>
+            </div>
+        @endif
+    </div>
+
+
 
 </div>
 @endsection

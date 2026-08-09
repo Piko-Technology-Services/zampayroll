@@ -8,11 +8,7 @@
             <span></span>
         </button>
 
-        <form class="d-none d-md-flex ms-3 flex-grow-1">
-
-            <input class="form-control search-input" type="search" placeholder="Search">
-
-        </form>
+        
 
         <div class="navbar-actions ms-auto">
 
@@ -37,19 +33,17 @@
 
                     <div class="avatar-img avatar-sm rounded-circle d-flex align-items-center justify-content-center fw-semibold"
                         style="
-        width:36px;
-        height:36px;
-        background:linear-gradient(135deg,#0d6efd,#4f8cff);
-        color:#fff;
-        font-size:12px;
-        flex-shrink:0;
-     ">
+                            width:36px;
+                            height:36px;
+                            background:linear-gradient(135deg,#0d6efd,#4f8cff);
+                            color:#fff;
+                            font-size:12px;
+                            flex-shrink:0;
+                            ">
                         {{ $initials }}
                     </div>
 
-                    <span class="profile-name d-none d-sm-inline">
-                        <!-- {{ auth()->user()->name }} -->
-                    </span>
+                   
 
                 </button>
 

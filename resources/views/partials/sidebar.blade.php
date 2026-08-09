@@ -9,7 +9,7 @@
 
             <span class="brand-copy">
                 <span class="brand-title">ZamPayroll</span>
-                <span class="brand-subtitle">Payroll Management System</span>
+                <span class="brand-subtitle">Payroll Made Simple</span>
             </span>
 
         </a>
@@ -37,7 +37,7 @@
             <span class="nav-text">Departments</span>
         </a> -->
 
-        <a class="nav-link {{ request()->routeIs('leave.*') ? 'active' : '' }}"
+        <!-- <a class="nav-link {{ request()->routeIs('leave.*') ? 'active' : '' }}"
            href="{{ route('leave.index') }}">
             <i class="bi bi-calendar-check nav-icon"></i>
             <span class="nav-text">Leave</span>
@@ -47,7 +47,7 @@
            href="{{ route('attendance.index') }}">
             <i class="bi bi-clock-history nav-icon"></i>
             <span class="nav-text">Attendance</span>
-        </a>
+        </a> -->
 
         <a class="nav-link {{ request()->routeIs('payroll.*') ? 'active' : '' }}"
            href="{{ route('payroll.runs.index') }}">
@@ -61,37 +61,6 @@
             <span class="nav-text">Reports</span>
         </a>
 
-        <a class="nav-link {{ request()->routeIs('settings.*') ? 'active' : '' }}"
-           href="{{ route('settings.index') }}">
-            <i class="bi bi-gear nav-icon"></i>
-            <span class="nav-text">Settings</span>
-        </a>
-
     </nav>
-
-    {{-- USER --}}
-    <div class="sidebar-user">
-
-        @php
-            $names = explode(' ', auth()->user()->name ?? 'Guest');
-            $initials = strtoupper(
-                substr($names[0] ?? '', 0, 1) .
-                substr($names[1] ?? '', 0, 1)
-            );
-        @endphp
-
-        <div class="avatar-img avatar-sm rounded-circle d-flex align-items-center justify-content-center fw-semibold"
-             style="width:36px;height:36px;
-             background:linear-gradient(135deg,#0d6efd,#4f8cff);
-             color:#fff;font-size:12px;">
-            {{ $initials }}
-        </div>
-
-        <div class="ms-2">
-            <strong>{{ Auth::user()->name ?? 'Guest' }}</strong><br>
-            <small class="text-muted">{{ Auth::user()->role ?? 'User' }}</small>
-        </div>
-
-    </div>
 
 </aside>

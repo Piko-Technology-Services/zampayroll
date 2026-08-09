@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Employee;
-use App\Models\LeaveRequest;
 use App\Models\PayrollRun;
 use App\Models\Payroll;
 use Illuminate\Http\Request;
@@ -46,22 +45,6 @@ class DashboardController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | LEAVE STATS
-        |--------------------------------------------------------------------------
-        */
-        $pendingLeave  = LeaveRequest::where('status', 'Pending')->count();
-        $approvedLeave = LeaveRequest::where('status', 'Approved')
-            ->whereMonth('created_at', now()->month)
-            ->count();
-
-        // Employees currently on leave (approved, dates span today)
-        $onLeaveToday = LeaveRequest::where('status', 'Approved')
-            ->whereDate('date_from', '<=', now())
-            ->whereDate('date_to', '>=', now())
-            ->count();
-
-        /*
-        |--------------------------------------------------------------------------
         | PAYROLL STATS
         |--------------------------------------------------------------------------
         */
@@ -75,12 +58,30 @@ class DashboardController extends Controller
                 'period'           => $latestRun->alias ?? $latestRun->period,
                 'status'           => $latestRun->status,
                 'employee_count'   => $latestRun->payrolls->count(),
-                'total_earnings'   => $latestRun->total_income   ?? $latestRun->payrolls->sum('total_income'),
+                'total_earnings'   => $latestRun->total_income     ?? $latestRun->payrolls->sum('total_income'),
                 'total_deductions' => $latestRun->total_deductions ?? $latestRun->payrolls->sum('total_deductions'),
-                'net_pay'          => $latestRun->net_pay         ?? $latestRun->payrolls->sum('net_pay'),
+                'net_pay'          => $latestRun->net_pay          ?? $latestRun->payrolls->sum('net_pay'),
                 'finalized_at'     => $latestRun->finalized_at,
             ];
         }
+
+        /*
+        |--------------------------------------------------------------------------
+        | PAYROLL TREND (last 6 runs, oldest -> newest) — powers the sparkline
+        |--------------------------------------------------------------------------
+        */
+        $payrollTrend = PayrollRun::with('payrolls')
+            ->latest()
+            ->limit(6)
+            ->get()
+            ->reverse()
+            ->values()
+            ->map(function ($run) {
+                return [
+                    'label'   => $run->alias ?? $run->period,
+                    'net_pay' => $run->net_pay ?? $run->payrolls->sum('net_pay'),
+                ];
+            });
 
         /*
         |--------------------------------------------------------------------------
@@ -97,15 +98,6 @@ class DashboardController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | RECENT LEAVE REQUESTS
-        |--------------------------------------------------------------------------
-        */
-        $recentLeave = LeaveRequest::latest()
-            ->limit(5)
-            ->get();
-
-        /*
-        |--------------------------------------------------------------------------
         | RECENT EMPLOYEES
         |--------------------------------------------------------------------------
         */
@@ -115,7 +107,7 @@ class DashboardController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | HR ALERTS
+        | HR ALERTS / ANOMALIES
         |--------------------------------------------------------------------------
         */
         $alerts = collect();
@@ -125,14 +117,6 @@ class DashboardController extends Controller
                 'message'  => "{$contractsExpiringSoon} employee contract(s) expiring within 30 days",
                 'severity' => 'danger',
                 'label'    => 'Urgent',
-            ]);
-        }
-
-        if ($pendingLeave > 0) {
-            $alerts->push([
-                'message'  => "{$pendingLeave} leave request(s) awaiting approval",
-                'severity' => 'warning',
-                'label'    => 'Pending',
             ]);
         }
 
@@ -152,6 +136,12 @@ class DashboardController extends Controller
             ]);
         }
 
+        // Compliance status derived from outstanding alerts
+        $compliance = [
+            'ok'    => $alerts->isEmpty(),
+            'count' => $alerts->count(),
+        ];
+
         /*
         |--------------------------------------------------------------------------
         | COMPILE STATS ARRAY
@@ -164,18 +154,16 @@ class DashboardController extends Controller
             'branches'               => $branches,
             'new_this_month'         => $newThisMonth,
             'contracts_expiring'     => $contractsExpiringSoon,
-            'pending_leave'          => $pendingLeave,
-            'approved_leave_month'   => $approvedLeave,
-            'on_leave_today'         => $onLeaveToday,
         ];
 
         return view('dashboard.index', compact(
             'stats',
             'payrollSummary',
+            'payrollTrend',
             'departmentBreakdown',
-            'recentLeave',
             'recentEmployees',
-            'alerts'
+            'alerts',
+            'compliance'
         ));
     }
 

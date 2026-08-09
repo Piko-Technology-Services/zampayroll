@@ -381,7 +381,7 @@
 }
 
 .emp-search-input:focus {
-    border-color: #185FA5;
+    border-color: #00742D;
 }
 
 /* ---- Stats ---- */
@@ -393,7 +393,7 @@
 }
 
 .emp-stat {
-    background: #2563EB;
+    background: #00742D;
     border-radius: 8px;
     padding: 12px 16px;
 }
@@ -440,7 +440,7 @@
 }
 
 .emp-select:focus {
-    border-color: #185FA5;
+    border-color: #00742D;
 }
 
 /* ---- View toggle ---- */
@@ -470,7 +470,7 @@
 }
 
 .emp-view-btn.active {
-    background: #185FA5;
+    background: #00742D;
     color: #fff;
 }
 
@@ -547,7 +547,7 @@
 
 /* Department color variants — add more as needed */
 .emp-avatar-it,
-.emp-dept-it             { background: #E6F1FB; color: #0C447C; }
+.emp-dept-it             { background: #E6F1FB; color: #00742D; }
 
 .emp-avatar-finance,
 .emp-dept-finance        { background: #E1F5EE; color: #085041; }
@@ -691,7 +691,7 @@
 }
 
 .emp-dept-count {
-    background: #185FA5;
+    background: #00742D;
     color: #fff;
     font-size: 10px;
     font-weight: 600;
@@ -710,8 +710,8 @@
 }
 
 .emp-card:hover {
-    border-color: #185FA5;
-    box-shadow: 0 0 0 3px rgba(24,95,165,.06);
+    border-color: #00742D;
+    box-shadow: 0 0 0 3px rgba(0, 116, 45, .06);
 }
 
 .emp-card-top {
