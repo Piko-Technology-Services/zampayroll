@@ -14,6 +14,7 @@ use App\Http\Controllers\CompanyAccessCodeController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\DemoRequestController;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,9 +23,12 @@ use App\Http\Controllers\ProfileController;
 */
 
 
-Route::get('/', function () {
-    return view('welcome');
-});
+// Route::get('/', function () {
+//     return view('welcome');
+// });
+
+Route::get('/', [DemoRequestController::class, 'index'])->name('home');
+Route::post('/demo-request', [DemoRequestController::class, 'store'])->name('demo.request.store');
 
 Route::middleware('guest')->group(function () {
 
