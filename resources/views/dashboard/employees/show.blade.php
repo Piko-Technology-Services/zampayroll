@@ -2,597 +2,384 @@
 
 @section('content')
 
-{{-- HEADER CARD --}}
-<div class="panel mb-3">
-    <div class="d-flex align-items-center gap-3">
-        <div class="flex-grow-1">
-            <h4 class="mb-0">Employee Information</h4>
-            <small class="text-muted">
-                Edit, Print, or view details of {{ $employee->first_name }} {{ $employee->last_name }}
-            </small>
-        </div>
+<div class="empv">
 
-        <div class="ms-auto d-flex align-items-center gap-2">
-            <a class="btn btn-outline-secondary btn-sm" href="{{ route('employees.edit', $employee) }}">
-                <i class="bi bi-pencil-square"></i> Edit
-            </a>
-            <a class="btn btn-outline-secondary btn-sm" href="{{ route('employees.index') }}">
-                <i class="bi bi-arrow-left"></i> Back
-            </a>
+    {{-- ===== HEADER ===== --}}
+    <div class="empv-card empv-header-card">
+        <div class="empv-header-row">
+            <div>
+                <h1 class="empv-title">Employee Information</h1>
+                <div class="empv-subtitle">
+                    Edit, print, or view details of {{ $employee->first_name }} {{ $employee->last_name }}
+                </div>
+            </div>
+
+            <div class="empv-header-actions">
+                <a class="empv-btn empv-btn-outline" href="{{ route('employees.edit', $employee) }}">
+                    <i class="bi bi-pencil-square"></i> Edit
+                </a>
+                <a class="empv-btn empv-btn-outline" href="{{ route('employees.index') }}">
+                    <i class="bi bi-arrow-left"></i> Back
+                </a>
+            </div>
         </div>
     </div>
-</div>
 
-{{-- RESUME CARD --}}
-<div class="resume-card">
+    {{-- ===== PROFILE CARD ===== --}}
+    <div class="empv-profile-card">
 
-    {{-- ===== LEFT SIDEBAR ===== --}}
-    <div class="resume-left">
+        {{-- ===== LEFT SIDEBAR ===== --}}
+        <div class="empv-left">
 
-        {{-- Photo --}}
-        <div class="resume-photo-wrap">
-            <div class="resume-photo-circle">
-                @if($employee->passport_photo)
-                    <img src="{{ asset('storage/' . $employee->passport_photo) }}"
-                         alt="{{ $employee->first_name }} {{ $employee->last_name }}">
-                @else
-                    <span class="resume-photo-initials">
-                        {{ strtoupper(substr($employee->first_name, 0, 1)) }}{{ strtoupper(substr($employee->last_name, 0, 1)) }}
-                    </span>
+            <div class="empv-photo-wrap">
+                <div class="empv-photo-circle">
+                    @if($employee->passport_photo)
+                        <img src="{{ asset('storage/' . $employee->passport_photo) }}"
+                             alt="{{ $employee->first_name }} {{ $employee->last_name }}">
+                    @else
+                        <span class="empv-photo-initials">
+                            {{ strtoupper(substr($employee->first_name, 0, 1)) }}{{ strtoupper(substr($employee->last_name, 0, 1)) }}
+                        </span>
+                    @endif
+                </div>
+            </div>
+
+            <div class="empv-badges">
+                <span class="empv-badge empv-badge-id">{{ $employee->employee_id }}</span>
+                <span class="empv-badge empv-badge-{{ $employee->employment_status == 'Active' ? 'active' : 'inactive' }}">
+                    {{ $employee->employment_status }}
+                </span>
+            </div>
+
+            <div class="empv-section-label">Contacts</div>
+
+            @if($employee->personal_email)
+            <div class="empv-info-row"><i class="bi bi-envelope"></i><span>{{ $employee->personal_email }}</span></div>
+            @endif
+            @if($employee->company_email)
+            <div class="empv-info-row"><i class="bi bi-building"></i><span>{{ $employee->company_email }}</span></div>
+            @endif
+            @if($employee->primary_phone)
+            <div class="empv-info-row"><i class="bi bi-telephone"></i><span>{{ $employee->primary_phone }}</span></div>
+            @endif
+            @if($employee->secondary_phone)
+            <div class="empv-info-row"><i class="bi bi-telephone"></i><span>{{ $employee->secondary_phone }}</span></div>
+            @endif
+
+            @if($employee->emergency_name || $employee->emergency_phone)
+            <div class="empv-section-label">Emergency</div>
+            @if($employee->emergency_name)
+            <div class="empv-info-row"><i class="bi bi-person"></i><span>{{ $employee->emergency_name }}</span></div>
+            @endif
+            @if($employee->emergency_relationship)
+            <div class="empv-info-row"><i class="bi bi-heart"></i><span>{{ $employee->emergency_relationship }}</span></div>
+            @endif
+            @if($employee->emergency_phone)
+            <div class="empv-info-row"><i class="bi bi-telephone"></i><span>{{ $employee->emergency_phone }}</span></div>
+            @endif
+            @endif
+
+            @if($employee->next_of_kin_name || $employee->next_of_kin_phone)
+            <div class="empv-section-label">Next of Kin</div>
+            @if($employee->next_of_kin_name)
+            <div class="empv-info-row"><i class="bi bi-person"></i><span>{{ $employee->next_of_kin_name }}</span></div>
+            @endif
+            @if($employee->next_of_kin_phone)
+            <div class="empv-info-row"><i class="bi bi-telephone"></i><span>{{ $employee->next_of_kin_phone }}</span></div>
+            @endif
+            @if($employee->next_of_kin_address)
+            <div class="empv-info-row"><i class="bi bi-geo-alt"></i><span>{{ $employee->next_of_kin_address }}</span></div>
+            @endif
+            @endif
+
+            <div class="empv-section-label">Finance</div>
+            @if($employee->bank_name)
+            <div class="empv-info-row"><i class="bi bi-bank"></i><span>{{ $employee->bank_name }}</span></div>
+            @endif
+            @if($employee->bank_account_number)
+            <div class="empv-info-row"><i class="bi bi-credit-card"></i><span>{{ $employee->bank_account_number }}</span></div>
+            @endif
+            @if($employee->nssf_number)
+            <div class="empv-info-row"><i class="bi bi-shield-check"></i><span>NSSF: {{ $employee->nssf_number }}</span></div>
+            @endif
+            @if($employee->tin_number)
+            <div class="empv-info-row"><i class="bi bi-receipt"></i><span>TIN: {{ $employee->tin_number }}</span></div>
+            @endif
+
+            @if($employee->salary)
+            <div class="empv-salary">K {{ number_format($employee->salary, 2) }} <span>/ month</span></div>
+            @endif
+
+        </div>{{-- end left --}}
+
+        {{-- ===== RIGHT MAIN ===== --}}
+        <div class="empv-right">
+
+            <div class="empv-name">
+                {{ strtoupper($employee->first_name) }}
+                @if($employee->middle_name) {{ strtoupper($employee->middle_name) }} @endif
+                <span>{{ strtoupper($employee->last_name) }}</span>
+            </div>
+
+            <div class="empv-role">
+                {{ $employee->position }}
+                @if($employee->department) &nbsp;•&nbsp; {{ $employee->department }} @endif
+                @if($employee->branch) &nbsp;•&nbsp; {{ $employee->branch }} @endif
+            </div>
+
+            <hr class="empv-divider">
+
+            <div class="empv-section-label-right">Personal</div>
+            <div class="empv-grid-2">
+                @if($employee->date_of_birth)
+                <div class="empv-entry"><div class="empv-entry-label">Date of birth</div><div class="empv-entry-value">{{ $employee->date_of_birth->format('Y-m-d') }}</div></div>
+                @endif
+                @if($employee->age)
+                <div class="empv-entry"><div class="empv-entry-label">Age</div><div class="empv-entry-value">{{ $employee->age }}</div></div>
+                @endif
+                @if($employee->gender)
+                <div class="empv-entry"><div class="empv-entry-label">Gender</div><div class="empv-entry-value">{{ $employee->gender }}</div></div>
+                @endif
+                @if($employee->nationality)
+                <div class="empv-entry"><div class="empv-entry-label">Nationality</div><div class="empv-entry-value">{{ $employee->nationality }}</div></div>
+                @endif
+                @if($employee->national_id_number)
+                <div class="empv-entry"><div class="empv-entry-label">National ID</div><div class="empv-entry-value">{{ $employee->national_id_number }}</div></div>
+                @endif
+                @if($employee->passport_number)
+                <div class="empv-entry"><div class="empv-entry-label">Passport</div><div class="empv-entry-value">{{ $employee->passport_number }}</div></div>
                 @endif
             </div>
-        </div>
 
-        {{-- Badges --}}
-        <div class="resume-badges">
-            <span class="resume-badge resume-badge-id">{{ $employee->employee_id }}</span>
-            <span class="resume-badge resume-badge-{{ $employee->employment_status == 'Active' ? 'active' : 'inactive' }}">
-                {{ $employee->employment_status }}
-            </span>
-        </div>
-
-        {{-- Contacts --}}
-        <div class="resume-section-label">Contacts</div>
-
-        @if($employee->personal_email)
-        <div class="resume-info-row">
-            <i class="bi bi-envelope"></i>
-            <span>{{ $employee->personal_email }}</span>
-        </div>
-        @endif
-
-        @if($employee->company_email)
-        <div class="resume-info-row">
-            <i class="bi bi-building"></i>
-            <span>{{ $employee->company_email }}</span>
-        </div>
-        @endif
-
-        @if($employee->primary_phone)
-        <div class="resume-info-row">
-            <i class="bi bi-telephone"></i>
-            <span>{{ $employee->primary_phone }}</span>
-        </div>
-        @endif
-
-        @if($employee->secondary_phone)
-        <div class="resume-info-row">
-            <i class="bi bi-telephone"></i>
-            <span>{{ $employee->secondary_phone }}</span>
-        </div>
-        @endif
-
-        {{-- Emergency --}}
-        @if($employee->emergency_name || $employee->emergency_phone)
-        <div class="resume-section-label">Emergency</div>
-
-        @if($employee->emergency_name)
-        <div class="resume-info-row">
-            <i class="bi bi-person"></i>
-            <span>{{ $employee->emergency_name }}</span>
-        </div>
-        @endif
-
-        @if($employee->emergency_relationship)
-        <div class="resume-info-row">
-            <i class="bi bi-heart"></i>
-            <span>{{ $employee->emergency_relationship }}</span>
-        </div>
-        @endif
-
-        @if($employee->emergency_phone)
-        <div class="resume-info-row">
-            <i class="bi bi-telephone"></i>
-            <span>{{ $employee->emergency_phone }}</span>
-        </div>
-        @endif
-        @endif
-
-        {{-- Next of Kin --}}
-        @if($employee->next_of_kin_name || $employee->next_of_kin_phone)
-        <div class="resume-section-label">Next of Kin</div>
-
-        @if($employee->next_of_kin_name)
-        <div class="resume-info-row">
-            <i class="bi bi-person"></i>
-            <span>{{ $employee->next_of_kin_name }}</span>
-        </div>
-        @endif
-
-        @if($employee->next_of_kin_phone)
-        <div class="resume-info-row">
-            <i class="bi bi-telephone"></i>
-            <span>{{ $employee->next_of_kin_phone }}</span>
-        </div>
-        @endif
-
-        @if($employee->next_of_kin_address)
-        <div class="resume-info-row">
-            <i class="bi bi-geo-alt"></i>
-            <span>{{ $employee->next_of_kin_address }}</span>
-        </div>
-        @endif
-        @endif
-
-        {{-- Finance --}}
-        <div class="resume-section-label">Finance</div>
-
-        @if($employee->bank_name)
-        <div class="resume-info-row">
-            <i class="bi bi-bank"></i>
-            <span>{{ $employee->bank_name }}</span>
-        </div>
-        @endif
-
-        @if($employee->bank_account_number)
-        <div class="resume-info-row">
-            <i class="bi bi-credit-card"></i>
-            <span>{{ $employee->bank_account_number }}</span>
-        </div>
-        @endif
-
-        @if($employee->nssf_number)
-        <div class="resume-info-row">
-            <i class="bi bi-shield-check"></i>
-            <span>NSSF: {{ $employee->nssf_number }}</span>
-        </div>
-        @endif
-
-        @if($employee->tin_number)
-        <div class="resume-info-row">
-            <i class="bi bi-receipt"></i>
-            <span>TIN: {{ $employee->tin_number }}</span>
-        </div>
-        @endif
-
-        @if($employee->salary)
-        <div class="resume-salary">
-            K {{ number_format($employee->salary, 2) }} <span>/ month</span>
-        </div>
-        @endif
-
-    </div>{{-- end resume-left --}}
-
-    {{-- ===== RIGHT MAIN ===== --}}
-    <div class="resume-right">
-
-        {{-- Name & Role --}}
-        <div class="resume-name">
-            {{ strtoupper($employee->first_name) }}
-            @if($employee->middle_name)
-                {{ strtoupper($employee->middle_name) }}
-            @endif
-            <span>{{ strtoupper($employee->last_name) }}</span>
-        </div>
-
-        <div class="resume-role">
-            {{ $employee->position }}
-            @if($employee->department)
-                &nbsp;•&nbsp; {{ $employee->department }}
-            @endif
-            @if($employee->branch)
-                &nbsp;•&nbsp; {{ $employee->branch }}
-            @endif
-        </div>
-
-        <hr class="resume-divider">
-
-        {{-- Personal --}}
-        <div class="resume-section-label-right">Personal</div>
-
-        <div class="resume-grid-2">
-
-            @if($employee->date_of_birth)
-            <div class="resume-entry">
-                <div class="resume-entry-label">Date of birth</div>
-                <div class="resume-entry-value">{{ $employee->date_of_birth->format('Y-m-d') }}</div>
+            <div class="empv-section-label-right">Job Details</div>
+            <div class="empv-grid-2">
+                @if($employee->department)
+                <div class="empv-entry"><div class="empv-entry-label">Department</div><div class="empv-entry-value">{{ $employee->department }}</div></div>
+                @endif
+                @if($employee->branch)
+                <div class="empv-entry"><div class="empv-entry-label">Branch</div><div class="empv-entry-value">{{ $employee->branch }}</div></div>
+                @endif
+                @if($employee->position)
+                <div class="empv-entry"><div class="empv-entry-label">Position</div><div class="empv-entry-value">{{ $employee->position }}</div></div>
+                @endif
+                @if($employee->supervisor)
+                <div class="empv-entry"><div class="empv-entry-label">Supervisor</div><div class="empv-entry-value">{{ $employee->supervisor }}</div></div>
+                @endif
             </div>
-            @endif
 
-            @if($employee->age)
-            <div class="resume-entry">
-                <div class="resume-entry-label">Age</div>
-                <div class="resume-entry-value">{{ $employee->age }}</div>
-            </div>
-            @endif
-
-            @if($employee->gender)
-            <div class="resume-entry">
-                <div class="resume-entry-label">Gender</div>
-                <div class="resume-entry-value">{{ $employee->gender }}</div>
-            </div>
-            @endif
-
-            @if($employee->nationality)
-            <div class="resume-entry">
-                <div class="resume-entry-label">Nationality</div>
-                <div class="resume-entry-value">{{ $employee->nationality }}</div>
-            </div>
-            @endif
-
-            @if($employee->national_id_number)
-            <div class="resume-entry">
-                <div class="resume-entry-label">National ID</div>
-                <div class="resume-entry-value">{{ $employee->national_id_number }}</div>
-            </div>
-            @endif
-
-            @if($employee->passport_number)
-            <div class="resume-entry">
-                <div class="resume-entry-label">Passport</div>
-                <div class="resume-entry-value">{{ $employee->passport_number }}</div>
-            </div>
-            @endif
-
-        </div>
-
-        {{-- Job Details --}}
-        <div class="resume-section-label-right">Job Details</div>
-
-        <div class="resume-grid-2">
-
-            @if($employee->department)
-            <div class="resume-entry">
-                <div class="resume-entry-label">Department</div>
-                <div class="resume-entry-value">{{ $employee->department }}</div>
-            </div>
-            @endif
-
-            @if($employee->branch)
-            <div class="resume-entry">
-                <div class="resume-entry-label">Branch</div>
-                <div class="resume-entry-value">{{ $employee->branch }}</div>
-            </div>
-            @endif
-
-            @if($employee->position)
-            <div class="resume-entry">
-                <div class="resume-entry-label">Position</div>
-                <div class="resume-entry-value">{{ $employee->position }}</div>
-            </div>
-            @endif
-
-            @if($employee->supervisor)
-            <div class="resume-entry">
-                <div class="resume-entry-label">Supervisor</div>
-                <div class="resume-entry-value">{{ $employee->supervisor }}</div>
-            </div>
-            @endif
-
-        </div>
-
-        {{-- Employment Dates --}}
-        <div class="resume-section-label-right">Employment Dates</div>
-
-        <div class="resume-grid-2">
-
-            @if($employee->probation_start || $employee->probation_end)
-            <div class="resume-entry">
-                <div class="resume-entry-label">Probation period</div>
-                <div class="resume-entry-value">
-                    {{ $employee->probation_start?->format('Y-m-d') }}
-                    @if($employee->probation_end)
-                        &rarr; {{ $employee->probation_end->format('Y-m-d') }}
-                    @endif
+            <div class="empv-section-label-right">Employment Dates</div>
+            <div class="empv-grid-2">
+                @if($employee->probation_start || $employee->probation_end)
+                <div class="empv-entry">
+                    <div class="empv-entry-label">Probation period</div>
+                    <div class="empv-entry-value">
+                        {{ $employee->probation_start?->format('Y-m-d') }}
+                        @if($employee->probation_end) &rarr; {{ $employee->probation_end->format('Y-m-d') }} @endif
+                    </div>
                 </div>
-            </div>
-            @endif
-
-            @if($employee->contract_start || $employee->contract_end)
-            <div class="resume-entry">
-                <div class="resume-entry-label">Contract period</div>
-                <div class="resume-entry-value">
-                    {{ $employee->contract_start?->format('Y-m-d') }}
-                    @if($employee->contract_end)
-                        &rarr; {{ $employee->contract_end->format('Y-m-d') }}
-                    @endif
+                @endif
+                @if($employee->contract_start || $employee->contract_end)
+                <div class="empv-entry">
+                    <div class="empv-entry-label">Contract period</div>
+                    <div class="empv-entry-value">
+                        {{ $employee->contract_start?->format('Y-m-d') }}
+                        @if($employee->contract_end) &rarr; {{ $employee->contract_end->format('Y-m-d') }} @endif
+                    </div>
                 </div>
+                @endif
             </div>
-            @endif
 
-        </div>
+            <hr class="empv-divider">
 
-        <hr class="resume-divider">
+            <div class="empv-section-label-right">Documents</div>
+            <div class="empv-docs">
+                @if(!empty($employee->uploads))
+                    @foreach($employee->uploads as $doc)
+                        <a href="{{ asset('storage/' . $doc['path']) }}" target="_blank" class="empv-doc-btn">
+                            <i class="bi bi-file-earmark-text"></i> {{ $doc['name'] }}
+                        </a>
+                    @endforeach
+                @else
+                    <span class="empv-no-docs">No documents uploaded</span>
+                @endif
+            </div>
 
-        {{-- Documents --}}
-        <div class="resume-section-label-right">Documents</div>
+            <hr class="empv-divider">
 
-        <div class="resume-docs">
-            @if(!empty($employee->uploads))
-                @foreach($employee->uploads as $doc)
-                    <a href="{{ asset('storage/' . $doc['path']) }}"
-                       target="_blank"
-                       class="resume-doc-btn">
-                        <i class="bi bi-file-earmark-text"></i>
-                        {{ $doc['name'] }}
-                    </a>
-                @endforeach
-            @else
-                <span class="resume-no-docs">No documents uploaded</span>
-            @endif
-        </div>
+            <div class="empv-actions">
+                <button onclick="window.print()" class="empv-btn empv-btn-outline">
+                    <i class="bi bi-printer"></i> Print
+                </button>
+            </div>
 
-        <hr class="resume-divider">
+        </div>{{-- end right --}}
 
-        {{-- Actions --}}
-        <div class="resume-actions">
-            <button onclick="window.print()" class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-printer"></i> Print
-            </button>
-        </div>
+    </div>{{-- end profile card --}}
 
-    </div>{{-- end resume-right --}}
-
-</div>{{-- end resume-card --}}
+</div>
 
 
 {{-- ===== STYLES ===== --}}
 <style>
-/* ---- Card shell ---- */
-.resume-card {
+.empv * { box-sizing: border-box; }
+
+.empv {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    color: #0F172A;
+    background: #F8FAFC;
+    padding: 1.5rem 0 2.5rem;
+}
+
+.empv-card {
+    background: #fff;
+    border: 1px solid #E9EDF2;
+    border-radius: 16px;
+}
+
+/* ---- Header ---- */
+.empv-header-card { padding: 1.1rem 1.4rem; margin-bottom: 1rem; }
+.empv-header-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem; }
+.empv-title { font-size: 1.1rem; font-weight: 700; margin: 0; color: #0F172A; }
+.empv-subtitle { font-size: .8rem; color: #94A3B8; margin-top: .15rem; }
+.empv-header-actions { display: flex; gap: .5rem; }
+
+.empv-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    font-size: .8rem;
+    font-weight: 600;
+    padding: .5rem 1rem;
+    border-radius: 10px;
+    text-decoration: none;
+    border: 1px solid #E5E9F0;
+    cursor: pointer;
+    background: #fff;
+    color: #475569;
+    transition: border-color .15s, color .15s, background .15s;
+}
+.empv-btn-outline:hover { border-color: #A7F3D0; color: #00742D; background: #ECFDF5; }
+
+/* ---- Profile shell ---- */
+.empv-profile-card {
     display: flex;
     gap: 0;
     background: #fff;
-    border: 1px solid #e0e0e0;
-    border-radius: 12px;
+    border: 1px solid #E9EDF2;
+    border-radius: 16px;
     overflow: hidden;
-    min-height: 680px;
-    font-size: 13px;
+    min-height: 640px;
+    font-size: .85rem;
 }
 
 /* ---- Left sidebar ---- */
-.resume-left {
-    width: 230px;
+.empv-left {
+    width: 250px;
     flex-shrink: 0;
-    background: #f7f7f5;
-    padding: 28px 20px;
-    border-right: 1px solid #e0e0e0;
+    background: #F8FAFC;
+    padding: 1.75rem 1.35rem;
+    border-right: 1px solid #E9EDF2;
 }
 
-.resume-photo-wrap {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 16px;
-}
-
-.resume-photo-circle {
-    width: 90px;
-    height: 90px;
+.empv-photo-wrap { display: flex; justify-content: center; margin-bottom: 1rem; }
+.empv-photo-circle {
+    width: 92px; height: 92px;
     border-radius: 50%;
     border: 3px solid #00742D;
-    background: #E6F1FB;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    background: #ECFDF5;
+    display: flex; align-items: center; justify-content: center;
     overflow: hidden;
 }
+.empv-photo-circle img { width: 100%; height: 100%; object-fit: cover; }
+.empv-photo-initials { font-size: 1.6rem; font-weight: 700; color: #00742D; }
 
-.resume-photo-circle img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
+.empv-badges { display: flex; justify-content: center; flex-wrap: wrap; gap: .35rem; margin-bottom: 1.15rem; }
+.empv-badge { display: inline-block; font-size: .7rem; font-weight: 600; padding: .2rem .7rem; border-radius: 20px; }
+.empv-badge-id       { background: #EEF2FF; color: #4338CA; }
+.empv-badge-active   { background: #ECFDF5; color: #059669; }
+.empv-badge-inactive { background: #F1F5F9; color: #64748B; }
 
-.resume-photo-initials {
-    font-size: 26px;
-    font-weight: 500;
-    color: #00742D;
-}
-
-.resume-badges {
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 5px;
-    margin-bottom: 18px;
-}
-
-.resume-badge {
-    display: inline-block;
-    font-size: 11px;
-    font-weight: 500;
-    padding: 3px 10px;
-    border-radius: 20px;
-}
-
-.resume-badge-id        { background: #E6F1FB; color: #00742D; }
-.resume-badge-active    { background: #EAF3DE; color: #3B6D11; }
-.resume-badge-inactive  { background: #f1f1f1; color: #555; }
-
-.resume-section-label {
-    font-size: 10.5px;
-    font-weight: 600;
-    letter-spacing: 0.07em;
+.empv-section-label {
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .06em;
     text-transform: uppercase;
     color: #00742D;
-    border-bottom: 1.5px solid #00742D;
-    padding-bottom: 4px;
-    margin: 18px 0 10px;
+    border-bottom: 1px solid #A7F3D0;
+    padding-bottom: .3rem;
+    margin: 1.15rem 0 .65rem;
 }
 
-.resume-info-row {
+.empv-info-row {
     display: flex;
     align-items: flex-start;
-    gap: 7px;
-    margin-bottom: 7px;
-    color: #333;
+    gap: .5rem;
+    margin-bottom: .45rem;
+    color: #334155;
     line-height: 1.4;
+    font-size: .82rem;
 }
+.empv-info-row i { font-size: .85rem; color: #94A3B8; margin-top: .1rem; flex-shrink: 0; }
 
-.resume-info-row i {
-    font-size: 13px;
-    color: #888;
-    margin-top: 1px;
-    flex-shrink: 0;
-}
-
-.resume-salary {
-    margin-top: 10px;
-    font-size: 14px;
-    font-weight: 600;
-    color: #185FA5;
-}
-
-.resume-salary span {
-    font-size: 11px;
-    font-weight: 400;
-    color: #888;
-}
+.empv-salary { margin-top: .7rem; font-size: .95rem; font-weight: 800; color: #00742D; }
+.empv-salary span { font-size: .72rem; font-weight: 400; color: #94A3B8; }
 
 /* ---- Right main ---- */
-.resume-right {
-    flex: 1;
-    padding: 28px 32px;
-    min-width: 0;
-}
+.empv-right { flex: 1; padding: 1.75rem 2rem; min-width: 0; }
 
-.resume-name {
-    font-size: 22px;
+.empv-name { font-size: 1.4rem; font-weight: 800; color: #0F172A; letter-spacing: .01em; line-height: 1.2; margin-bottom: .2rem; }
+.empv-name span { color: #00742D; }
+.empv-role { font-size: .84rem; color: #64748B; margin-bottom: .3rem; }
+
+.empv-divider { border: none; border-top: 1px solid #F1F5F9; margin: 1rem 0; }
+
+.empv-section-label-right {
+    font-size: .68rem;
     font-weight: 700;
-    color: #1a1a1a;
-    letter-spacing: 0.03em;
-    line-height: 1.2;
-    margin-bottom: 3px;
-}
-
-.resume-name span {
-    color: #00742D;
-}
-
-.resume-role {
-    font-size: 13.5px;
-    color: #666;
-    margin-bottom: 4px;
-}
-
-.resume-divider {
-    border: none;
-    border-top: 1.5px solid #e8e8e8;
-    margin: 16px 0;
-}
-
-.resume-section-label-right {
-    font-size: 10.5px;
-    font-weight: 600;
-    letter-spacing: 0.07em;
+    letter-spacing: .06em;
     text-transform: uppercase;
     color: #00742D;
-    border-bottom: 1.5px solid #00742D;
-    padding-bottom: 4px;
-    margin: 16px 0 12px;
+    border-bottom: 1px solid #A7F3D0;
+    padding-bottom: .3rem;
+    margin: 1rem 0 .75rem;
 }
 
-.resume-grid-2 {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px 20px;
-    margin-bottom: 6px;
-}
+.empv-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: .65rem 1.25rem; margin-bottom: .4rem; }
+.empv-entry-label { font-size: .7rem; color: #94A3B8; margin-bottom: .1rem; }
+.empv-entry-value { font-size: .84rem; font-weight: 600; color: #0F172A; }
 
-.resume-entry-label {
-    font-size: 11px;
-    color: #888;
-    margin-bottom: 2px;
-}
-
-.resume-entry-value {
-    font-size: 13px;
-    font-weight: 500;
-    color: #1a1a1a;
-}
-
-.resume-docs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 8px;
-}
-
-.resume-doc-btn {
+.empv-docs { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .5rem; }
+.empv-doc-btn {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    font-size: 12px;
-    padding: 4px 12px;
-    border: 1px solid #d0d0d0;
-    border-radius: 6px;
-    color: #333;
+    gap: .35rem;
+    font-size: .78rem;
+    padding: .3rem .8rem;
+    border: 1px solid #E5E9F0;
+    border-radius: 8px;
+    color: #334155;
     text-decoration: none;
     background: #fff;
-    transition: background 0.15s;
+    transition: background .15s, border-color .15s, color .15s;
 }
+.empv-doc-btn:hover { background: #ECFDF5; color: #00742D; border-color: #A7F3D0; text-decoration: none; }
+.empv-no-docs { font-size: .78rem; color: #B4BECC; }
 
-.resume-doc-btn:hover {
-    background: #f0f0f0;
-    color: #185FA5;
-    text-decoration: none;
-}
+.empv-actions { display: flex; justify-content: flex-end; gap: .5rem; }
 
-.resume-no-docs {
-    font-size: 12px;
-    color: #aaa;
-}
-
-.resume-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-}
-
-/* ---- Print styles ---- */
+/* ---- Print ---- */
 @media print {
-    .resume-card {
-        border: none;
-        box-shadow: none;
-    }
-
-    .resume-actions,
-    .panel.mb-3 {
-        display: none !important;
-    }
-
-    .resume-left {
-        background: #f7f7f5 !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
+    .empv { background: #fff; padding: 0; }
+    .empv-profile-card { border: none; }
+    .empv-actions, .empv-header-card { display: none !important; }
+    .empv-left { background: #F8FAFC !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 
 /* ---- Responsive ---- */
 @media (max-width: 640px) {
-    .resume-card {
-        flex-direction: column;
-    }
-
-    .resume-left {
-        width: 100%;
-        border-right: none;
-        border-bottom: 1px solid #e0e0e0;
-    }
-
-    .resume-grid-2 {
-        grid-template-columns: 1fr;
-    }
+    .empv-profile-card { flex-direction: column; }
+    .empv-left { width: 100%; border-right: none; border-bottom: 1px solid #E9EDF2; }
+    .empv-grid-2 { grid-template-columns: 1fr; }
 }
 </style>
 

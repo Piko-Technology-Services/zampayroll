@@ -1156,7 +1156,7 @@ html[data-theme="dark"] body {
 }
 
 html[data-theme="dark"] .admin-navbar.bg-white {
-  background-color: 1e3a5f !important;
+  background-color: #1e3a5f !important;
 }
 
 html[data-theme="dark"] .profile-avatar {
