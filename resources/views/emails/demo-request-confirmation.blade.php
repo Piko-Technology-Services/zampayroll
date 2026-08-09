@@ -22,7 +22,7 @@
               <h1 style="margin:0 0 16px;font-size:21px;color:#14161A;">Thanks, {{ $demoRequest->full_name }} — we've got it.</h1>
               <p style="margin:0 0 16px;font-size:14px;line-height:1.7;color:#4B4F58;">
                 We've received your request for a ZamPayroll demo on behalf of <strong>{{ $demoRequest->company_name }}</strong>.
-                A member of our team will reach out to you at {{ $demoRequest->email }}{{ $demoRequest->phone ? ' or ' . $demoRequest->phone : '' }} within one business day to schedule a time that works for you.
+                A member of our team will reach out to you at {{ $demoRequest->email }}{{ $demoRequest->phone ? ' or ' . $demoRequest->phone : '' }} within one business day.
               </p>
             </td>
           </tr>
@@ -41,10 +41,7 @@
                         <td style="padding:4px 0;font-size:13px;color:#1F5A2C;vertical-align:top;">2.</td>
                         <td style="padding:4px 0 4px 8px;font-size:13px;color:#14161A;">We contact you to confirm a convenient date and time.</td>
                       </tr>
-                      <tr>
-                        <td style="padding:4px 0;font-size:13px;color:#1F5A2C;vertical-align:top;">3.</td>
-                        <td style="padding:4px 0 4px 8px;font-size:13px;color:#14161A;">We walk you through ZamPayroll live, tailored to {{ $demoRequest->company_name }}.</td>
-                      </tr>
+                      
                     </table>
                   </td>
                 </tr>
@@ -55,7 +52,7 @@
             <td style="padding:22px 28px 6px;">
               <p style="margin:0;font-size:13px;color:#8A8D96;">In the meantime, if anything changes or you have questions, just reply to this email or reach us at</p>
               <p style="margin:6px 0 0;font-size:14px;">
-                <a href="mailto:hello@zampayroll.com" style="color:#2F7D40;text-decoration:none;font-weight:600;">hello@zampayroll.com</a>
+                <a href="mailto:billing@zampayroll.com" style="color:#2F7D40;text-decoration:none;font-weight:600;">billing@zampayroll.com</a>
               </p>
             </td>
           </tr>
