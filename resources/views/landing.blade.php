@@ -19,8 +19,8 @@
   <meta property="og:title" content="ZamPayroll — AI-Powered HR & Payroll for Zambia">
   <meta property="og:description" content="AI-powered HR and Payroll software built for Zambian businesses. Simplify payroll, employee management and HR processes with ZamPayroll.">
   <meta property="og:url" content="https://zampayroll.com/">
-  <meta property="og:image" content="https://zampayroll.com/images/zampayroll-og-image.jpg">
-  <meta property="og:image:secure_url" content="https://zampayroll.com/images/zampayroll-og-image.jpg">
+  <meta property="og:image" content="https://misc.zampayroll.com/images/zampayroll-og-image.jpg">
+  <meta property="og:image:secure_url" content="https://misc.zampayroll.com/images/zampayroll-og-image.jpg">
   <meta property="og:image:type" content="image/jpeg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
@@ -29,7 +29,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="ZamPayroll — AI-Powered HR & Payroll for Zambia">
   <meta name="twitter:description" content="AI-powered HR and Payroll software built for Zambian businesses. Simplify payroll, employee management and HR processes with ZamPayroll.">
-  <meta name="twitter:image" content="https://zampayroll.com/images/zampayroll-og-image.jpg">
+  <meta name="twitter:image" content="https://misc.zampayroll.com/images/zampayroll-og-image.jpg">
   <meta name="twitter:image:alt" content="ZamPayroll — AI-Powered HR and Payroll for Zambia">
 
   <meta property="og:locale" content="en_ZM">
@@ -44,8 +44,8 @@
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
-  <link rel="icon" type="image/png" href="/images/favicon.png">
-  <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/favicon.png">
 
   <script type="application/ld+json">
     {
@@ -56,7 +56,7 @@
       "operatingSystem": "Web",
       "description": "AI-powered HR and Payroll software built for Zambian businesses.",
       "url": "https://zampayroll.com/",
-      "image": "https://zampayroll.com/images/zampayroll-og-image.jpg",
+      "image": "https://misc.zampayroll.com/images/zampayroll-og-image.jpg",
       "offers": {
         "@@type": "Offer",
         "priceCurrency": "ZMW",
