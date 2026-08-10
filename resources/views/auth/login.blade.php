@@ -5,6 +5,11 @@
 
 @section('content')
 
+<div class="mb-4">
+    <h1 class="h4 mb-1">Welcome back</h1>
+    <p class="text-muted mb-0">Sign in to manage your company payroll.</p>
+</div>
+
 <form method="POST"
       action="{{ route('login') }}"
       class="needs-validation"
@@ -28,7 +33,7 @@
             <input type="email"
                    name="email"
                    value="{{ old('email') }}"
-                   class="form-control border-start-0"
+                   class="form-control border-start-0 @error('email') is-invalid @enderror"
                    placeholder="name@company.com"
                    required>
 
@@ -64,7 +69,7 @@
 
             <input type="password"
                    name="password"
-                   class="form-control border-start-0"
+                   class="form-control border-start-0 @error('password') is-invalid @enderror"
                    placeholder="Enter your password"
                    required>
 
@@ -109,8 +114,24 @@
 
     </button>
 
-    
-
 </form>
+
+{{-- REGISTER LINK --}}
+<div class="text-center mt-4">
+
+    <small class="text-muted">
+
+        Don't have a company account?
+
+        <a href="{{ route('register') }}"
+           class="text-decoration-none">
+
+            Create one
+
+        </a>
+
+    </small>
+
+</div>
 
 @endsection

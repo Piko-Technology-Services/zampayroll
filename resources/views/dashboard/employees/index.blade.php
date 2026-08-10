@@ -123,9 +123,11 @@
                 @foreach($employees as $employee)
 
                 @php
+                    
                     $contractEndingSoon = $employee->contract_end
                         && \Carbon\Carbon::parse($employee->contract_end)->isFuture()
-                        && \Carbon\Carbon::parse($employee->contract_end)->diffInDays(now()) <= 30;
+                        && \Carbon\Carbon::parse($employee->contract_end)->diffInDays(now()) <= 60;
+
                 @endphp
 
                 <tr class="emp-row"
@@ -176,9 +178,9 @@
                                 @else
                                     <i class="bi bi-calendar-event"></i>
                                 @endif
-                                {{ $employee->contract_start->format('M d, Y') }}
+                                {{ $employee->contract_start->format('Y-m-d') }}
                                 &rarr;
-                                {{ $employee->contract_end->format('M d, Y') }}
+                                {{ $employee->contract_end->format('Y-m-d') }}
                                 @if($contractEndingSoon)
                                     <span class="emp-soon-label">ending soon</span>
                                 @endif
@@ -286,7 +288,7 @@
                         @if($contractEndingSoon)
                         <div class="emp-card-warn">
                             <i class="bi bi-exclamation-triangle-fill"></i>
-                            Contract ending soon ({{ $employee->contract_end->format('M d, Y') }})
+                            Contract ending soon ({{ $employee->contract_end->format('Y-m-d') }})
                         </div>
                         @endif
 

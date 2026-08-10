@@ -158,22 +158,22 @@
                         <div class="empf-field">
                             <label class="empf-label">Probation Start</label>
                             <input type="date" class="empf-input" name="probation_start"
-                                   value="{{ old('probation_start', $employee->probation_start) }}">
+                                   value="{{ old('probation_start', optional($employee->probation_start)->format('Y-m-d')) }}">
                         </div>
                         <div class="empf-field">
                             <label class="empf-label">Probation End</label>
                             <input type="date" class="empf-input" name="probation_end"
-                                   value="{{ old('probation_end', $employee->probation_end) }}">
+                                   value="{{ old('probation_end', optional($employee->probation_end)->format('Y-m-d')) }}">
                         </div>
                         <div class="empf-field">
                             <label class="empf-label">Contract Start</label>
                             <input type="date" class="empf-input" name="contract_start"
-                                   value="{{ old('contract_start', $employee->contract_start) }}">
+                                   value="{{ old('contract_start', optional($employee->contract_start)->format('Y-m-d')) }}">
                         </div>
                         <div class="empf-field">
                             <label class="empf-label">Contract End</label>
                             <input type="date" class="empf-input" name="contract_end"
-                                   value="{{ old('contract_end', $employee->contract_end) }}">
+                                   value="{{ old('contract_end', optional($employee->contract_end)->format('Y-m-d')) }}">
                         </div>
                     </div>
                 </div>

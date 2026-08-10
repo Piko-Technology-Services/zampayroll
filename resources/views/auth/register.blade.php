@@ -1,8 +1,8 @@
 @extends('layouts.auth')
 
 @section('title', 'Create Company Account')
-
-@section('subtitle', 'Register your company and create the first administrator account.')
+@section('subtitle', 'Company Registration')
+@section('card_size', 'auth-card-wide')
 
 @section('content')
 
@@ -14,13 +14,13 @@
 @csrf
 
 {{-- PAGE HEADER --}}
-<div class="mb-4">
+<div class="mb-5">
 
-    <p class="eyebrow mb-1">
+    <p class="eyebrow mb-2">
         Payroll System Registration
     </p>
 
-    <h1 class="h3 mb-1">
+    <h1 class="h4 mb-2">
         Create Your Company Account
     </h1>
 
@@ -35,13 +35,13 @@
    COMPANY INFORMATION
 ========================================================== --}}
 
-<div class="row g-4">
+<div class="row g-4 g-xl-5">
 
     <div class="col-12 col-lg-6">
 
-        <div class="border rounded-3 p-3 p-md-4 h-100">
+        <div class="border rounded-3 p-4 p-xl-5 h-100">
 
-            <div class="d-flex align-items-center mb-3">
+            <div class="d-flex align-items-center mb-4">
 
                 <div class="me-2">
 
@@ -65,7 +65,7 @@
 
 
             {{-- COMPANY NAME --}}
-            <div class="mb-3">
+            <div class="mb-4">
 
                 <label for="company_name"
                        class="form-label small fw-semibold">
@@ -106,7 +106,7 @@
 
 
             {{-- COMPANY EMAIL --}}
-            <div class="mb-3">
+            <div class="mb-4">
 
                 <label for="company_email"
                        class="form-label small fw-semibold">
@@ -145,7 +145,7 @@
 
 
             {{-- COMPANY PHONE --}}
-            <div class="mb-3">
+            <div class="mb-4">
 
                 <label for="company_phone"
                        class="form-label small fw-semibold">
@@ -184,7 +184,7 @@
 
 
             {{-- COMPANY ADDRESS --}}
-            <div class="mb-3">
+            <div class="mb-4">
 
                 <label for="company_address"
                        class="form-label small fw-semibold">
@@ -274,9 +274,9 @@
 
     <div class="col-12 col-lg-6">
 
-        <div class="border rounded-3 p-3 p-md-4 h-100">
+        <div class="border rounded-3 p-4 p-xl-5 h-100">
 
-            <div class="d-flex align-items-center mb-3">
+            <div class="d-flex align-items-center mb-4">
 
                 <div class="me-2">
 
@@ -300,7 +300,7 @@
 
 
             {{-- FULL NAME --}}
-            <div class="mb-3">
+            <div class="mb-4">
 
                 <label for="name"
                        class="form-label small fw-semibold">
@@ -341,7 +341,7 @@
 
 
             {{-- POSITION --}}
-            <div class="mb-3">
+            <div class="mb-4">
 
                 <label for="position"
                        class="form-label small fw-semibold">
@@ -380,7 +380,7 @@
 
 
             {{-- USER EMAIL --}}
-            <div class="mb-3">
+            <div class="mb-4">
 
                 <label for="email"
                        class="form-label small fw-semibold">
@@ -421,7 +421,7 @@
 
 
             {{-- PASSWORD --}}
-            <div class="mb-3">
+            <div class="mb-4">
 
                 <label for="password"
                        class="form-label small fw-semibold">
@@ -504,7 +504,7 @@
 
 
 {{-- TERMS --}}
-<div class="mb-4">
+<div class="mb-4 mt-4">
 
     <div class="form-check">
 
