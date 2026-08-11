@@ -2,387 +2,537 @@
 
 @section('content')
 
-<div class="empv">
+<div class="hrf-wrap">
 
-    {{-- ===== HEADER ===== --}}
-    <div class="empv-card empv-header-card">
-        <div class="empv-header-row">
-            <div>
-                <h1 class="empv-title">Employee Information</h1>
-                <div class="empv-subtitle">
-                    Edit, print, or view details of {{ $employee->first_name }} {{ $employee->last_name }}
-                </div>
-            </div>
-
-            <div class="empv-header-actions">
-                <a class="empv-btn empv-btn-outline" href="{{ route('employees.edit', $employee) }}">
-                    <i class="bi bi-pencil-square"></i> Edit
-                </a>
-                <a class="empv-btn empv-btn-outline" href="{{ route('employees.index') }}">
-                    <i class="bi bi-arrow-left"></i> Back
-                </a>
-            </div>
+    {{-- ===== TOP BAR ===== --}}
+    <div class="hrf-topbar">
+        <div>
+            <div class="hrf-eyebrow">Personnel File</div>
+            <h1 class="hrf-pagetitle">{{ $employee->first_name }} {{ $employee->last_name }}</h1>
+        </div>
+        <div class="hrf-topactions">
+            <a class="hrf-btn hrf-btn-ghost" href="{{ route('employees.index') }}">
+                <i class="bi bi-arrow-left"></i> Back
+            </a>
+            <a class="hrf-btn hrf-btn-solid" href="{{ route('employees.edit', $employee) }}">
+                <i class="bi bi-pencil-square"></i> Edit File
+            </a>
         </div>
     </div>
 
-    {{-- ===== PROFILE CARD ===== --}}
-    <div class="empv-profile-card">
+    {{-- ===== DOSSIER ===== --}}
+    <div class="hrf-file">
 
-        {{-- ===== LEFT SIDEBAR ===== --}}
-        <div class="empv-left">
+        {{-- vertical index strip --}}
+        <div class="hrf-tabstrip" aria-hidden="true">
+            <span>ID</span>
+            <span>PERSONAL</span>
+            <span>EMPLOYMENT</span>
+            <span>FINANCE</span>
+            <span>DOCS</span>
+        </div>
 
-            <div class="empv-photo-wrap">
-                <div class="empv-photo-circle">
+        {{-- ===== IDENTITY PANEL ===== --}}
+        <div class="hrf-id-panel">
+
+            <div class="hrf-badge-card">
+                <div class="hrf-photo-frame">
                     @if($employee->passport_photo)
                         <img src="{{ asset('storage/' . $employee->passport_photo) }}"
                              alt="{{ $employee->first_name }} {{ $employee->last_name }}">
                     @else
-                        <span class="empv-photo-initials">
+                        <span class="hrf-photo-initials">
                             {{ strtoupper(substr($employee->first_name, 0, 1)) }}{{ strtoupper(substr($employee->last_name, 0, 1)) }}
                         </span>
                     @endif
                 </div>
+                <div class="hrf-badge-id">{{ $employee->employee_id }}</div>
+                <div class="hrf-status-pill hrf-status-{{ $employee->employment_status == 'Active' ? 'active' : 'inactive' }}">
+                    <span class="hrf-status-dot"></span>{{ $employee->employment_status }}
+                </div>
             </div>
 
-            <div class="empv-badges">
-                <span class="empv-badge empv-badge-id">{{ $employee->employee_id }}</span>
-                <span class="empv-badge empv-badge-{{ $employee->employment_status == 'Active' ? 'active' : 'inactive' }}">
-                    {{ $employee->employment_status }}
-                </span>
+            <div class="hrf-panel-block">
+                <div class="hrf-panel-label">Contacts</div>
+                @if($employee->personal_email)
+                <div class="hrf-line"><i class="bi bi-envelope"></i><span>{{ $employee->personal_email }}</span></div>
+                @endif
+                @if($employee->company_email)
+                <div class="hrf-line"><i class="bi bi-building"></i><span>{{ $employee->company_email }}</span></div>
+                @endif
+                @if($employee->primary_phone)
+                <div class="hrf-line"><i class="bi bi-telephone"></i><span>{{ $employee->primary_phone }}</span></div>
+                @endif
+                @if($employee->secondary_phone)
+                <div class="hrf-line"><i class="bi bi-telephone"></i><span>{{ $employee->secondary_phone }}</span></div>
+                @endif
             </div>
-
-            <div class="empv-section-label">Contacts</div>
-
-            @if($employee->personal_email)
-            <div class="empv-info-row"><i class="bi bi-envelope"></i><span>{{ $employee->personal_email }}</span></div>
-            @endif
-            @if($employee->company_email)
-            <div class="empv-info-row"><i class="bi bi-building"></i><span>{{ $employee->company_email }}</span></div>
-            @endif
-            @if($employee->primary_phone)
-            <div class="empv-info-row"><i class="bi bi-telephone"></i><span>{{ $employee->primary_phone }}</span></div>
-            @endif
-            @if($employee->secondary_phone)
-            <div class="empv-info-row"><i class="bi bi-telephone"></i><span>{{ $employee->secondary_phone }}</span></div>
-            @endif
 
             @if($employee->emergency_name || $employee->emergency_phone)
-            <div class="empv-section-label">Emergency</div>
-            @if($employee->emergency_name)
-            <div class="empv-info-row"><i class="bi bi-person"></i><span>{{ $employee->emergency_name }}</span></div>
-            @endif
-            @if($employee->emergency_relationship)
-            <div class="empv-info-row"><i class="bi bi-heart"></i><span>{{ $employee->emergency_relationship }}</span></div>
-            @endif
-            @if($employee->emergency_phone)
-            <div class="empv-info-row"><i class="bi bi-telephone"></i><span>{{ $employee->emergency_phone }}</span></div>
-            @endif
+            <div class="hrf-panel-block">
+                <div class="hrf-panel-label">Emergency Contact</div>
+                @if($employee->emergency_name)
+                <div class="hrf-line"><i class="bi bi-person"></i><span>{{ $employee->emergency_name }}</span></div>
+                @endif
+                @if($employee->emergency_relationship)
+                <div class="hrf-line"><i class="bi bi-heart"></i><span>{{ $employee->emergency_relationship }}</span></div>
+                @endif
+                @if($employee->emergency_phone)
+                <div class="hrf-line"><i class="bi bi-telephone"></i><span>{{ $employee->emergency_phone }}</span></div>
+                @endif
+            </div>
             @endif
 
             @if($employee->next_of_kin_name || $employee->next_of_kin_phone)
-            <div class="empv-section-label">Next of Kin</div>
-            @if($employee->next_of_kin_name)
-            <div class="empv-info-row"><i class="bi bi-person"></i><span>{{ $employee->next_of_kin_name }}</span></div>
-            @endif
-            @if($employee->next_of_kin_phone)
-            <div class="empv-info-row"><i class="bi bi-telephone"></i><span>{{ $employee->next_of_kin_phone }}</span></div>
-            @endif
-            @if($employee->next_of_kin_address)
-            <div class="empv-info-row"><i class="bi bi-geo-alt"></i><span>{{ $employee->next_of_kin_address }}</span></div>
-            @endif
+            <div class="hrf-panel-block">
+                <div class="hrf-panel-label">Next of Kin</div>
+                @if($employee->next_of_kin_name)
+                <div class="hrf-line"><i class="bi bi-person"></i><span>{{ $employee->next_of_kin_name }}</span></div>
+                @endif
+                @if($employee->next_of_kin_phone)
+                <div class="hrf-line"><i class="bi bi-telephone"></i><span>{{ $employee->next_of_kin_phone }}</span></div>
+                @endif
+                @if($employee->next_of_kin_address)
+                <div class="hrf-line"><i class="bi bi-geo-alt"></i><span>{{ $employee->next_of_kin_address }}</span></div>
+                @endif
+            </div>
             @endif
 
-            <div class="empv-section-label">Finance</div>
-            @if($employee->bank_name)
-            <div class="empv-info-row"><i class="bi bi-bank"></i><span>{{ $employee->bank_name }}</span></div>
-            @endif
-            @if($employee->bank_account_no)
-            <div class="empv-info-row"><i class="bi bi-credit-card"></i><span>{{ $employee->bank_account_no }}</span></div>
-            @endif
-            @if($employee->ssn)
-            <div class="empv-info-row"><i class="bi bi-shield-check"></i><span>SSN: {{ $employee->ssn }}</span></div>
-            @endif
-            @if($employee->nhima_no)
-            <div class="empv-info-row"><i class="bi bi-heart"></i><span>NHIMA: {{ $employee->nhima_no }}</span></div>
-            @endif
-            @if($employee->tpin)
-            <div class="empv-info-row"><i class="bi bi-receipt"></i><span>TPIN: {{ $employee->tpin }}</span></div>
-            @endif
+            <div class="hrf-panel-block">
+                <div class="hrf-panel-label">Finance</div>
+                @if($employee->bank_name)
+                <div class="hrf-line"><i class="bi bi-bank"></i><span>{{ $employee->bank_name }}</span></div>
+                @endif
+                @if($employee->bank_account_no)
+                <div class="hrf-line hrf-mono"><i class="bi bi-credit-card"></i><span>{{ $employee->bank_account_no }}</span></div>
+                @endif
+                @if($employee->ssn)
+                <div class="hrf-line hrf-mono"><i class="bi bi-shield-check"></i><span>SSN {{ $employee->ssn }}</span></div>
+                @endif
+                @if($employee->nhima_no)
+                <div class="hrf-line hrf-mono"><i class="bi bi-heart"></i><span>NHIMA {{ $employee->nhima_no }}</span></div>
+                @endif
+                @if($employee->tpin)
+                <div class="hrf-line hrf-mono"><i class="bi bi-receipt"></i><span>TPIN {{ $employee->tpin }}</span></div>
+                @endif
+            </div>
 
             @if($employee->salary)
-            <div class="empv-salary">K {{ number_format($employee->salary, 2) }} <span>/ month</span></div>
+            <div class="hrf-salary-stamp">
+                <div class="hrf-salary-label">Monthly Salary</div>
+                <div class="hrf-salary-amount">K {{ number_format($employee->salary, 2) }}</div>
+            </div>
             @endif
 
-        </div>{{-- end left --}}
+        </div>{{-- end identity panel --}}
 
-        {{-- ===== RIGHT MAIN ===== --}}
-        <div class="empv-right">
+        {{-- ===== RECORD SHEET ===== --}}
+        <div class="hrf-record">
 
-            <div class="empv-name">
-                {{ strtoupper($employee->first_name) }}
-                @if($employee->middle_name) {{ strtoupper($employee->middle_name) }} @endif
-                <span>{{ strtoupper($employee->last_name) }}</span>
-            </div>
-
-            <div class="empv-role">
-                {{ $employee->position }}
-                @if($employee->department) &nbsp;•&nbsp; {{ $employee->department }} @endif
-                @if($employee->branch) &nbsp;•&nbsp; {{ $employee->branch }} @endif
-            </div>
-
-            <hr class="empv-divider">
-
-            <div class="empv-section-label-right">Personal</div>
-            <div class="empv-grid-2">
-                @if($employee->date_of_birth)
-                <div class="empv-entry"><div class="empv-entry-label">Date of birth</div><div class="empv-entry-value">{{ $employee->date_of_birth->format('Y-m-d') }}</div></div>
-                @endif
-                @if($employee->age)
-                <div class="empv-entry"><div class="empv-entry-label">Age</div><div class="empv-entry-value">{{ $employee->age }}</div></div>
-                @endif
-                @if($employee->gender)
-                <div class="empv-entry"><div class="empv-entry-label">Gender</div><div class="empv-entry-value">{{ $employee->gender }}</div></div>
-                @endif
-                @if($employee->nationality)
-                <div class="empv-entry"><div class="empv-entry-label">Nationality</div><div class="empv-entry-value">{{ $employee->nationality }}</div></div>
-                @endif
-                @if($employee->nrc_no)
-                <div class="empv-entry"><div class="empv-entry-label">NRC Number</div><div class="empv-entry-value">{{ $employee->nrc_no }}</div></div>
-                @endif
-                @if($employee->passport_number)
-                <div class="empv-entry"><div class="empv-entry-label">Passport</div><div class="empv-entry-value">{{ $employee->passport_number }}</div></div>
-                @endif
-            </div>
-
-            <div class="empv-section-label-right">Job Details</div>
-            <div class="empv-grid-2">
-                @if($employee->department)
-                <div class="empv-entry"><div class="empv-entry-label">Department</div><div class="empv-entry-value">{{ $employee->department }}</div></div>
-                @endif
-                @if($employee->branch)
-                <div class="empv-entry"><div class="empv-entry-label">Branch</div><div class="empv-entry-value">{{ $employee->branch }}</div></div>
-                @endif
-                @if($employee->position)
-                <div class="empv-entry"><div class="empv-entry-label">Position</div><div class="empv-entry-value">{{ $employee->position }}</div></div>
-                @endif
-                @if($employee->supervisor)
-                <div class="empv-entry"><div class="empv-entry-label">Supervisor</div><div class="empv-entry-value">{{ $employee->supervisor }}</div></div>
-                @endif
-            </div>
-
-            <div class="empv-section-label-right">Employment Dates</div>
-            <div class="empv-grid-2">
-                @if($employee->probation_start || $employee->probation_end)
-                <div class="empv-entry">
-                    <div class="empv-entry-label">Probation period</div>
-                    <div class="empv-entry-value">
-                        {{ $employee->probation_start?->format('Y-m-d') }}
-                        @if($employee->probation_end) &rarr; {{ $employee->probation_end->format('Y-m-d') }} @endif
-                    </div>
+            <div class="hrf-record-head">
+                <div class="hrf-name">
+                    {{ strtoupper($employee->first_name) }}
+                    @if($employee->middle_name) {{ strtoupper($employee->middle_name) }} @endif
+                    {{ strtoupper($employee->last_name) }}
                 </div>
-                @endif
-                @if($employee->contract_start || $employee->contract_end)
-                <div class="empv-entry">
-                    <div class="empv-entry-label">Contract period</div>
-                    <div class="empv-entry-value">
-                        {{ $employee->contract_start?->format('Y-m-d') }}
-                        @if($employee->contract_end) &rarr; {{ $employee->contract_end->format('Y-m-d') }} @endif
-                    </div>
+                <div class="hrf-role">
+                    {{ $employee->position }}
+                    @if($employee->department) <span class="hrf-role-sep">/</span> {{ $employee->department }} @endif
+                    @if($employee->branch) <span class="hrf-role-sep">/</span> {{ $employee->branch }} @endif
                 </div>
-                @endif
             </div>
 
-            <hr class="empv-divider">
+            <section class="hrf-section">
+                <div class="hrf-section-head"><span class="hrf-section-no">01</span>Personal</div>
+                <div class="hrf-grid">
+                    @if($employee->date_of_birth)
+                    <div class="hrf-field"><div class="hrf-field-label">Date of birth</div><div class="hrf-field-value">{{ $employee->date_of_birth->format('Y-m-d') }}</div></div>
+                    @endif
+                    @if($employee->age)
+                    <div class="hrf-field"><div class="hrf-field-label">Age</div><div class="hrf-field-value">{{ $employee->age }}</div></div>
+                    @endif
+                    @if($employee->gender)
+                    <div class="hrf-field"><div class="hrf-field-label">Gender</div><div class="hrf-field-value">{{ $employee->gender }}</div></div>
+                    @endif
+                    @if($employee->nationality)
+                    <div class="hrf-field"><div class="hrf-field-label">Nationality</div><div class="hrf-field-value">{{ $employee->nationality }}</div></div>
+                    @endif
+                    @if($employee->nrc_no)
+                    <div class="hrf-field"><div class="hrf-field-label">NRC Number</div><div class="hrf-field-value hrf-mono">{{ $employee->nrc_no }}</div></div>
+                    @endif
+                    @if($employee->passport_number)
+                    <div class="hrf-field"><div class="hrf-field-label">Passport</div><div class="hrf-field-value hrf-mono">{{ $employee->passport_number }}</div></div>
+                    @endif
+                </div>
+            </section>
 
-            <div class="empv-section-label-right">Documents</div>
-            <div class="empv-docs">
-                @if(!empty($employee->uploads))
-                    @foreach($employee->uploads as $doc)
-                        <a href="{{ asset('storage/' . $doc['path']) }}" target="_blank" class="empv-doc-btn">
-                            <i class="bi bi-file-earmark-text"></i> {{ $doc['name'] }}
-                        </a>
-                    @endforeach
-                @else
-                    <span class="empv-no-docs">No documents uploaded</span>
-                @endif
-            </div>
+            <section class="hrf-section">
+                <div class="hrf-section-head"><span class="hrf-section-no">02</span>Employment</div>
+                <div class="hrf-grid">
+                    @if($employee->department)
+                    <div class="hrf-field"><div class="hrf-field-label">Department</div><div class="hrf-field-value">{{ $employee->department }}</div></div>
+                    @endif
+                    @if($employee->branch)
+                    <div class="hrf-field"><div class="hrf-field-label">Branch</div><div class="hrf-field-value">{{ $employee->branch }}</div></div>
+                    @endif
+                    @if($employee->position)
+                    <div class="hrf-field"><div class="hrf-field-label">Position</div><div class="hrf-field-value">{{ $employee->position }}</div></div>
+                    @endif
+                    @if($employee->supervisor)
+                    <div class="hrf-field"><div class="hrf-field-label">Supervisor</div><div class="hrf-field-value">{{ $employee->supervisor }}</div></div>
+                    @endif
+                </div>
+            </section>
 
-            <hr class="empv-divider">
+            @if($employee->probation_start || $employee->probation_end || $employee->contract_start || $employee->contract_end)
+            <section class="hrf-section">
+                <div class="hrf-section-head"><span class="hrf-section-no">03</span>Employment Dates</div>
+                <div class="hrf-timeline">
+                    @if($employee->probation_start || $employee->probation_end)
+                    <div class="hrf-timeline-row">
+                        <div class="hrf-timeline-label">Probation</div>
+                        <div class="hrf-timeline-track">
+                            <span class="hrf-timeline-date">{{ $employee->probation_start?->format('Y-m-d') ?? '—' }}</span>
+                            <span class="hrf-timeline-bar"></span>
+                            <span class="hrf-timeline-date">{{ $employee->probation_end?->format('Y-m-d') ?? '—' }}</span>
+                        </div>
+                    </div>
+                    @endif
+                    @if($employee->contract_start || $employee->contract_end)
+                    <div class="hrf-timeline-row">
+                        <div class="hrf-timeline-label">Contract</div>
+                        <div class="hrf-timeline-track">
+                            <span class="hrf-timeline-date">{{ $employee->contract_start?->format('Y-m-d') ?? '—' }}</span>
+                            <span class="hrf-timeline-bar"></span>
+                            <span class="hrf-timeline-date">{{ $employee->contract_end?->format('Y-m-d') ?? '—' }}</span>
+                        </div>
+                    </div>
+                    @endif
+                </div>
+            </section>
+            @endif
 
-            <div class="empv-actions">
-                <button onclick="window.print()" class="empv-btn empv-btn-outline">
-                    <i class="bi bi-printer"></i> Print
+            <section class="hrf-section">
+                <div class="hrf-section-head"><span class="hrf-section-no">04</span>Documents</div>
+                <div class="hrf-docs">
+                    @if(!empty($employee->uploads))
+                        @foreach($employee->uploads as $doc)
+                            <a href="{{ asset('storage/' . $doc['path']) }}" target="_blank" class="hrf-doc-tab">
+                                <i class="bi bi-file-earmark-text"></i> {{ $doc['name'] }}
+                            </a>
+                        @endforeach
+                    @else
+                        <span class="hrf-no-docs">No documents uploaded</span>
+                    @endif
+                </div>
+            </section>
+
+            <div class="hrf-record-actions">
+                <button onclick="window.print()" class="hrf-btn hrf-btn-ghost">
+                    <i class="bi bi-printer"></i> Print File
                 </button>
             </div>
 
-        </div>{{-- end right --}}
+        </div>{{-- end record sheet --}}
 
-    </div>{{-- end profile card --}}
+    </div>{{-- end dossier --}}
 
 </div>
 
 
 {{-- ===== STYLES ===== --}}
 <style>
-.empv * { box-sizing: border-box; }
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
 
-.empv {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    color: #0F172A;
-    background: #F8FAFC;
-    padding: 1.5rem 0 2.5rem;
+.hrf-wrap * { box-sizing: border-box; }
+
+.hrf-wrap {
+    --paper: #FAF8F3;
+    --ink: #17263A;
+    --ink-soft: #58687D;
+    --ink-faint: #93A0B2;
+    --brass: #9C7A32;
+    --brass-soft: #E9DFC7;
+    --line: #E1DACB;
+    --active: #2F6F4E;
+    --active-bg: #EAF3EC;
+    --inactive: #8A8578;
+    --inactive-bg: #F0EEE7;
+
+    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    padding: 1.5rem 0 3rem;
 }
 
-.empv-card {
-    background: #fff;
-    border: 1px solid #E9EDF2;
-    border-radius: 16px;
+/* ---- Top bar ---- */
+.hrf-topbar {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: .75rem;
+    margin-bottom: 1.1rem;
+    padding: 0 .1rem;
 }
+.hrf-eyebrow {
+    font-family: 'Roboto Slab', serif;
+    font-size: .68rem;
+    font-weight: 600;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--brass);
+    margin-bottom: .25rem;
+}
+.hrf-pagetitle { font-size: 1.35rem; font-weight: 700; margin: 0; color: var(--ink); }
+.hrf-topactions { display: flex; gap: .55rem; }
 
-/* ---- Header ---- */
-.empv-header-card { padding: 1.1rem 1.4rem; margin-bottom: 1rem; }
-.empv-header-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem; }
-.empv-title { font-size: 1.1rem; font-weight: 700; margin: 0; color: #0F172A; }
-.empv-subtitle { font-size: .8rem; color: #94A3B8; margin-top: .15rem; }
-.empv-header-actions { display: flex; gap: .5rem; }
-
-.empv-btn {
+.hrf-btn {
     display: inline-flex;
     align-items: center;
     gap: .4rem;
-    font-size: .8rem;
+    font-size: .78rem;
     font-weight: 600;
-    padding: .5rem 1rem;
-    border-radius: 10px;
+    padding: .55rem 1.05rem;
+    border-radius: 6px;
     text-decoration: none;
-    border: 1px solid #E5E9F0;
     cursor: pointer;
-    background: #fff;
-    color: #475569;
-    transition: border-color .15s, color .15s, background .15s;
+    transition: border-color .15s, color .15s, background .15s, box-shadow .15s;
 }
-.empv-btn-outline:hover { border-color: #A7F3D0; color: #00742D; background: #ECFDF5; }
+.hrf-btn-ghost {
+    border: 1px solid #D6CFBB;
+    background: transparent;
+    color: var(--ink-soft);
+}
+.hrf-btn-ghost:hover { border-color: var(--brass); color: var(--brass); }
+.hrf-btn-solid {
+    border: 1px solid var(--ink);
+    background: var(--ink);
+    color: var(--paper);
+}
+.hrf-btn-solid:hover { background: #23374F; border-color: #23374F; color: var(--paper); }
 
-/* ---- Profile shell ---- */
-.empv-profile-card {
+/* ---- Dossier shell ---- */
+.hrf-file {
     display: flex;
-    gap: 0;
     background: #fff;
-    border: 1px solid #E9EDF2;
-    border-radius: 16px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    position: relative;
+    box-shadow: 0 1px 0 rgba(23,38,58,.03), 0 8px 24px -18px rgba(23,38,58,.35);
     overflow: hidden;
-    min-height: 640px;
-    font-size: .85rem;
+}
+.hrf-file::before {
+    /* folder-tab notch */
+    content: "";
+    position: absolute;
+    top: 0; left: 44px;
+    width: 96px; height: 8px;
+    background: var(--brass);
+    border-radius: 0 0 3px 3px;
 }
 
-/* ---- Left sidebar ---- */
-.empv-left {
-    width: 250px;
+/* ---- Vertical index tab strip ---- */
+.hrf-tabstrip {
+    width: 26px;
     flex-shrink: 0;
-    background: #F8FAFC;
-    padding: 1.75rem 1.35rem;
-    border-right: 1px solid #E9EDF2;
+    background: var(--ink);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-evenly;
+    padding: 1.5rem 0;
+}
+.hrf-tabstrip span {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-family: 'Roboto Slab', serif;
+    font-size: .58rem;
+    font-weight: 600;
+    letter-spacing: .12em;
+    color: #7E92AC;
 }
 
-.empv-photo-wrap { display: flex; justify-content: center; margin-bottom: 1rem; }
-.empv-photo-circle {
-    width: 92px; height: 92px;
-    border-radius: 50%;
-    border: 3px solid #00742D;
-    background: #ECFDF5;
+/* ---- Identity panel ---- */
+.hrf-id-panel {
+    width: 258px;
+    flex-shrink: 0;
+    background: #FCFBF8;
+    border-right: 1px solid var(--line);
+    padding: 1.85rem 1.4rem 1.5rem;
+}
+
+.hrf-badge-card {
+    border: 1px dashed #CBC2A8;
+    border-radius: 6px;
+    padding: 1.1rem 1rem 1rem;
+    text-align: center;
+    background: #fff;
+    margin-bottom: 1.4rem;
+}
+.hrf-photo-frame {
+    width: 84px; height: 84px;
+    margin: 0 auto .7rem;
+    border-radius: 8px;
+    border: 2px solid var(--ink);
+    background: var(--brass-soft);
     display: flex; align-items: center; justify-content: center;
     overflow: hidden;
 }
-.empv-photo-circle img { width: 100%; height: 100%; object-fit: cover; }
-.empv-photo-initials { font-size: 1.6rem; font-weight: 700; color: #00742D; }
+.hrf-photo-frame img { width: 100%; height: 100%; object-fit: cover; }
+.hrf-photo-initials { font-family: 'Roboto Slab', serif; font-size: 1.4rem; font-weight: 700; color: var(--brass); }
 
-.empv-badges { display: flex; justify-content: center; flex-wrap: wrap; gap: .35rem; margin-bottom: 1.15rem; }
-.empv-badge { display: inline-block; font-size: .7rem; font-weight: 600; padding: .2rem .7rem; border-radius: 20px; }
-.empv-badge-id       { background: #EEF2FF; color: #4338CA; }
-.empv-badge-active   { background: #ECFDF5; color: #059669; }
-.empv-badge-inactive { background: #F1F5F9; color: #64748B; }
-
-.empv-section-label {
-    font-size: .68rem;
-    font-weight: 700;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-    color: #00742D;
-    border-bottom: 1px solid #A7F3D0;
-    padding-bottom: .3rem;
-    margin: 1.15rem 0 .65rem;
+.hrf-badge-id {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .78rem;
+    font-weight: 600;
+    letter-spacing: .08em;
+    color: var(--ink);
+    margin-bottom: .55rem;
 }
 
-.empv-info-row {
-    display: flex;
-    align-items: flex-start;
-    gap: .5rem;
-    margin-bottom: .45rem;
-    color: #334155;
-    line-height: 1.4;
-    font-size: .82rem;
-}
-.empv-info-row i { font-size: .85rem; color: #94A3B8; margin-top: .1rem; flex-shrink: 0; }
-
-.empv-salary { margin-top: .7rem; font-size: .95rem; font-weight: 800; color: #00742D; }
-.empv-salary span { font-size: .72rem; font-weight: 400; color: #94A3B8; }
-
-/* ---- Right main ---- */
-.empv-right { flex: 1; padding: 1.75rem 2rem; min-width: 0; }
-
-.empv-name { font-size: 1.4rem; font-weight: 800; color: #0F172A; letter-spacing: .01em; line-height: 1.2; margin-bottom: .2rem; }
-.empv-name span { color: #00742D; }
-.empv-role { font-size: .84rem; color: #64748B; margin-bottom: .3rem; }
-
-.empv-divider { border: none; border-top: 1px solid #F1F5F9; margin: 1rem 0; }
-
-.empv-section-label-right {
-    font-size: .68rem;
-    font-weight: 700;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-    color: #00742D;
-    border-bottom: 1px solid #A7F3D0;
-    padding-bottom: .3rem;
-    margin: 1rem 0 .75rem;
-}
-
-.empv-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: .65rem 1.25rem; margin-bottom: .4rem; }
-.empv-entry-label { font-size: .7rem; color: #94A3B8; margin-bottom: .1rem; }
-.empv-entry-value { font-size: .84rem; font-weight: 600; color: #0F172A; }
-
-.empv-docs { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .5rem; }
-.empv-doc-btn {
+.hrf-status-pill {
     display: inline-flex;
     align-items: center;
     gap: .35rem;
-    font-size: .78rem;
-    padding: .3rem .8rem;
-    border: 1px solid #E5E9F0;
-    border-radius: 8px;
-    color: #334155;
-    text-decoration: none;
-    background: #fff;
-    transition: background .15s, border-color .15s, color .15s;
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    padding: .28rem .7rem;
+    border-radius: 20px;
 }
-.empv-doc-btn:hover { background: #ECFDF5; color: #00742D; border-color: #A7F3D0; text-decoration: none; }
-.empv-no-docs { font-size: .78rem; color: #B4BECC; }
+.hrf-status-dot { width: 6px; height: 6px; border-radius: 50%; }
+.hrf-status-active { background: var(--active-bg); color: var(--active); }
+.hrf-status-active .hrf-status-dot { background: var(--active); }
+.hrf-status-inactive { background: var(--inactive-bg); color: var(--inactive); }
+.hrf-status-inactive .hrf-status-dot { background: var(--inactive); }
 
-.empv-actions { display: flex; justify-content: flex-end; gap: .5rem; }
+.hrf-panel-block { margin-bottom: 1.25rem; }
+.hrf-panel-label {
+    font-family: 'Roboto Slab', serif;
+    font-size: .65rem;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--brass);
+    border-bottom: 1px solid var(--brass-soft);
+    padding-bottom: .3rem;
+    margin-bottom: .6rem;
+}
+.hrf-line {
+    display: flex;
+    align-items: flex-start;
+    gap: .5rem;
+    margin-bottom: .4rem;
+    color: var(--ink-soft);
+    line-height: 1.4;
+    font-size: .8rem;
+}
+.hrf-line i { font-size: .8rem; color: var(--ink-faint); margin-top: .15rem; flex-shrink: 0; }
+.hrf-mono, .hrf-line.hrf-mono span { font-family: 'IBM Plex Mono', monospace; font-size: .76rem; letter-spacing: .01em; }
+
+.hrf-salary-stamp {
+    border: 2px solid var(--ink);
+    border-radius: 6px;
+    padding: .8rem .9rem;
+    text-align: center;
+    transform: rotate(-.6deg);
+}
+.hrf-salary-label {
+    font-family: 'Roboto Slab', serif;
+    font-size: .6rem;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: .2rem;
+}
+.hrf-salary-amount { font-family: 'IBM Plex Mono', monospace; font-size: 1.05rem; font-weight: 600; color: var(--ink); }
+
+/* ---- Record sheet ---- */
+.hrf-record { flex: 1; padding: 1.85rem 2.1rem 1.6rem; min-width: 0; }
+
+.hrf-record-head { margin-bottom: 1.4rem; padding-bottom: 1.3rem; border-bottom: 1px solid var(--line); }
+.hrf-name { font-family: 'Roboto Slab', serif; font-size: 1.55rem; font-weight: 700; color: var(--ink); letter-spacing: .01em; margin-bottom: .3rem; }
+.hrf-role { font-size: .85rem; color: var(--ink-soft); }
+.hrf-role-sep { color: var(--ink-faint); margin: 0 .15rem; }
+
+.hrf-section { margin-bottom: 1.6rem; }
+.hrf-section:last-of-type { margin-bottom: 1.2rem; }
+.hrf-section-head {
+    display: flex;
+    align-items: baseline;
+    gap: .55rem;
+    font-family: 'Roboto Slab', serif;
+    font-size: .82rem;
+    font-weight: 700;
+    color: var(--ink);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin-bottom: .85rem;
+}
+.hrf-section-no {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .72rem;
+    font-weight: 600;
+    color: #fff;
+    background: var(--brass);
+    padding: .1rem .4rem;
+    border-radius: 3px;
+    letter-spacing: 0;
+}
+
+.hrf-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem 1.5rem; }
+.hrf-field-label { font-size: .68rem; color: var(--ink-faint); margin-bottom: .15rem; text-transform: uppercase; letter-spacing: .04em; }
+.hrf-field-value { font-size: .86rem; font-weight: 600; color: var(--ink); }
+
+.hrf-timeline { display: flex; flex-direction: column; gap: .75rem; }
+.hrf-timeline-row { display: flex; align-items: center; gap: 1rem; }
+.hrf-timeline-label { width: 78px; flex-shrink: 0; font-size: .78rem; font-weight: 600; color: var(--ink-soft); }
+.hrf-timeline-track { display: flex; align-items: center; gap: .6rem; flex: 1; }
+.hrf-timeline-date { font-family: 'IBM Plex Mono', monospace; font-size: .74rem; color: var(--ink); white-space: nowrap; }
+.hrf-timeline-bar { flex: 1; height: 2px; background: linear-gradient(90deg, var(--brass), var(--brass-soft)); border-radius: 2px; min-width: 24px; }
+
+.hrf-docs { display: flex; flex-wrap: wrap; gap: .5rem; }
+.hrf-doc-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    font-size: .78rem;
+    font-weight: 500;
+    padding: .38rem .85rem;
+    border: 1px solid var(--line);
+    border-radius: 5px 5px 0 0;
+    border-bottom: 2px solid var(--brass);
+    color: var(--ink-soft);
+    text-decoration: none;
+    background: #FCFBF8;
+    transition: background .15s, color .15s;
+}
+.hrf-doc-tab:hover { background: var(--brass-soft); color: var(--ink); text-decoration: none; }
+.hrf-no-docs { font-size: .78rem; color: var(--ink-faint); font-style: italic; }
+
+.hrf-record-actions { display: flex; justify-content: flex-end; padding-top: .6rem; border-top: 1px solid var(--line); }
 
 /* ---- Print ---- */
 @media print {
-    .empv { background: #fff; padding: 0; }
-    .empv-profile-card { border: none; }
-    .empv-actions, .empv-header-card { display: none !important; }
-    .empv-left { background: #F8FAFC !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .hrf-wrap { background: #fff; padding: 0; }
+    .hrf-file { border: none; box-shadow: none; }
+    .hrf-tabstrip, .hrf-topactions, .hrf-record-actions { display: none !important; }
+    .hrf-id-panel { background: #FCFBF8 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 
 /* ---- Responsive ---- */
-@media (max-width: 640px) {
-    .empv-profile-card { flex-direction: column; }
-    .empv-left { width: 100%; border-right: none; border-bottom: 1px solid #E9EDF2; }
-    .empv-grid-2 { grid-template-columns: 1fr; }
+@media (max-width: 860px) {
+    .hrf-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 680px) {
+    .hrf-file { flex-direction: column; }
+    .hrf-tabstrip { display: none; }
+    .hrf-id-panel { width: 100%; border-right: none; border-bottom: 1px solid var(--line); }
+    .hrf-grid { grid-template-columns: 1fr; }
+    .hrf-timeline-row { flex-wrap: wrap; }
 }
 </style>
 
