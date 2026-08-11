@@ -1,13 +1,141 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Make a Payment — ZamPayroll</title>
-<meta name="description" content="Pay your ZamPayroll invoice via Mobile Money, VISA, Mastercard, PayPal or Bank Transfer.">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+```
+<!-- Primary SEO -->
+<title>Make a Payment | ZamPayroll</title>
+
+<meta
+    name="description"
+    content="Make a payment to ZamPayroll using Mobile Money and securely submit your proof of payment for verification."
+>
+
+<meta name="author" content="ZamPayroll">
+<meta name="application-name" content="ZamPayroll">
+
+<!-- Payment pages generally do not need to appear in search results -->
+<meta
+    name="robots"
+    content="noindex, follow"
+>
+
+<meta name="referrer" content="strict-origin-when-cross-origin">
+
+<!-- Canonical -->
+<link
+    rel="canonical"
+    href="https://zampayroll.com/payments"
+>
+
+<!-- Language / Region -->
+<meta http-equiv="content-language" content="en-ZM">
+
+<!-- Browser / Theme -->
+<meta name="theme-color" content="#0B3D2E">
+
+<!-- ========================================================= -->
+<!-- Open Graph / Facebook / LinkedIn                          -->
+<!-- ========================================================= -->
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ZamPayroll">
+<meta property="og:locale" content="en_ZM">
+
+<meta
+    property="og:title"
+    content="Make a Payment | ZamPayroll"
+>
+
+<meta
+    property="og:description"
+    content="Make a payment to ZamPayroll using Mobile Money and securely submit your proof of payment for verification."
+>
+
+<meta
+    property="og:url"
+    content="https://zampayroll.com/payments"
+>
+
+<meta
+    property="og:image"
+    content="https://misc.zampayroll.com/images/zampayroll-og-image.png"
+>
+
+<meta
+    property="og:image:secure_url"
+    content="https://misc.zampayroll.com/images/zampayroll-og-image.png"
+>
+
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+
+<meta
+    property="og:image:alt"
+    content="ZamPayroll — Payroll and HR Software for Zambian Businesses"
+>
+
+<!-- ========================================================= -->
+<!-- Twitter / X                                                -->
+<!-- ========================================================= -->
+
+<meta name="twitter:card" content="summary_large_image">
+
+<meta
+    name="twitter:title"
+    content="Make a Payment | ZamPayroll"
+>
+
+<meta
+    name="twitter:description"
+    content="Make a payment to ZamPayroll using Mobile Money and securely submit your proof of payment for verification."
+>
+
+<meta
+    name="twitter:image"
+    content="https://misc.zampayroll.com/images/zampayroll-og-image.png"
+>
+
+<meta
+    name="twitter:image:alt"
+    content="ZamPayroll — Payroll and HR Software for Zambian Businesses"
+>
+
+<!-- ========================================================= -->
+<!-- Mobile / App Appearance                                    -->
+<!-- ========================================================= -->
+
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ZamPayroll">
+
+<!-- Icons -->
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/favicon.png">
+
+<!-- ========================================================= -->
+<!-- Fonts                                                       -->
+<!-- ========================================================= -->
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+<link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+>
+
+<!-- Font Awesome -->
+<link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+>
+```
+
+</head>
 <style>
   :root{
     --cream:#FAF7F0;
