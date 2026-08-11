@@ -247,16 +247,16 @@
 .hrf-wrap * { box-sizing: border-box; }
 
 .hrf-wrap {
-    --paper: #FAF8F3;
-    --ink: #17263A;
+    --paper: #ffffff;
+    --ink: #00742E;
     --ink-soft: #58687D;
     --ink-faint: #93A0B2;
-    --brass: #9C7A32;
-    --brass-soft: #E9DFC7;
-    --line: #E1DACB;
+    --brass: #029508;
+    --brass-soft: #cdffcf;
+    --line: #f3f3f3;
     --active: #2F6F4E;
     --active-bg: #EAF3EC;
-    --inactive: #8A8578;
+    --inactive: #029508;
     --inactive-bg: #F0EEE7;
 
     font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
