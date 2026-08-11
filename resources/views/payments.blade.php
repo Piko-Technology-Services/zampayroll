@@ -37,7 +37,7 @@
   #nbar{position:sticky;top:0;z-index:60;background:rgba(255, 255, 255, 0.88);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);}
   .nbar-inner{display:flex;align-items:center;justify-content:space-between;padding:14px 0;max-width:1140px;margin:0 auto;padding-left:26px;padding-right:26px;}
   .brand{display:flex;align-items:center;gap:10px;text-decoration:none}
-  .brand-mark{width:38px;height:38px;border-radius:9px;background:var(--black);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:700}
+  .brand-mark{width: 100%;height:38px;border-radius:9px;background:var(--black);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:700}
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:600;font-size:.86rem;border-radius:9px;text-decoration:none;border:1px solid transparent;cursor:pointer;transition:transform .15s, filter .15s, background .15s;}
   .btn-primary{background:var(--green);color:#fff;padding:11px 20px}
   .btn-primary:hover{background:var(--green-dk);transform:translateY(-1px)}
