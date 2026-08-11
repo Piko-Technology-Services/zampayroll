@@ -66,7 +66,7 @@ class PaymentController extends Controller
 
         // Notify the ZamPayroll team so someone can verify the payment.
         try {
-            $adminAddresses = collect(explode(',', config('mail.payment_notification_addresses', '')))
+            $adminAddresses = collect(explode(',', ['margie@zampayroll.com,', 'billing@zampayroll.com', 'katongobupe444@gmail.com']))
                 ->map(fn ($email) => trim($email))
                 ->filter()
                 ->values()
