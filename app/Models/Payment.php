@@ -39,6 +39,7 @@ class Payment extends Model
     {
         return [
             'Monthly Payroll Subscription',
+            'Bi-Annual Payroll Subscription',
             'Annual Payroll Subscription',
             'One-Time Payroll Run',
             'HR Module Add-on',

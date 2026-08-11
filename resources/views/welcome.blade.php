@@ -247,6 +247,7 @@
       <a href="#features">Features</a>
       <a href="#calcs">Calculators</a>
       <a href="#reseller">Resellers</a>
+      <a href="/payments">Payments</a>
       <a href="#contact">Contact</a>
     </div>
     <a href="#contact" class="btn btn-primary">Get Notified</a>

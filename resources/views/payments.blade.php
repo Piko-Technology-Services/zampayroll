@@ -144,7 +144,7 @@
 <nav id="nbar">
   <div class="nbar-inner">
     <a href="{{ route('home') }}" class="brand">
-      <span class="brand-mark">Z</span>
+      <img src="https://misc.zampayroll.com/logo-word.png" alt="Zampayroll" class="brand-mark" />
     </a>
     <a href="{{ route('home') }}" class="btn btn-line"><i class="fa-solid fa-arrow-left fa-sm"></i> Back to site</a>
   </div>
@@ -194,7 +194,7 @@
             <div class="mm-label">Send payment to</div>
             <div class="mm-number">+260 776 136 965</div>
             <div class="mm-name-lbl">Account name</div>
-            <div class="mm-name">ZamPayroll Limited</div>
+            <div class="mm-name">Margie Chilikima</div>
 
             <ul class="mm-steps">
               <li><span class="n">1</span> Open your MTN Mobile Money menu and send the exact amount to the number above.</li>
