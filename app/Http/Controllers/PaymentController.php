@@ -109,7 +109,7 @@ public function store(Request $request): RedirectResponse
     }
 
     return redirect()
-        ->route('payments')
+        ->route('payments.index')
         ->with('payment_success', true);
-}
+    }
 }
