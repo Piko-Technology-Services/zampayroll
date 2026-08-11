@@ -74,9 +74,9 @@
                         </div>
 
                         <div class="empf-field empf-span-2">
-                            <label class="empf-label">National ID</label>
-                            <input class="empf-input" name="national_id_number"
-                                   value="{{ old('national_id_number', $employee->national_id_number) }}">
+                            <label class="empf-label">NRC Number</label>
+                            <input class="empf-input" name="nrc_no"
+                                   value="{{ old('nrc_no', $employee->nrc_no) }}">
                         </div>
                         <div class="empf-field">
                             <label class="empf-label">Passport Number</label>
@@ -235,24 +235,31 @@
                                    value="{{ old('bank_name', $employee->bank_name) }}">
                         </div>
                         <div class="empf-field">
-                            <label class="empf-label">Account</label>
-                            <input class="empf-input" name="bank_account_number"
-                                   value="{{ old('bank_account_number', $employee->bank_account_number) }}">
+                            <label class="empf-label">Account Number</label>
+                            <input class="empf-input" name="bank_account_no"
+                                   value="{{ old('bank_account_no', $employee->bank_account_no) }}">
                         </div>
                         <div class="empf-field">
                             <label class="empf-label">Salary</label>
                             <input class="empf-input" name="salary"
                                    value="{{ old('salary', $employee->salary) }}">
                         </div>
-                        <div class="empf-field empf-span-2">
-                            <label class="empf-label">NSSF</label>
-                            <input class="empf-input" name="nssf_number"
-                                   value="{{ old('nssf_number', $employee->nssf_number) }}">
-                        </div>
                         <div class="empf-field">
-                            <label class="empf-label">TIN</label>
-                            <input class="empf-input" name="tin_number"
-                                   value="{{ old('tin_number', $employee->tin_number) }}">
+                            <label class="empf-label">SSN NAPSA</label>
+                            <input class="empf-input" name="ssn"
+                                   value="{{ old('ssn', $employee->ssn) }}">
+                        </div>
+
+                        <div class="empf-field">
+                            <label class="empf-label">NHIMA</label>
+                            <input class="empf-input" name="nhima_no"
+                                   value="{{ old('nhima_no', $employee->nhima_no) }}">
+                        </div>
+
+                        <div class="empf-field">
+                            <label class="empf-label">TPIN</label>
+                            <input class="empf-input" name="tpin"
+                                   value="{{ old('tpin', $employee->tpin) }}">
                         </div>
                     </div>
                 </div>

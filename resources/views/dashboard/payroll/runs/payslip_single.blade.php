@@ -418,12 +418,16 @@
                         <span class="foot-value">{{ $employee->nrc_no ?? '—' }}</span>
                     </div>
                     <div class="foot-row">
-                        <span class="foot-label">NHIS No:</span>
-                        <span class="foot-value">{{ $employee->nhis_no ?? '—' }}</span>
+                        <span class="foot-label">NHIMA No:</span>
+                        <span class="foot-value">{{ $employee->nhima_no ?? '—' }}</span>
                     </div>
                     <div class="foot-row">
-                        <span class="foot-label">Social S No:</span>
-                        <span class="foot-value">{{ $employee->social_security_no ?? '—' }}</span>
+                        <span class="foot-label">SSN No:</span>
+                        <span class="foot-value">{{ $employee->ssn ?? '—' }}</span>
+                    </div>
+                    <div class="foot-row">
+                        <span class="foot-label">TPIN No:</span>
+                        <span class="foot-value">{{ $employee->tpin ?? '—' }}</span>
                     </div>
                 </div>
 

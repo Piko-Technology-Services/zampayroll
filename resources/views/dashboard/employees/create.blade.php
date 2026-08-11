@@ -62,8 +62,8 @@
                 </div>
 
                 <div class="empf-field empf-span-2">
-                    <label class="empf-label">National ID</label>
-                    <input class="empf-input" name="national_id_number">
+                    <label class="empf-label">NRC Number</label>
+                    <input class="empf-input" name="nrc_no">
                 </div>
                 <div class="empf-field">
                     <label class="empf-label">Passport Number</label>
@@ -203,20 +203,27 @@
                 </div>
                 <div class="empf-field">
                     <label class="empf-label">Account Number</label>
-                    <input class="empf-input" name="bank_account_number">
+                    <input class="empf-input" name="bank_account_no">
                 </div>
                 <div class="empf-field">
-                    <label class="empf-label">Salary</label>
+                    <label class="empf-label">NET Salary</label>
                     <input type="number" class="empf-input" name="salary">
                 </div>
-                <div class="empf-field empf-span-2">
-                    <label class="empf-label">NSSF</label>
-                    <input class="empf-input" name="nssf_number">
+                <div class="empf-field">
+                    <label class="empf-label">SSN NAPSA</label>
+                    <input class="empf-input" name="ssn">
                 </div>
+
+                <div class="empf-field">
+                    <label class="empf-label">NHIMA Number</label>
+                    <input class="empf-input" name="nhima_no">
+                </div>
+
                 <div class="empf-field">
                     <label class="empf-label">TPIN</label>
-                    <input class="empf-input" name="tin_number">
+                    <input class="empf-input" name="tpin">
                 </div>
+                
             </div>
         </div>
 

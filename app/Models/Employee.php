@@ -28,7 +28,7 @@ class Employee extends Model
         'date_of_birth',
         'gender',
         'nationality',
-        'national_id_number',
+        'nrc_no',
         'passport_number',
         'passport_photo',
 
@@ -87,9 +87,10 @@ class Employee extends Model
         |--------------------------------------------------------------------------
         */
         'bank_name',
-        'bank_account_number',
-        'nssf_number',
-        'tin_number',
+        'bank_account_no',
+        'ssn',
+        'nhima_no',
+        'tpin',
         'salary',
         'net_salary',
 

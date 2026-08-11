@@ -96,14 +96,17 @@
             @if($employee->bank_name)
             <div class="empv-info-row"><i class="bi bi-bank"></i><span>{{ $employee->bank_name }}</span></div>
             @endif
-            @if($employee->bank_account_number)
-            <div class="empv-info-row"><i class="bi bi-credit-card"></i><span>{{ $employee->bank_account_number }}</span></div>
+            @if($employee->bank_account_no)
+            <div class="empv-info-row"><i class="bi bi-credit-card"></i><span>{{ $employee->bank_account_no }}</span></div>
             @endif
-            @if($employee->nssf_number)
-            <div class="empv-info-row"><i class="bi bi-shield-check"></i><span>NSSF: {{ $employee->nssf_number }}</span></div>
+            @if($employee->ssn)
+            <div class="empv-info-row"><i class="bi bi-shield-check"></i><span>SSN: {{ $employee->ssn }}</span></div>
             @endif
-            @if($employee->tin_number)
-            <div class="empv-info-row"><i class="bi bi-receipt"></i><span>TIN: {{ $employee->tin_number }}</span></div>
+            @if($employee->nhima_no)
+            <div class="empv-info-row"><i class="bi bi-heart"></i><span>NHIMA: {{ $employee->nhima_no }}</span></div>
+            @endif
+            @if($employee->tpin)
+            <div class="empv-info-row"><i class="bi bi-receipt"></i><span>TPIN: {{ $employee->tpin }}</span></div>
             @endif
 
             @if($employee->salary)
@@ -143,8 +146,8 @@
                 @if($employee->nationality)
                 <div class="empv-entry"><div class="empv-entry-label">Nationality</div><div class="empv-entry-value">{{ $employee->nationality }}</div></div>
                 @endif
-                @if($employee->national_id_number)
-                <div class="empv-entry"><div class="empv-entry-label">National ID</div><div class="empv-entry-value">{{ $employee->national_id_number }}</div></div>
+                @if($employee->nrc_no)
+                <div class="empv-entry"><div class="empv-entry-label">NRC Number</div><div class="empv-entry-value">{{ $employee->nrc_no }}</div></div>
                 @endif
                 @if($employee->passport_number)
                 <div class="empv-entry"><div class="empv-entry-label">Passport</div><div class="empv-entry-value">{{ $employee->passport_number }}</div></div>
