@@ -318,7 +318,7 @@
             <div class="mm-label">Send payment to</div>
             <div class="mm-number">+260 776 136 965</div>
             <div class="mm-name-lbl">Account name</div>
-            <div class="mm-name">Margie Chilikima</div>
+            <div class="mm-name">Margaret  Chilikima</div>
 
             <ul class="mm-steps">
               <li><span class="n">1</span> Open your MTN Mobile Money menu and send the exact amount to the number above.</li>
