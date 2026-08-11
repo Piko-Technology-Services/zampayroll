@@ -15,6 +15,7 @@ use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DemoRequestController;
+use App\Http\Controllers\PaymentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -26,6 +27,9 @@ use App\Http\Controllers\DemoRequestController;
 // Route::get('/', function () {
 //     return view('welcome');
 // });
+
+Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
+Route::post('/payments', [PaymentController::class, 'store'])->name('payments.store');
 
 Route::get('/', [DemoRequestController::class, 'index'])->name('home');
 Route::post('/demo-request', [DemoRequestController::class, 'store'])->name('demo.request.store');
