@@ -45,7 +45,7 @@
 
                 <div class="me-2">
 
-                    <i class="bi bi-building fs-4 text-primary"></i>
+                    <i class="bi bi-building fs-4 text-success"></i>
 
                 </div>
 
@@ -280,7 +280,7 @@
 
                 <div class="me-2">
 
-                    <i class="bi bi-person-badge fs-4 text-primary"></i>
+                    <i class="bi bi-person-badge fs-4 text-success"></i>
 
                 </div>
 
@@ -539,7 +539,7 @@
 
 {{-- SUBMIT --}}
 <button type="submit"
-        class="btn btn-primary w-100 py-2">
+        class="btn btn-success w-100 py-2">
 
     <i class="bi bi-building-add me-2"></i>
 
@@ -556,7 +556,7 @@
         Already have an account?
 
         <a href="{{ route('login') }}"
-           class="text-decoration-none">
+           class="text-decoration-none text-success fw-semibold">
 
             Sign in
 

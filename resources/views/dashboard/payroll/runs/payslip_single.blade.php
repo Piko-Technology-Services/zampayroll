@@ -14,12 +14,14 @@
 
     body {
         font-family: 'Helvetica Neue', Arial, sans-serif;
-        color: #1c1c1c;
+        color: #000000;
         background: #fff;
         margin: 0;
         padding: 0;
-        font-size: 12px;
+        font-size: 11.5px;
     }
+
+    .mono { font-family: 'Courier New', Courier, monospace; }
 
     .print-bar {
         max-width: 900px;
@@ -28,181 +30,183 @@
         justify-content: space-between;
         align-items: center;
     }
-    .print-bar h2 { font-size: 18px; margin: 0; color: #2b2b2b; }
+    .print-bar h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 17px; margin: 0; color: #1A2530; font-weight: 700; }
+    .print-bar div { display: flex; gap: 8px; }
     .print-bar button {
-        background: #3b3b8f;
-        color: #fff;
-        border: none;
-        padding: 10px 18px;
-        border-radius: 5px;
-        font-size: 13px;
+        background: #fff;
+        color: #1A2530;
+        border: 1px solid #1A2530;
+        padding: 9px 16px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
         cursor: pointer;
     }
-    .print-bar button:hover { background: #2f2f73; }
+    .print-bar button:first-child { background: #1A2530; color: #fff; }
+    .print-bar button:hover { opacity: .85; }
 
     /* ════════════════════════════════════════════════
-       PAYSLIP SHEET
+       PAYSLIP SHEET — formal statement layout
     ════════════════════════════════════════════════ */
     .payslip {
         max-width: 900px;
         margin: 0 auto 26px;
-        border: 1.5px solid #4c4cae;
+        border: 1px solid #C7A548;
         page-break-after: always;
-        font-size: 11.5px;
+        font-size: 11px;
     }
     .payslip:last-child { page-break-after: auto; }
 
-    /* ── Top identity block ─────────────────────────── */
-    .identity {
+    /* ── Letterhead ──────────────────────────────────── */
+    .letterhead {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 16px 20px 12px;
+        border-bottom: 2px solid #1A2530;
+    }
+    .lh-company { display: flex; align-items: center; gap: 10px; }
+    .lh-company img { height: 36px; width: auto; }
+    .lh-company-name { font-family: Georgia, 'Times New Roman', serif; font-size: 16px; font-weight: 700; color: #1A2530; }
+    .lh-company-sub { font-size: 9.5px; color: #7A8595; text-transform: uppercase; letter-spacing: .06em; margin-top: 1px; }
+
+    .lh-doc { text-align: right; }
+    .lh-doc-title {
+        font-family: Georgia, 'Times New Roman', serif;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: .1em;
+        color: #C7A548;
+        text-transform: uppercase;
+    }
+    .lh-doc-period { font-size: 15px; font-weight: 700; color: #1A2530; margin-top: 2px; }
+    .lh-doc-ref { font-size: 9.5px; color: #7A8595; margin-top: 2px; }
+
+    /* ── Section label (dossier numbering) ──────────── */
+    .sec-label {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        font-family: Georgia, 'Times New Roman', serif;
+        font-weight: 700;
+        font-size: 10.5px;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        color: #1A2530;
+        padding: 10px 20px 6px;
+    }
+    .sec-no {
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 9px;
+        font-weight: 700;
+        color: #fff;
+        background: #C7A548;
+        padding: 1px 5px;
+        border-radius: 2px;
+    }
+
+    /* ── Employee & pay details grid ────────────────── */
+    .details-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px 0;
+        padding: 0 20px 12px;
+        border-bottom: 1px solid #E4DFD0;
+    }
+    .details-item { padding: 2px 10px 2px 0; }
+    .details-label { font-size: 8.5px; text-transform: uppercase; letter-spacing: .05em; color: #7A8595; margin-bottom: 1px; }
+    .details-value { font-size: 11px; color: #1A2530; font-weight: 600; }
+
+    /* ── Earnings / Deductions tables ────────────────── */
+    .tables-row {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        border-bottom: 1.5px solid #4c4cae;
+        border-bottom: 1px solid #E4DFD0;
     }
-    .identity-col { padding: 10px 16px; }
-    .identity-col + .identity-col { border-left: 1.5px solid #4c4cae; }
+    .table-col { padding: 0 0 10px; }
+    .table-col + .table-col { border-left: 1px solid #E4DFD0; }
 
-    .id-row { display: flex; margin-bottom: 4px; }
-    .id-label { width: 110px; font-weight: 700; color: #1c1c1c; flex-shrink: 0; }
-    .id-value { color: #1c1c1c; }
-    .id-value.company-name { font-weight: 700; color: #2b2b8f; font-size: 13px; }
+    .lines-table { width: 100%; border-collapse: collapse; }
+    .lines-table thead th {
+        text-align: left;
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        color: #7A8595;
+        font-weight: 700;
+        padding: 4px 20px 5px;
+        border-bottom: 1px solid #1A2530;
+    }
+    .lines-table thead th.num { text-align: right; }
+    .lines-table td { padding: 3px 20px; font-size: 11px; }
+    .lines-table td.num {
+        text-align: right;
+        font-family: 'Courier New', Courier, monospace;
+        white-space: nowrap;
+    }
+    .lines-table td.days { text-align: right; width: 60px; font-family: 'Courier New', Courier, monospace; color: #7A8595; }
 
-    .identity-col .id-row:last-child { margin-bottom: 0; }
+    .code-cell { display: flex; gap: 6px; }
+    .code-cell .code { font-family: 'Courier New', Courier, monospace; font-weight: 700; color: #C7A548; width: 30px; flex-shrink: 0; }
 
-    .logo-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-    .logo-row img { height: 34px; width: auto; }
+    .table-total-row td {
+        border-top: 1px solid #1A2530;
+        font-weight: 700;
+        padding-top: 5px;
+    }
 
-    /* ── YTD summary strip ──────────────────────────── */
+    /* ── YTD strip ───────────────────────────────────── */
     .ytd-strip {
         display: grid;
         grid-template-columns: repeat(5, 1fr);
-        background: #f4f4fb;
-        border-bottom: 1.5px solid #4c4cae;
-        text-align: center;
-        padding: 8px 0;
+        padding: 10px 20px 12px;
+        border-bottom: 1px solid #E4DFD0;
     }
-    .ytd-strip > div { border-right: 1px solid #d8d8ee; padding: 0 6px; }
-    .ytd-strip > div:last-child { border-right: none; }
-    .ytd-label { font-weight: 700; font-size: 10.5px; color: #2b2b2b; margin-bottom: 2px; }
-    .ytd-value { font-size: 11.5px; color: #1c1c1c; }
+    .ytd-item { border-left: 1px solid #E4DFD0; padding: 0 12px; }
+    .ytd-item:first-child { border-left: none; padding-left: 0; }
+    .ytd-label { font-size: 8.5px; text-transform: uppercase; letter-spacing: .05em; color: #7A8595; margin-bottom: 2px; }
+    .ytd-value { font-family: 'Courier New', Courier, monospace; font-size: 11.5px; font-weight: 700; color: #1A2530; }
 
-    /* ── Earnings / deductions table ────────────────── */
-    .lines-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-    .lines-table thead th {
-        text-align: left;
-        font-weight: 700;
-        font-size: 10.5px;
-        padding: 8px 14px 6px;
-        border-bottom: 1px solid #4c4cae;
-    }
-    .lines-table thead th.num { text-align: right; }
-
-    .lines-table td {
-        padding: 3px 14px;
-        vertical-align: top;
-        font-size: 11.5px;
-    }
-    .lines-table td.amount-col {
-        text-align: right;
-        background: #ebebf3;
-        font-variant-numeric: tabular-nums;
-        width: 110px;
-    }
-    .lines-table td.hours-col {
-        text-align: right;
-        width: 90px;
-        font-variant-numeric: tabular-nums;
-    }
-    .lines-table td.earning-amount {
-        text-align: right;
-        background: #ebebf3;
-        font-variant-numeric: tabular-nums;
-        width: 120px;
-    }
-
-    .code-cell { display: flex; gap: 8px; }
-    .code-cell .code { font-weight: 700; width: 32px; flex-shrink: 0; }
-
-    .lines-spacer-row td { height: 6px; padding: 0; background: transparent; }
-
-    /* Fill remaining vertical space so short payslips still look balanced */
-    .filler-row td { height: 14px; padding: 0; }
-    .filler-row td.amount-col,
-    .filler-row td.earning-amount { background: #ebebf3; }
-
-    /* ── Totals row inside the earnings/deductions table ─ */
-    .deduction-total-row td {
-        border-top: 1.5px solid #4c4cae;
-        font-weight: 700;
-        padding-top: 5px;
-    }
-    .deduction-total-row td.amount-col { background: #ebebf3; }
-
-    /* ── Footer block: banking + totals ─────────────── */
-    .footer-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        border-top: 1.5px solid #4c4cae;
-    }
-    .footer-col { padding: 10px 16px; }
-    .footer-col + .footer-col { border-left: 1.5px solid #4c4cae; }
-
-    .foot-row { display: flex; margin-bottom: 4px; }
-    .foot-label { width: 110px; font-weight: 700; flex-shrink: 0; }
-    .foot-value { font-variant-numeric: tabular-nums; }
-
-    .totals-block { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
-    .totals-block .t-row {
+    /* ── Summary: totals + net stamp ─────────────────── */
+    .summary-row {
         display: flex;
-        justify-content: space-between;
-        width: 220px;
-        font-size: 11.5px;
+        justify-content: flex-end;
+        align-items: flex-end;
+        gap: 26px;
+        padding: 14px 20px 16px;
     }
-    .totals-block .t-label { font-weight: 700; }
-    .totals-block .t-value { font-variant-numeric: tabular-nums; }
+    .summary-lines { display: flex; flex-direction: column; gap: 4px; }
+    .summary-lines .s-row { display: flex; justify-content: space-between; gap: 22px; font-size: 11px; }
+    .summary-lines .s-label { color: #7A8595; }
+    .summary-lines .s-value { font-family: 'Courier New', Courier, monospace; font-weight: 700; color: #1A2530; }
 
-    .totals-block .net-row {
-        border-top: 1.5px solid #1c1c1c;
-        margin-top: 4px;
-        padding-top: 5px;
-        font-size: 13.5px;
-        font-weight: 700;
-    }
-    .totals-block .net-row .t-value { color: #1c6b2e; }
-
-    .deductions-box {
+    .net-stamp {
+        border: 2px solid #1A2530;
+        border-radius: 4px;
+        padding: 8px 18px;
         text-align: right;
-        font-size: 11.5px;
-        font-weight: 700;
-        margin-top: 8px;
     }
-    .deductions-box .box-value {
-        display: inline-block;
-        background: #ebebf3;
-        border: 1px solid #c6c6dd;
-        padding: 4px 14px;
-        margin-top: 3px;
-    }
+    .net-stamp-label { font-size: 9px; text-transform: uppercase; letter-spacing: .08em; color: #7A8595; margin-bottom: 2px; }
+    .net-stamp-value { font-family: 'Courier New', Courier, monospace; font-size: 17px; font-weight: 700; color: #1F6B3C; }
 
-    /* ── Provider strap line ────────────────────────── */
+    /* ── Footer strap ─────────────────────────────────── */
     .strap-line {
-        text-align: right;
-        padding: 4px 16px 8px;
-        font-size: 9.5px;
-        color: #5b5bb0;
+        text-align: center;
+        padding: 8px 16px 10px;
+        font-size: 8.5px;
+        color: #A9A190;
         font-style: italic;
+        border-top: 1px solid #E4DFD0;
     }
 
     @media print {
         .print-bar { display: none; }
-        .payslip { border: 1.5px solid #4c4cae; }
+        .payslip { border: 1px solid #C7A548; }
     }
 
     @media screen {
-        body { background: #eef0f3; padding: 24px 0; }
-        .payslip { background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+        body { background: #F1EFE9; padding: 24px 0; }
+        .payslip { background: #fff; box-shadow: 0 1px 4px rgba(26,37,48,0.1); }
     }
 </style>
 </head>
@@ -226,8 +230,8 @@
 
         @php
             $employee   = $payroll->employee;
-            $earnings   = $payroll->items->where('type', 'earning');
-            $deductions = $payroll->items->where('type', 'deduction');
+            $earnings   = $payroll->items->where('type', 'earning')->values();
+            $deductions = $payroll->items->where('type', 'deduction')->values();
 
             // Pad short item lists so every payslip keeps a consistent visual height
             $maxRows   = max($earnings->count(), $deductions->count(), 5);
@@ -248,206 +252,214 @@
         <div class="payslip">
 
             {{-- ════════════════════════════════════════
-                 IDENTITY: employee details | company details
+                 LETTERHEAD
             ════════════════════════════════════════ --}}
-            <div class="identity">
-
-                <div class="identity-col">
-                    <div class="id-row">
-                        <span class="id-label">Employee ID</span>
-                        <span class="id-value">{{ $employee->employee_id }}</span>
-                    </div>
-                    <div class="id-row">
-                        <span class="id-label">Emp Name:</span>
-                        <span class="id-value">{{ $employee->first_name }} {{ $employee->last_name }}</span>
-                    </div>
-                    <div class="id-row">
-                        <span class="id-label">Date Engaged</span>
-                        <span class="id-value">{{ \Carbon\Carbon::parse($employee->contract_start)->format('d/m/Y') }}</span>
-                    </div>
-                    <div class="id-row">
-                        <span class="id-label">Salary Rate</span>
-                        <span class="id-value">K {{ number_format($employee->salary ?? 0, 2) }}</span>
+            <div class="letterhead">
+                <div class="lh-company">
+                    @if($companyLogo)
+                        <img src="{{ $companyLogo }}" alt="{{ $companyName }} logo">
+                    @endif
+                    <div>
+                        <div class="lh-company-name">{{ $companyName }}</div>
+                        <div class="lh-company-sub">Payroll Department</div>
                     </div>
                 </div>
+                <div class="lh-doc">
+                    <div class="lh-doc-title">Payslip</div>
+                    <div class="lh-doc-period">{{ strtoupper($run->period) }}</div>
+                    <div class="lh-doc-ref">Ref: {{ $employee->employee_id }}</div>
+                </div>
+            </div>
 
-                <div class="identity-col">
-                    @if($companyLogo)
-                        <div class="logo-row">
-                            <img src="{{ $companyLogo }}" alt="{{ $companyName }} logo">
-                        </div>
-                    @endif
-                    <div class="id-row">
-                        <span class="id-label">Company</span>
-                        <span class="id-value company-name">{{ $companyName }}</span>
-                    </div>
-                    <div class="id-row">
-                        <span class="id-label">Pay Period</span>
-                        <span class="id-value">{{ strtoupper($run->period) }}</span>
-                    </div>
-                    <div class="id-row">
-                        <span class="id-label">Branch</span>
-                        <span class="id-value">{{ $payroll->branch }}</span>
-                    </div>
-                    <div class="id-row">
-                        <span class="id-label">Cost/Centre:</span>
-                        <span class="id-value">{{ $payroll->cost_centre }}</span>
-                    </div>
+            {{-- ════════════════════════════════════════
+                 01 — EMPLOYEE &amp; PAY DETAILS
+            ════════════════════════════════════════ --}}
+            <div class="sec-label"><span class="sec-no">01</span>Employee &amp; Pay Details</div>
+
+            <div class="details-grid">
+                <div class="details-item">
+                    <div class="details-label">Employee Name</div>
+                    <div class="details-value">{{ $employee->first_name }} {{ $employee->last_name }}</div>
+                </div>
+                <div class="details-item">
+                    <div class="details-label">Employee ID</div>
+                    <div class="details-value mono">{{ $employee->employee_id }}</div>
+                </div>
+                <div class="details-item">
+                    <div class="details-label">Job Title</div>
+                    <div class="details-value">{{ $employee->position }}</div>
+                </div>
+                <div class="details-item">
+                    <div class="details-label">Date Engaged</div>
+                    <div class="details-value mono">{{ \Carbon\Carbon::parse($employee->contract_start)->format('d/m/Y') }}</div>
+                </div>
+
+                <div class="details-item">
+                    <div class="details-label">Branch</div>
+                    <div class="details-value">{{ $payroll->branch }}</div>
+                </div>
+                <div class="details-item">
+                    <div class="details-label">Cost Centre</div>
+                    <div class="details-value">{{ $payroll->cost_centre }}</div>
+                </div>
+                <div class="details-item">
+                    <div class="details-label">Salary Rate</div>
+                    <div class="details-value mono">K {{ number_format($employee->salary ?? 0, 2) }}</div>
+                </div>
+                <div class="details-item">
+                    <div class="details-label">Pay Method</div>
+                    <div class="details-value">{{ $employee->pay_method ?? 'BANK TRANSFER' }}</div>
+                </div>
+
+                <div class="details-item">
+                    <div class="details-label">Bank A/C No.</div>
+                    <div class="details-value mono">{{ $employee->bank_account_no ?? '—' }}</div>
+                </div>
+                <div class="details-item">
+                    <div class="details-label">NRC No.</div>
+                    <div class="details-value mono">{{ $employee->nrc_no ?? '—' }}</div>
+                </div>
+                <div class="details-item">
+                    <div class="details-label">NHIMA No.</div>
+                    <div class="details-value mono">{{ $employee->nhima_no ?? '—' }}</div>
+                </div>
+                <div class="details-item">
+                    <div class="details-label">SSN No.</div>
+                    <div class="details-value mono">{{ $employee->ssn ?? '—' }}</div>
+                </div>
+
+                <div class="details-item">
+                    <div class="details-label">TPIN No.</div>
+                    <div class="details-value mono">{{ $employee->tpin ?? '—' }}</div>
+                </div>
+            </div>
+
+            {{-- ════════════════════════════════════════
+                 02/03 — EARNINGS  |  DEDUCTIONS
+            ════════════════════════════════════════ --}}
+            <div class="tables-row">
+
+                <div class="table-col">
+                    <div class="sec-label"><span class="sec-no">02</span>Earnings</div>
+                    <table class="lines-table">
+                        <thead>
+                            <tr>
+                                <th>Code / Description</th>
+                                <th class="num">Days/Hrs</th>
+                                <th class="num">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($earnings as $i => $e)
+                                <tr>
+                                    <td>
+                                        <span class="code-cell">
+                                            <span class="code">{{ $e->code }}</span>
+                                            <span>{{ strtoupper($e->description) }}</span>
+                                        </span>
+                                    </td>
+                                    <td class="days">{{ $i === 0 ? number_format($daysWorked, 2) : '' }}</td>
+                                    <td class="num">{{ number_format($e->amount, 2) }}</td>
+                                </tr>
+                            @endforeach
+
+                            @for($i = 0; $i < $fillerE; $i++)
+                                <tr><td>&nbsp;</td><td class="days"></td><td class="num"></td></tr>
+                            @endfor
+
+                            <tr class="table-total-row">
+                                <td>Total Income</td>
+                                <td class="days"></td>
+                                <td class="num">K {{ number_format($payroll->total_income, 2) }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="table-col">
+                    <div class="sec-label"><span class="sec-no">03</span>Deductions</div>
+                    <table class="lines-table">
+                        <thead>
+                            <tr>
+                                <th>Code / Description</th>
+                                <th class="num">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($deductions as $d)
+                                <tr>
+                                    <td>
+                                        <span class="code-cell">
+                                            <span class="code">{{ $d->code }}</span>
+                                            <span>{{ strtoupper($d->description) }}</span>
+                                        </span>
+                                    </td>
+                                    <td class="num">{{ number_format($d->amount, 2) }}</td>
+                                </tr>
+                            @endforeach
+
+                            @for($i = 0; $i < $fillerD; $i++)
+                                <tr><td>&nbsp;</td><td class="num"></td></tr>
+                            @endfor
+
+                            <tr class="table-total-row">
+                                <td>Total Deductions</td>
+                                <td class="num">K {{ number_format($payroll->total_deductions, 2) }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
 
             </div>
 
             {{-- ════════════════════════════════════════
-                 YTD SUMMARY STRIP
+                 04 — YEAR TO DATE
             ════════════════════════════════════════ --}}
+            <div class="sec-label"><span class="sec-no">04</span>Year to Date</div>
+
             <div class="ytd-strip">
-                <div>
+                <div class="ytd-item">
                     <div class="ytd-label">Total Income YTD</div>
                     <div class="ytd-value">K {{ number_format($ytdIncome, 2) }}</div>
                 </div>
-                <div>
+                <div class="ytd-item">
                     <div class="ytd-label">Net for Tax YTD</div>
                     <div class="ytd-value">K {{ number_format($ytdNetForTax, 2) }}</div>
                 </div>
-                <div>
+                <div class="ytd-item">
                     <div class="ytd-label">Tax YTD</div>
                     <div class="ytd-value">K {{ number_format($ytdTax, 2) }}</div>
                 </div>
-                <div>
+                <div class="ytd-item">
                     <div class="ytd-label">Napsa YTD</div>
                     <div class="ytd-value">K {{ number_format($ytdNapsa, 2) }}</div>
                 </div>
-                <div>
+                <div class="ytd-item">
                     <div class="ytd-label">Leave Days</div>
                     <div class="ytd-value">{{ number_format($leaveDays, 4) }}</div>
                 </div>
             </div>
 
             {{-- ════════════════════════════════════════
-                 EARNINGS  |  DEDUCTIONS  side by side
+                 05 — PAY SUMMARY
             ════════════════════════════════════════ --}}
-            <table class="lines-table">
-                <thead>
-                    <tr>
-                        <th style="width:30%">Code / Description</th>
-                        <th class="num hours-col">Days/Hrs</th>
-                        <th class="num earning-amount">Amount</th>
-                        <th style="width:30%">Code / Description</th>
-                        <th class="num amount-col">Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @php
-                        $earningsArr   = $earnings->values();
-                        $deductionsArr = $deductions->values();
-                        $rowCount      = max($earningsArr->count(), $deductionsArr->count());
-                    @endphp
+            <div class="sec-label"><span class="sec-no">05</span>Pay Summary</div>
 
-                    @for($i = 0; $i < $rowCount; $i++)
-                        @php
-                            $e = $earningsArr->get($i);
-                            $d = $deductionsArr->get($i);
-                        @endphp
-                        <tr>
-                            <td>
-                                @if($e)
-                                    <span class="code-cell">
-                                        <span class="code">{{ $e->code }}</span>
-                                        <span>{{ strtoupper($e->description) }}</span>
-                                    </span>
-                                @endif
-                            </td>
-                            <td class="hours-col">
-                                {{ $i === 0 ? number_format($daysWorked, 2) : '' }}
-                            </td>
-                            <td class="earning-amount">
-                                {{ $e ? number_format($e->amount, 2) : '' }}
-                            </td>
-                            <td>
-                                @if($d)
-                                    <span class="code-cell">
-                                        <span class="code">{{ $d->code }}</span>
-                                        <span>{{ strtoupper($d->description) }}</span>
-                                    </span>
-                                @endif
-                            </td>
-                            <td class="amount-col">
-                                {{ $d ? number_format($d->amount, 2) : '' }}
-                            </td>
-                        </tr>
-                    @endfor
-
-                    {{-- Filler rows keep short payslips visually consistent --}}
-                    @for($i = 0; $i < 3; $i++)
-                        <tr class="filler-row">
-                            <td></td><td class="hours-col"></td><td class="earning-amount"></td>
-                            <td></td><td class="amount-col"></td>
-                        </tr>
-                    @endfor
-
-                    <tr class="deduction-total-row">
-                        <td></td>
-                        <td class="hours-col"></td>
-                        <td class="earning-amount"></td>
-                        <td style="font-weight:700">Total Deductions</td>
-                        <td class="amount-col">K {{ number_format($payroll->total_deductions, 2) }}</td>
-                    </tr>
-                </tbody>
-            </table>
-
-            {{-- ════════════════════════════════════════
-                 FOOTER: banking details | totals
-            ════════════════════════════════════════ --}}
-            <div class="footer-grid">
-
-                <div class="footer-col">
-                    <div class="foot-row">
-                        <span class="foot-label">Job Title:</span>
-                        <span class="foot-value">{{ $employee->position }}</span>
+            <div class="summary-row">
+                <div class="summary-lines">
+                    <div class="s-row">
+                        <span class="s-label">Total Income</span>
+                        <span class="s-value">K {{ number_format($payroll->total_income, 2) }}</span>
                     </div>
-                    <div class="foot-row">
-                        <span class="foot-label">Pay Method:</span>
-                        <span class="foot-value">{{ $employee->pay_method ?? 'BANK TRANSFER' }}</span>
-                    </div>
-                    <div class="foot-row">
-                        <span class="foot-label">Bank A/C No:</span>
-                        <span class="foot-value">{{ $employee->bank_account_no ?? '—' }}</span>
-                    </div>
-                    <div class="foot-row">
-                        <span class="foot-label">NRC No:</span>
-                        <span class="foot-value">{{ $employee->nrc_no ?? '—' }}</span>
-                    </div>
-                    <div class="foot-row">
-                        <span class="foot-label">NHIMA No:</span>
-                        <span class="foot-value">{{ $employee->nhima_no ?? '—' }}</span>
-                    </div>
-                    <div class="foot-row">
-                        <span class="foot-label">SSN No:</span>
-                        <span class="foot-value">{{ $employee->ssn ?? '—' }}</span>
-                    </div>
-                    <div class="foot-row">
-                        <span class="foot-label">TPIN No:</span>
-                        <span class="foot-value">{{ $employee->tpin ?? '—' }}</span>
+                    <div class="s-row">
+                        <span class="s-label">Total Deductions</span>
+                        <span class="s-value">K {{ number_format($payroll->total_deductions, 2) }}</span>
                     </div>
                 </div>
-
-                <div class="footer-col">
-                    <div class="totals-block">
-                        <div class="t-row">
-                            <span class="t-label">Total Income</span>
-                            <span class="t-value">K {{ number_format($payroll->total_income, 2) }}</span>
-                        </div>
-                        <div class="t-row">
-                            <span class="t-label">Total Deductions</span>
-                            <span class="t-value">K {{ number_format($payroll->total_deductions, 2) }}</span>
-                        </div>
-                        <div class="t-row net-row">
-                            <span class="t-label">Net Pay</span>
-                            <span class="t-value">K {{ number_format($payroll->net_pay, 2) }}</span>
-                        </div>
-                    </div>
+                <div class="net-stamp">
+                    <div class="net-stamp-label">Net Pay</div>
+                    <div class="net-stamp-value">K {{ number_format($payroll->net_pay, 2) }}</div>
                 </div>
-
             </div>
 
             <div class="strap-line">

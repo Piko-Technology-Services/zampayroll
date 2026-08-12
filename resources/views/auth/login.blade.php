@@ -55,7 +55,7 @@
             </label>
 
             <a href="#"
-               class="small text-decoration-none">
+               class="small text-success text-decoration-none">
                 Forgot Password?
             </a>
 
@@ -106,7 +106,7 @@
     </div>
 
     {{-- BUTTON --}}
-    <button class="btn btn-primary w-100 py-2"
+    <button class="btn btn-success w-100 py-2"
             type="submit">
 
         <i class="bi bi-box-arrow-in-right me-2"></i>
@@ -124,9 +124,9 @@
         Don't have a company account?
 
         <a href="{{ route('register') }}"
-           class="text-decoration-none">
+           class="text-decoration-none text-success fw-semibold">
 
-            Create one
+            Try Demo Account
 
         </a>
 
