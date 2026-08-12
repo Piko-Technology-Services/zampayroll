@@ -406,59 +406,52 @@
         </a>
     </div>
 
-    {{-- ===== LOWER GRID: Departments / New Employees ===== --}}
-    <div class="lower-grid mb-3">
-
-        {{-- Headcount by Department --}}
-        <div class="hrd-card">
-            <div class="panel-title">Headcount by Department</div>
-            @if($departmentBreakdown->isEmpty())
-                <div class="no-data">No department data</div>
-            @else
-                @php $maxCount = $departmentBreakdown->max('count'); @endphp
-                @foreach($departmentBreakdown as $dept)
-                    <div class="dept-row">
-                        <div class="dept-meta">
-                            <span>{{ $dept->department }}</span>
-                            <span class="dept-count">{{ $dept->count }}</span>
-                        </div>
-                        <div class="dept-bar-track">
-                            <div class="dept-bar-fill" style="width: {{ $maxCount > 0 ? round(($dept->count / $maxCount) * 100) : 0 }}%"></div>
-                        </div>
-                    </div>
-                @endforeach
+        {{-- ===== RECENT PAYROLL RUN ===== --}}
+    <div class="hrd-card payroll-run-card">
+        <div class="panel-title-row" style="margin-bottom:.9rem;">
+            <div class="panel-title" style="margin:0;">Recent Payroll Run</div>
+            @if($payrollSummary)
+                <span class="status-chip {{ strtolower($payrollSummary['status']) }}">{{ $payrollSummary['status'] }}</span>
             @endif
         </div>
 
-        {{-- Recently Added Employees --}}
-        <div class="hrd-card">
-            <div class="panel-title-row">
-                <div class="panel-title" style="margin:0;">Recently Added</div>
-                <a href="{{ route('employees.index') }}" class="panel-link">View all</a>
+        @if($payrollSummary)
+            <div class="payroll-run-head" style="margin-bottom: .9rem;">
+                <span class="period">{{ $payrollSummary['period'] }}</span>
             </div>
-            @if($recentEmployees->isEmpty())
-                <div class="no-data">No employees yet</div>
-            @else
-                <ul class="mini-list">
-                    @foreach($recentEmployees as $emp)
-                        <li>
-                            <div class="mini-avatar">
-                                {{ strtoupper(substr($emp->first_name, 0, 1)) }}{{ strtoupper(substr($emp->last_name, 0, 1)) }}
-                            </div>
-                            <div class="mini-info">
-                                <div class="mini-name">{{ $emp->first_name }} {{ $emp->last_name }}</div>
-                                <div class="mini-meta">{{ $emp->position ?? '—' }} · {{ $emp->created_at->diffForHumans() }}</div>
-                            </div>
-                            @if($emp->department)
-                                <span class="mini-tag">{{ $emp->department }}</span>
-                            @endif
-                        </li>
-                    @endforeach
-                </ul>
-            @endif
-        </div>
-
+            <div class="payroll-run-figures">
+                <div>
+                    <div class="prf-label">Employees</div>
+                    <div class="prf-value">{{ $payrollSummary['employee_count'] }}</div>
+                </div>
+                <div>
+                    <div class="prf-label">Gross Pay</div>
+                    <div class="prf-value">K{{ number_format($payrollSummary['total_earnings'], 2) }}</div>
+                </div>
+                <div>
+                    <div class="prf-label">Deductions</div>
+                    <div class="prf-value deductions">K{{ number_format($payrollSummary['total_deductions'], 2) }}</div>
+                </div>
+                <div>
+                    <div class="prf-label">Net Pay</div>
+                    <div class="prf-value net">K{{ number_format($payrollSummary['net_pay'], 2) }}</div>
+                </div>
+            </div>
+            <div class="mt-3" style="font-size:.74rem; color:#94A3B8;">
+                {{ $payrollSummary['finalized_at']
+                    ? 'Finalized '.\Carbon\Carbon::parse($payrollSummary['finalized_at'])->format('d M Y')
+                    : 'Not yet finalized' }}
+            </div>
+        @else
+            <div class="payroll-empty">
+                <i class="bi bi-receipt fs-2 d-block mb-2"></i>
+                No payroll run found yet.
+                <a href="{{ route('payroll.runs.create') }}">Start a payroll run →</a>
+            </div>
+        @endif
     </div>
+
+
 
     {{-- ===== MAIN ROW: Payroll trend + Anomalies ===== --}}
     <div class="main-row">
@@ -543,49 +536,37 @@
 
     </div>
 
-    {{-- ===== RECENT PAYROLL RUN ===== --}}
-    <div class="hrd-card payroll-run-card">
-        <div class="panel-title-row" style="margin-bottom:.9rem;">
-            <div class="panel-title" style="margin:0;">Recent Payroll Run</div>
-            @if($payrollSummary)
-                <span class="status-chip {{ strtolower($payrollSummary['status']) }}">{{ $payrollSummary['status'] }}</span>
+    {{-- ===== LOWER GRID: Departments / New Employees ===== --}}
+    <div class="lower-grid mb-3">
+
+        {{-- Recently Added Employees --}}
+        <div class="hrd-card">
+            <div class="panel-title-row">
+                <div class="panel-title" style="margin:0;">Recently Added</div>
+                <a href="{{ route('employees.index') }}" class="panel-link">View all</a>
+            </div>
+            @if($recentEmployees->isEmpty())
+                <div class="no-data">No employees yet</div>
+            @else
+                <ul class="mini-list">
+                    @foreach($recentEmployees as $emp)
+                        <li>
+                            <div class="mini-avatar">
+                                {{ strtoupper(substr($emp->first_name, 0, 1)) }}{{ strtoupper(substr($emp->last_name, 0, 1)) }}
+                            </div>
+                            <div class="mini-info">
+                                <div class="mini-name">{{ $emp->first_name }} {{ $emp->last_name }}</div>
+                                <div class="mini-meta">{{ $emp->position ?? '—' }} · {{ $emp->created_at->diffForHumans() }}</div>
+                            </div>
+                            @if($emp->department)
+                                <span class="mini-tag">{{ $emp->department }}</span>
+                            @endif
+                        </li>
+                    @endforeach
+                </ul>
             @endif
         </div>
 
-        @if($payrollSummary)
-            <div class="payroll-run-head" style="margin-bottom: .9rem;">
-                <span class="period">{{ $payrollSummary['period'] }}</span>
-            </div>
-            <div class="payroll-run-figures">
-                <div>
-                    <div class="prf-label">Employees</div>
-                    <div class="prf-value">{{ $payrollSummary['employee_count'] }}</div>
-                </div>
-                <div>
-                    <div class="prf-label">Gross Pay</div>
-                    <div class="prf-value">K{{ number_format($payrollSummary['total_earnings'], 2) }}</div>
-                </div>
-                <div>
-                    <div class="prf-label">Deductions</div>
-                    <div class="prf-value deductions">K{{ number_format($payrollSummary['total_deductions'], 2) }}</div>
-                </div>
-                <div>
-                    <div class="prf-label">Net Pay</div>
-                    <div class="prf-value net">K{{ number_format($payrollSummary['net_pay'], 2) }}</div>
-                </div>
-            </div>
-            <div class="mt-3" style="font-size:.74rem; color:#94A3B8;">
-                {{ $payrollSummary['finalized_at']
-                    ? 'Finalized '.\Carbon\Carbon::parse($payrollSummary['finalized_at'])->format('d M Y')
-                    : 'Not yet finalized' }}
-            </div>
-        @else
-            <div class="payroll-empty">
-                <i class="bi bi-receipt fs-2 d-block mb-2"></i>
-                No payroll run found yet.
-                <a href="{{ route('payroll.runs.create') }}">Start a payroll run →</a>
-            </div>
-        @endif
     </div>
 
 

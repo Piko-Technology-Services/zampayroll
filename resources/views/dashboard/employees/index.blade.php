@@ -87,13 +87,7 @@
                             {{ $employees->pluck('department')->filter()->unique()->count() }}
                         </span>
                     </div>
-                    <div class="emp-rail-stat-row">
-                        <span class="emp-rail-stat-dot emp-dot-red"></span>
-                        <span class="emp-rail-stat-label">Contracts Expiring</span>
-                        <span class="emp-rail-stat-value emp-stat-red">
-                            {{ $employees->filter(fn($e) => $e->contract_end && \Carbon\Carbon::parse($e->contract_end)->diffInDays(now()) <= 30 && \Carbon\Carbon::parse($e->contract_end)->isFuture())->count() }}
-                        </span>
-                    </div>
+                    
                 </div>
             </div>
 
@@ -132,7 +126,6 @@
                             <th>Department</th>
                             <th>Branch</th>
                             <th>Phone</th>
-                            <th>Contract</th>
                             <th>Status</th>
                             <th></th>
                         </tr>
@@ -187,26 +180,6 @@
 
                             <td class="emp-td-muted">
                                 <i class="bi bi-telephone"></i> {{ $employee->primary_phone ?? '—' }}
-                            </td>
-
-                            <td>
-                                @if($employee->contract_start && $employee->contract_end)
-                                    <div class="emp-contract {{ $contractEndingSoon ? 'emp-contract-warn' : '' }}">
-                                        @if($contractEndingSoon)
-                                            <i class="bi bi-exclamation-triangle-fill"></i>
-                                        @else
-                                            <i class="bi bi-calendar-event"></i>
-                                        @endif
-                                        {{ $employee->contract_start->format('Y-m-d') }}
-                                        &rarr;
-                                        {{ $employee->contract_end->format('Y-m-d') }}
-                                        @if($contractEndingSoon)
-                                            <span class="emp-soon-label">ending soon</span>
-                                        @endif
-                                    </div>
-                                @else
-                                    <span class="emp-td-muted">—</span>
-                                @endif
                             </td>
 
                             <td>
@@ -362,7 +335,7 @@
     --ink: #00742E;
     --ink-soft: #58687D;
     --ink-faint: #93A0B2;
-    --brass: #029508;
+    --brass: #00742E;
     --brass-soft: #cdffcf;
     --line: #f3f3f3;
     --active: #2F6F4E;

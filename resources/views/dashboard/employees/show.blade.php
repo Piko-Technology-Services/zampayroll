@@ -242,7 +242,11 @@
 
 {{-- ===== STYLES ===== --}}
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+/* @import url('https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap'); */
+
+body {
+    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
 
 .hrf-wrap * { box-sizing: border-box; }
 
@@ -276,7 +280,8 @@
     padding: 0 .1rem;
 }
 .hrf-eyebrow {
-    font-family: 'Roboto Slab', serif;
+        font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+
     font-size: .68rem;
     font-weight: 600;
     letter-spacing: .14em;
@@ -346,7 +351,8 @@
 .hrf-tabstrip span {
     writing-mode: vertical-rl;
     transform: rotate(180deg);
-    font-family: 'Roboto Slab', serif;
+        font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+
     font-size: .58rem;
     font-weight: 600;
     letter-spacing: .12em;
@@ -380,7 +386,7 @@
     overflow: hidden;
 }
 .hrf-photo-frame img { width: 100%; height: 100%; object-fit: cover; }
-.hrf-photo-initials { font-family: 'Roboto Slab', serif; font-size: 1.4rem; font-weight: 700; color: var(--brass); }
+.hrf-photo-initials { font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 1.4rem; font-weight: 700; color: var(--brass); }
 
 .hrf-badge-id {
     font-family: 'IBM Plex Mono', monospace;
@@ -410,7 +416,7 @@
 
 .hrf-panel-block { margin-bottom: 1.25rem; }
 .hrf-panel-label {
-    font-family: 'Roboto Slab', serif;
+    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: .65rem;
     font-weight: 600;
     letter-spacing: .1em;
@@ -440,7 +446,7 @@
     transform: rotate(-.6deg);
 }
 .hrf-salary-label {
-    font-family: 'Roboto Slab', serif;
+    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: .6rem;
     font-weight: 600;
     letter-spacing: .1em;
@@ -454,7 +460,7 @@
 .hrf-record { flex: 1; padding: 1.85rem 2.1rem 1.6rem; min-width: 0; }
 
 .hrf-record-head { margin-bottom: 1.4rem; padding-bottom: 1.3rem; border-bottom: 1px solid var(--line); }
-.hrf-name { font-family: 'Roboto Slab', serif; font-size: 1.55rem; font-weight: 700; color: var(--ink); letter-spacing: .01em; margin-bottom: .3rem; }
+.hrf-name { font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 1.55rem; font-weight: 700; color: var(--ink); letter-spacing: .01em; margin-bottom: .3rem; }
 .hrf-role { font-size: .85rem; color: var(--ink-soft); }
 .hrf-role-sep { color: var(--ink-faint); margin: 0 .15rem; }
 
@@ -464,7 +470,7 @@
     display: flex;
     align-items: baseline;
     gap: .55rem;
-    font-family: 'Roboto Slab', serif;
+    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: .82rem;
     font-weight: 700;
     color: var(--ink);
