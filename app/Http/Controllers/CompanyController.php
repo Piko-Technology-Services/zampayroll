@@ -18,7 +18,7 @@ class CompanyController extends Controller
         abort_unless($company, 404);
         abort_unless($user->isCompanyAdmin(), 403);
 
-        $company->update($request->only(['name', 'email', 'phone', 'address', 'tpin']));
+        $company->update($request->only(['name', 'email', 'phone', 'address', 'work_days', 'tpin']));
 
         return back()->with('success', 'Company information has been updated successfully.');
     }

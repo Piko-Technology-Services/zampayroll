@@ -41,13 +41,13 @@
            href="{{ route('leave.index') }}">
             <i class="bi bi-calendar-check nav-icon"></i>
             <span class="nav-text">Leave</span>
-        </a>
+        </a> -->
 
         <a class="nav-link {{ request()->routeIs('attendance.*') ? 'active' : '' }}"
-           href="{{ route('attendance.index') }}">
+           href="{{ route('attendance.calendar') }}">
             <i class="bi bi-clock-history nav-icon"></i>
             <span class="nav-text">Attendance</span>
-        </a> -->
+        </a>
 
         <a class="nav-link {{ request()->routeIs('payroll.*') ? 'active' : '' }}"
            href="{{ route('payroll.runs.index') }}">

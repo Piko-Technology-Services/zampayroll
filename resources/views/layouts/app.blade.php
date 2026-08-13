@@ -195,7 +195,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 {{-- DOWNLOAD SAMPLE --}}
                 <a href="{{ route('employees.sample-csv') }}"
-                   class="btn btn-sm btn-outline-primary mb-3 w-100">
+                   class="btn btn-sm btn-outline-success mb-3 w-100">
                     <i class="bi bi-download"></i>
                     Download Sample CSV
                 </a>

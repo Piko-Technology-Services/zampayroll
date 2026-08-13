@@ -30,9 +30,9 @@
     <div class="row mb-4">
 
         <div class="col-md-3">
-            <div class="card border-primary shadow-sm">
+            <div class="card border-success shadow-sm">
                 <div class="card-body text-center">
-                    <div class="fw-bold text-primary">1</div>
+                    <div class="fw-bold text-success">1</div>
                     <small>Create Run</small>
                 </div>
             </div>

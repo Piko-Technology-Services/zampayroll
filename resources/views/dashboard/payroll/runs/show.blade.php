@@ -5,6 +5,7 @@
 <div class="panel">
 
     {{-- HEADER --}}
+    
 {{-- HEADER --}}
 <div class="panel-header d-flex justify-content-between align-items-center flex-wrap gap-2">
 
@@ -23,73 +24,56 @@
     {{-- RIGHT ACTION BAR --}}
     <div class="d-flex align-items-center flex-wrap gap-2">
         
-
-    <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#adjustmentModal"><i class="bi bi-sliders"></i> Add Adjustment </button> 
-    {{-- LOANS --}}
-        <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#adjustmentModalBulk">
-            <i class="bi bi-upload"></i> Bulk Adjustments
-        </button>
-    <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#payrollRulesModal"> <i class="bi bi-sliders"></i> Payroll Rules </button>
-
-        
-
-        {{-- GENERATE --}}
-        <form action="{{ route('payroll.runs.generate', $run->id) }}" method="POST" class="d-inline">
-            @csrf
-            <button type="submit" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-tools me-1"></i> Generate Payroll
+        {{-- PAYROLL RUN ADJUSTMENTS --}}
+        <div class="btn-group-vertical-inline" role="group">
+            <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#adjustmentModal"><i class="bi bi-sliders"></i> Add Adjustment </button> 
+            <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#adjustmentModalBulk">
+                <i class="bi bi-upload"></i> Bulk Adjustments
             </button>
-        </form>
+            <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#payrollRulesModal"> <i class="bi bi-sliders"></i> Payroll Rules </button>
+        </div>
 
-        
-
-        
-
-
-        {{-- TOOLS --}}
-        <button class="btn btn-ouline-secondary btn-sm"
-                data-bs-toggle="offcanvas"
-                data-bs-target="#toolsOffcanvas"
-                title="Tools">
-            <i class="bi bi-tools me-1"></i> Tools
-        </button>
-
-        {{-- PRINT --}}
+        {{-- PRINT & EMAIL --}}
         <a href="{{ route('payroll.runs.payslips', $run->id) }}"
            target="_blank"
            class="btn btn-outline-secondary btn-sm"
            data-bs-toggle="tooltip"
            title="Print Payslips">
-            <i class="bi bi-printer me-1"></i> Print
+            <i class="bi bi-printer me-1"></i> Print all
         </a>
-
 
         <form action="{{ route('payroll.email.bulk', $run) }}"
             method="POST"
-            onsubmit="return confirmBulkEmail(this)">
+            
+            class="d-inline">
             @csrf
-            <button type="submit" class="btn btn-dark btn-sm" id="emailBulkBtn">
+            <button onclick="return confirm('Send payslips to all employees in this run? This cannot be undone.')"
+                    class="btn btn-dark btn-sm" id="emailBulkBtn">
                 <i class="bi bi-envelope-paper"></i>
-                <span id="emailBulkBtnText">Email all payslips</span>
+                <span id="emailBulkBtnText">Email all</span>
             </button>
         </form>
 
-        
-        {{-- SUBMIT --}}
-        <button class="btn btn-outline-secondary btn-sm"
-                data-bs-toggle="tooltip"
-                title="Submit Payroll">
-            <i class="bi bi-send-check me-1"></i> Submit
-        </button>
-
-        {{-- FINALIZE --}}
-
+        {{-- ADMIN CONTROLS --}}
         @if(auth()->check() && auth()->user()->role === 'admin')
-            <form action="{{ route('payroll.runs.finalize', $run->id) }}" method="POST">
+            <div class="border-start ps-2"></div>
+            
+            {{-- GENERATE --}}
+            <form action="{{ route('payroll.runs.generate', $run->id) }}" method="POST" class="d-inline">
+                @csrf
+                <button type="submit" class="btn btn-warning btn-sm" onclick="return confirm('⚠️ This action cannot be undone! You are about to generate all payroll entries with default adjustments. Continue?')">
+                    <i class="bi bi-tools me-1"></i> Generate Payroll
+                </button>
+            </form>
+
+            {{-- FINALIZE --}}
+            <form action="{{ route('payroll.runs.finalize', $run->id) }}" method="POST" class="d-inline" >
                 @csrf
                 <button class="btn btn-success btn-sm"
                         data-bs-toggle="tooltip"
-                        title="Finalize Run">
+                        title="Finalize Run"
+                        onclick="return confirm('⚠️ WARNING: This action CANNOT be undone!\n\nFinalizing this payroll run will:\n• Lock the payroll run permanently\n• Prevent any further changes or adjustments\n• Make it a final, immutable record\n\nThe only way to replace this finalized run is to create a new payroll run. This run cannot be deleted.\n\nContinue?')"
+                        >
                     <i class="bi bi-check2-circle me-1"></i> Finalize
                 </button>
             </form>

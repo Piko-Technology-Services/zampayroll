@@ -17,6 +17,11 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DemoRequestController;
 use App\Http\Controllers\PaymentController;
 
+use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\AttendanceSettingsController;
+use App\Http\Controllers\AttendanceReportController;
+
+
 /*
 |--------------------------------------------------------------------------
 | GUEST ROUTES (NOT LOGGED IN)
@@ -112,7 +117,7 @@ Route::middleware('auth')->group(function () {
     // Others
     Route::get('/departments', [DashboardController::class, 'departments'])->name('departments.index');
     Route::get('/leave', [LeaveController::class, 'index'])->name('leave.index');
-    Route::get('/attendance', [DashboardController::class, 'attendance'])->name('attendance.index');
+    
     Route::get('/payroll/runs/all', [DashboardController::class, 'payroll'])->name('payroll.index');
     Route::get('/reports', [DashboardController::class, 'reports'])->name('reports.index');
 
@@ -146,6 +151,35 @@ Route::middleware('auth')->group(function () {
 // a not-yet-registered invitee has no account to authenticate with).
 Route::get('/invitations/{token}/accept', [InvitationController::class, 'accept'])->name('invitations.accept');
 Route::post('/invitations/{token}/complete', [InvitationController::class, 'complete'])->name('invitations.complete');
+
+Route::middleware(['auth'])->prefix('attendance')->name('attendance.')->group(function () {
+ 
+    Route::get('/', [AttendanceController::class, 'calendar'])->name('calendar');
+ 
+    // CSV import (kept above the {date} routes so 'import' isn't swallowed by the date wildcard)
+    Route::get('/import/sample-csv', [AttendanceController::class, 'downloadSampleCsv'])->name('import.sample');
+    Route::post('/import', [AttendanceController::class, 'import'])->name('import');
+ 
+    // Working days + holidays
+    Route::get('/settings', [AttendanceSettingsController::class, 'index'])->name('settings');
+    Route::put('/settings/work-days', [AttendanceSettingsController::class, 'updateWorkDays'])->name('settings.workdays');
+    Route::post('/settings/holidays', [AttendanceSettingsController::class, 'storeHoliday'])->name('settings.holidays.store');
+    Route::delete('/settings/holidays/{holiday}', [AttendanceSettingsController::class, 'destroyHoliday'])->name('settings.holidays.destroy');
+ 
+    // Day drill-down — date constrained to YYYY-MM-DD so it never matches 'import' or 'settings' above
+    Route::get('/{date}', [AttendanceController::class, 'day'])
+        ->where('date', '\d{4}-\d{2}-\d{2}')
+        ->name('day');
+ 
+    Route::post('/{date}', [AttendanceController::class, 'store'])
+        ->where('date', '\d{4}-\d{2}-\d{2}')
+        ->name('store');
+
+    Route::get('/report', [AttendanceReportController::class, 'index'])->name('report');
+    Route::get('/report/export', [AttendanceReportController::class, 'export'])->name('report.export');
+    
+ 
+});
 
 
 /*
