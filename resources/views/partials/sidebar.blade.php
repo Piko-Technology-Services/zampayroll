@@ -37,11 +37,12 @@
             <span class="nav-text">Departments</span>
         </a> -->
 
-        <!-- <a class="nav-link {{ request()->routeIs('leave.*') ? 'active' : '' }}"
-           href="{{ route('leave.index') }}">
+        <a class="nav-link {{ request()->routeIs('leave.*') ? 'active' : '' }}"
+           href="{{ route('leave.years') }}">
             <i class="bi bi-calendar-check nav-icon"></i>
             <span class="nav-text">Leave</span>
-        </a> -->
+        </a>
+        
 
         <a class="nav-link {{ request()->routeIs('attendance.*') ? 'active' : '' }}"
            href="{{ route('attendance.calendar') }}">

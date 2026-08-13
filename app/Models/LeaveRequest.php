@@ -6,58 +6,59 @@ use Illuminate\Database\Eloquent\Model;
 
 class LeaveRequest extends Model
 {
- protected $fillable = [
+    public const STATUSES = [
+        'pending'  => 'Pending',
+        'approved' => 'Approved',
+        'rejected' => 'Rejected',
+    ];
 
-        // Employee Details
-        'employee_name',
-        'employee_number',
-        'position',
+    // Leave categories recognised under Zambia's Employment Code Act, 2019,
+    // plus a couple of common non-statutory ones (study, unpaid, other).
+    public const TYPES = [
+        'annual'       => 'Annual Leave',
+        'sick'         => 'Sick Leave',
+        'maternity'    => 'Maternity Leave',
+        'paternity'    => 'Paternity Leave',
+        'compassionate'=> 'Compassionate / Bereavement Leave',
+        'family'       => 'Family Responsibility Leave',
+        'study'        => 'Study Leave',
+        'unpaid'       => 'Unpaid Leave',
+        'other'        => 'Other',
+    ];
 
-        // Leave Details
+    protected $fillable = [
+        'employee_id',
         'leave_type',
-        'other_leave_type',
-        'date_from',
-        'date_to',
-        'total_days',
+        'company_email',
+        'start_date',
+        'end_date',
         'return_date',
+        'days',
         'reason',
-
-        // Late Application
-        'late_application_reason',
-
-        // Applicant
-        'applicant_signature_date',
-
-        // Supervisor Section
+        'supervisor_email',
+        'documents',
         'status',
-        'supervisor_comments',
-        'supervisor_decision',
-        'supervisor_name',
-        'supervisor_position',
-        'supervisor_signature_date',
-
-        // HR Section
-        'days_accrued',
-        'days_available',
-        'days_requested',
-        'days_balance',
-        'hr_name',
-        'hr_position',
-        'hr_signature_date',
-
-        // Supporting Documents
-        'supporting_document',
-
-        // Emails
-        'email',
+        'hr_comment',
+        'reviewed_by',
+        'reviewed_at',
     ];
 
     protected $casts = [
-        'date_from' => 'date',
-        'date_to' => 'date',
+        'start_date'  => 'date',
+        'end_date'    => 'date',
         'return_date' => 'date',
-        'applicant_signature_date' => 'date',
-        'supervisor_signature_date' => 'date',
-        'hr_signature_date' => 'date',
+        'days'        => 'decimal:2',
+        'documents'   => 'array',
+        'reviewed_at' => 'datetime',
     ];
+
+    public function employee()
+    {
+        return $this->belongsTo(Employee::class);
+    }
+
+    public function reviewedBy()
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
+    }
 }

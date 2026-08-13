@@ -4,7 +4,11 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeeController;
+
+use App\Http\Controllers\LeaveApplicationController;
 use App\Http\Controllers\LeaveController;
+use App\Http\Controllers\LeaveDashboardController;
+
 use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\PayrollRunController;
 use App\Http\Controllers\PayrollRuleController;
@@ -116,7 +120,7 @@ Route::middleware('auth')->group(function () {
 
     // Others
     Route::get('/departments', [DashboardController::class, 'departments'])->name('departments.index');
-    Route::get('/leave', [LeaveController::class, 'index'])->name('leave.index');
+    // Route::get('/leave', [LeaveController::class, 'index'])->name('leave.index');
     
     Route::get('/payroll/runs/all', [DashboardController::class, 'payroll'])->name('payroll.index');
     Route::get('/reports', [DashboardController::class, 'reports'])->name('reports.index');
@@ -188,47 +192,33 @@ Route::middleware(['auth'])->prefix('attendance')->name('attendance.')->group(fu
 |--------------------------------------------------------------------------
 */
 
-Route::get('/leave/apply', [LeaveController::class, 'create'])
-    ->name('leave.apply');
-
-Route::post('/leave/apply', [LeaveController::class, 'store'])
-    ->name('leave.store');
-
-
+Route::get('/leave/apply', [LeaveApplicationController::class, 'form'])->name('leave.apply.form');
+Route::get('/leave/apply/work-days', [LeaveApplicationController::class, 'workDaysLookup'])->name('leave.apply.workdays');
+Route::post('/leave/apply', [LeaveApplicationController::class, 'store'])->name('leave.apply.store');
 /*
 |--------------------------------------------------------------------------
 | HR Dashboard
 |--------------------------------------------------------------------------
 */
 
-Route::middleware('auth')->group(function () {
-
-    Route::get('/leave', [LeaveController::class, 'index'])
-        ->name('leave.index');
-
-    Route::get('/leave/{leave}', [LeaveController::class, 'show'])
-        ->name('leave.show');
-
-    Route::post('/leave/{leave}/approve', [LeaveController::class, 'approve'])
-        ->name('leave.approve');
-
-    Route::post('/leave/{leave}/reject', [LeaveController::class, 'reject'])
-        ->name('leave.reject');
-
-        Route::delete('/leave/{leave}', [LeaveController::class, 'destroy'])
-    ->name('leave.destroy');
-
-    Route::get('/leave/{leave}/print', [LeaveController::class, 'print'])
-    ->name('leave.print');
-
-
-    Route::patch('/leave/{leave}/supervisor', [LeaveController::class, 'updateSupervisor'])
-    ->name('leave.supervisor.update');
-
-    Route::patch('/leave/{leave}/hr', [LeaveController::class, 'updateHr'])
-        ->name('leave.hr.update');
-
+Route::middleware(['auth'])->prefix('leave')->name('leave.')->group(function () {
+ 
+    Route::get('/', [LeaveController::class, 'years'])->name('years');
+ 
+    Route::get('/dashboard/requests', [LeaveDashboardController::class, 'index'])->name('dashboard');
+    Route::post('/dashboard/requests/{leaveRequest}/approve', [LeaveDashboardController::class, 'approve'])->name('approve');
+    Route::post('/dashboard/requests/{leaveRequest}/reject', [LeaveDashboardController::class, 'reject'])->name('reject');
+ 
+    Route::get('/{year}', [LeaveController::class, 'sheet'])
+        ->where('year', '\d{4}')
+        ->name('sheet');
+ 
+    Route::put('/{year}', [LeaveController::class, 'sheetUpdate'])
+        ->where('year', '\d{4}')
+        ->name('sheet.update');
+ 
 });
+
 
 Route::get('/payroll/rules', function () {
     return "RULES WORKING";
