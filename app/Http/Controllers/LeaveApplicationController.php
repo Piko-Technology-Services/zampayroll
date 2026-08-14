@@ -122,6 +122,9 @@ class LeaveApplicationController extends Controller
     {
         $employee = $leaveRequest->employee;
 
+        // These emails come from the users table (users.email) for users
+        // belonging to the same company (users.company_id) with the
+        // role 'company_admin'. We pluck the email column into an array.
         $adminEmails = User::where('company_id', $employee->company_id)
             ->where('role', 'company_admin')
             ->pluck('email')

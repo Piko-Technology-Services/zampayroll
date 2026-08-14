@@ -55,7 +55,7 @@
         </form>
 
         {{-- ADMIN CONTROLS --}}
-        @if(auth()->check() && auth()->user()->role === 'admin')
+        @if(auth()->check() && auth()->user()->role === 'company_admin' && $run->status !== 'Finalized')
             <div class="border-start ps-2"></div>
             
             {{-- GENERATE --}}
@@ -195,9 +195,9 @@
 
                             <form action="{{ route('payroll.email.single', $payroll) }}"
                                 method="POST"
-                                onsubmit="return confirmSingleEmail(this)">
+                                
                                 @csrf
-                                <button type="submit" class="btn btn-sm btn-outline-success" id="emailSingleBtn">
+                                <button onclick="return confirmSingleEmail(this.form);" class="btn btn-sm btn-outline-success" id="emailSingleBtn">
                                     <i class="bi bi-share me-1"></i>
                                 </button>
                             </form>
