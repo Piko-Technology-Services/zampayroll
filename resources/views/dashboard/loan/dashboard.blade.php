@@ -81,40 +81,50 @@
 </div>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
 .lnd * { box-sizing: border-box; }
 .lnd {
-    --paper: #FAF8F3; --ink: #17263A; --ink-soft: #58687D; --ink-faint: #93A0B2;
-    --brass: #9C7A32; --brass-soft: #E9DFC7; --line: #E1DACB;
-    --active: #2F6F4E; --active-bg: #EAF3EC; --warn: #9B3A2A; --warn-bg: #F7E7E2;
+    --paper: #ffffff;
+    --ink: #00742E;
+    --ink-soft: #58687D;
+    --ink-faint: #93A0B2;
+    --brass: #00742E;
+    --brass-soft: #EAF7ED;
+    --line: #D9E9DE;
+    --accent-orange: #E97B00;
+    --accent-red: #D50115;
+    --active: #00742E;
+    --active-bg: #EAF7ED;
+    --warn: #D50115;
+    --warn-bg: #FDEBEC;
     font-family: 'IBM Plex Sans', sans-serif; color: var(--ink); background: var(--paper); padding: 1.5rem 0 2.5rem;
 }
 .lnd-header { margin-bottom: 1rem; }
-.lnd-eyebrow { font-family: 'Roboto Slab', serif; font-size: .68rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--brass); margin-bottom: .2rem; }
-.lnd-title { font-family: 'Roboto Slab', serif; font-size: 1.4rem; font-weight: 700; margin: 0; }
-.lnd-alert { border-radius: 6px; font-size: .84rem; padding: .7rem 1rem; margin-bottom: 1rem; background: var(--active-bg); color: var(--active); border: 1px solid #C7E0CD; }
+.lnd-eyebrow { font-family: 'IBM Plex Sans', sans-serif; font-size: .68rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--brass); margin-bottom: .2rem; }
+.lnd-title { font-family: 'IBM Plex Sans', sans-serif; font-size: 1.4rem; font-weight: 700; margin: 0; }
+.lnd-alert { border-radius: 6px; font-size: .84rem; padding: .7rem 1rem; margin-bottom: 1rem; background: var(--active-bg); color: var(--active); border: 1px solid var(--line); }
 
 .lnd-tabs { display: flex; gap: .4rem; margin-bottom: 1rem; }
 .lnd-tab { display: inline-flex; align-items: center; gap: .4rem; font-size: .8rem; font-weight: 600; padding: .5rem .9rem; border-radius: 6px; text-decoration: none; color: var(--ink-soft); border: 1px solid var(--line); background: #fff; }
 .lnd-tab-active { background: var(--ink); color: #fff; border-color: var(--ink); }
-.lnd-tab-count { font-family: 'IBM Plex Mono', monospace; font-size: .68rem; background: rgba(0,0,0,.08); padding: .05rem .4rem; border-radius: 10px; }
+.lnd-tab-count { font-size: .68rem; background: rgba(0,116,46,.08); padding: .05rem .4rem; border-radius: 10px; }
 .lnd-tab-active .lnd-tab-count { background: rgba(255,255,255,.2); }
 
 .lnd-card { background: #fff; border: 1px solid var(--line); border-radius: 6px; overflow-x: auto; }
 .lnd-table { width: 100%; border-collapse: collapse; font-size: .82rem; min-width: 900px; }
-.lnd-table thead th { font-family: 'Roboto Slab', serif; font-size: .64rem; font-weight: 600; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .06em; padding: .8rem 1rem; border-bottom: 2px solid var(--ink); text-align: left; background: #FCFBF8; }
+.lnd-table thead th { font-family: 'IBM Plex Sans', sans-serif; font-size: .64rem; font-weight: 600; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .06em; padding: .8rem 1rem; border-bottom: 2px solid var(--ink); text-align: left; background: #F9FCFA; }
 .lnd-table thead th.num, .lnd-table td.num { text-align: right; }
 .lnd-table td { padding: .6rem 1rem; border-bottom: 1px solid var(--line); vertical-align: middle; }
-.lnd-mono { font-family: 'IBM Plex Mono', monospace; }
+.lnd-mono { font-family: 'IBM Plex Sans', sans-serif; }
 .lnd-emp-name { font-weight: 600; font-size: .82rem; }
-.lnd-emp-id { font-family: 'IBM Plex Mono', monospace; font-size: .66rem; color: var(--ink-faint); }
+.lnd-emp-id { font-size: .66rem; color: var(--ink-faint); }
 .lnd-td-muted { color: var(--ink-faint); font-size: .72rem; }
 .lnd-empty { text-align: center; color: var(--ink-faint); padding: 1.5rem 0 !important; }
 .lnd-doc-link { display: block; font-size: .74rem; color: var(--ink-soft); text-decoration: none; margin-bottom: .2rem; }
 .lnd-doc-link:hover { color: var(--brass); }
 
 .lnd-status { display: inline-block; font-size: .68rem; font-weight: 700; padding: .2rem .6rem; border-radius: 4px; text-transform: uppercase; }
-.lnd-status-pending { background: #FBEEE0; color: #B5651D; }
+.lnd-status-pending { background: #FFF2E7; color: var(--accent-orange); }
 .lnd-status-approved { background: var(--active-bg); color: var(--active); }
 .lnd-status-rejected { background: var(--warn-bg); color: var(--warn); }
 
@@ -123,9 +133,9 @@
 .lnd-comment { font-size: .74rem; padding: .3rem .5rem; border: 1px solid var(--line); border-radius: 4px; width: 110px; }
 .lnd-btn { width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border-radius: 5px; border: 1px solid var(--line); background: #fff; cursor: pointer; }
 .lnd-btn-approve { color: var(--active); }
-.lnd-btn-approve:hover { background: var(--active-bg); border-color: #C7E0CD; }
+.lnd-btn-approve:hover { background: var(--active-bg); border-color: var(--line); }
 .lnd-btn-reject { color: var(--warn); }
-.lnd-btn-reject:hover { background: var(--warn-bg); border-color: #E3C6BC; }
+.lnd-btn-reject:hover { background: var(--warn-bg); border-color: #F2C7CC; }
 </style>
 
 @endsection

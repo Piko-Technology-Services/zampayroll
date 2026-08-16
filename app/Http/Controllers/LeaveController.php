@@ -159,7 +159,7 @@ class LeaveController extends Controller
         $entitled = (float) ($employee->leave_days_entitled ?? 24);
         $balance  = $entitled - $totalTaken;
 
-        $grossForLeave = $employee->natural_gross_salary ?? $employee->salary ?? 0;
+        $grossForLeave = $employee->natural_gross_salary ?? $employee->net_salary ?? 0;
         $dailyRate = $employee->leave_days_value ?? ($grossForLeave / $employee->working_days_per_month);
         $amountPayable = round($balance * $dailyRate, 2);
 
