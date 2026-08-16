@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Employee;
 use App\Models\LeaveRecord;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 
 class LeaveController extends Controller
 {
@@ -15,8 +16,6 @@ class LeaveController extends Controller
     {
         $currentYear = (int) now()->format('Y');
 
-        // Years that already have leave activity, plus a sensible window
-        // around today so a brand-new company still sees clickable years.
         $activeYears = LeaveRecord::selectRaw('DISTINCT year')->pluck('year')->toArray();
         $window = range($currentYear - 2, $currentYear + 1);
 
@@ -50,20 +49,15 @@ class LeaveController extends Controller
             }
 
             $total = array_sum($monthly);
-            $entitled = (float) ($employee->leave_days_entitled ?? 24);
-            $balance = $employee->leave_days_balance !== null
-                ? (float) $employee->leave_days_balance
-                : max(0, $entitled - $total);
-            $dailyRate = $employee->leave_days_value ?? ($employee->salary ? $employee->salary / 26 : 0);
-            $amountPayable = round($balance * $dailyRate, 2);
+            $calc  = $this->recalculateEmployeeLeave($employee, $total);
 
             $rows[] = [
                 'employee'      => $employee,
                 'monthly'       => $monthly,
                 'total'         => $total,
-                'entitled'      => $entitled,
-                'balance'       => $balance,
-                'amountPayable' => $amountPayable,
+                'entitled'      => $calc['entitled'],
+                'balance'       => $calc['balance'],
+                'amountPayable' => $calc['amountPayable'],
             ];
         }
 
@@ -76,7 +70,47 @@ class LeaveController extends Controller
     }
 
     /**
-     * Manual HR edit of the master sheet — bulk upsert of every cell.
+     * Single-cell realtime update — called on blur/change of one day-taken
+     * input. Upserts that one LeaveRecord, recomputes the employee's yearly
+     * total, persists the recalculated leave_days_balance, and returns the
+     * fresh row totals as JSON so the frontend can update in place without
+     * a full page reload.
+     */
+    public function updateCell(Request $request, int $year): JsonResponse
+    {
+        $validated = $request->validate([
+            'employee_id' => 'required|integer|exists:employees,id',
+            'month'       => 'required|integer|between:1,12',
+            'days_taken'  => 'nullable|numeric|min:0|max:31',
+        ]);
+
+        $employee = Employee::findOrFail($validated['employee_id']);
+        $days = $validated['days_taken'] ?? 0;
+
+        LeaveRecord::updateOrCreate(
+            ['employee_id' => $employee->id, 'year' => $year, 'month' => $validated['month']],
+            ['days_taken' => $days]
+        );
+
+        $total = (float) LeaveRecord::where('employee_id', $employee->id)
+            ->where('year', $year)
+            ->sum('days_taken');
+
+        $calc = $this->recalculateEmployeeLeave($employee, $total, persist: true);
+
+        return response()->json([
+            'employee_id'   => $employee->id,
+            'total'         => $total,
+            'entitled'      => $calc['entitled'],
+            'balance'       => $calc['balance'],
+            'amountPayable' => $calc['amountPayable'],
+        ]);
+    }
+
+    /**
+     * Manual HR edit of the master sheet — bulk upsert of every cell,
+     * then recalculate + persist every affected employee's balance so the
+     * "Save Sheet" button stays consistent with the realtime cell updates.
      */
     public function sheetUpdate(Request $request, int $year)
     {
@@ -93,8 +127,50 @@ class LeaveController extends Controller
                     ['days_taken' => $days ?: 0]
                 );
             }
+
+            $employee = Employee::find($employeeId);
+            if ($employee) {
+                $total = (float) LeaveRecord::where('employee_id', $employeeId)
+                    ->where('year', $year)
+                    ->sum('days_taken');
+
+                $this->recalculateEmployeeLeave($employee, $total, persist: true);
+            }
         }
 
         return back()->with('success', "Leave sheet for {$year} updated.");
+    }
+
+    /**
+     * Shared balance/rate/amount-payable math, used by sheet() (read-only
+     * display), updateCell() (realtime single-cell save), and sheetUpdate()
+     * (bulk save) — kept in one place so all three stay in sync.
+     *
+     * balance is always recomputed as entitled - total taken. This means
+     * leave_days_balance is treated as a *derived* value driven by the
+     * leave_records table, not a standing manual figure — so any HR
+     * override previously placed directly on the employee record will be
+     * superseded the next time a day is recorded here. If you need to
+     * preserve manual overrides independent of days taken, that's a
+     * behavior change worth flagging before shipping this.
+     */
+    private function recalculateEmployeeLeave(Employee $employee, float $totalTaken, bool $persist = false): array
+    {
+        $entitled = (float) ($employee->leave_days_entitled ?? 24);
+        $balance  = $entitled - $totalTaken;
+
+        $grossForLeave = $employee->natural_gross_salary ?? $employee->salary ?? 0;
+        $dailyRate = $employee->leave_days_value ?? ($grossForLeave / $employee->working_days_per_month);
+        $amountPayable = round($balance * $dailyRate, 2);
+
+        if ($persist && $employee->leave_days_balance !== $balance) {
+            $employee->update(['leave_days_balance' => $balance]);
+        }
+
+        return [
+            'entitled'      => $entitled,
+            'balance'       => $balance,
+            'amountPayable' => $amountPayable,
+        ];
     }
 }

@@ -753,7 +753,41 @@ function formatMoney(value)
         banner.style.display = 'flex';
         document.getElementById('esRuleBannerText').textContent = d.name + ' selected';
 
-        document.getElementById('adjAmount').focus();
+        const isOvertime = d.code === 'P04'; // matches the seeded Overtime rule code
+
+        document.getElementById('adjAmount').style.display = isOvertime ? 'none' : '';
+        document.getElementById('esOvertimeInputs').style.display = isOvertime ? 'block' : 'none';
+
+        if (isOvertime) {
+            document.getElementById('esOtHours').value = '';
+            document.getElementById('esOtType').value = 'normal';
+            document.getElementById('adjAmount').value = '0.00';
+            document.getElementById('esOtHours').focus();
+        } else {
+            document.getElementById('adjAmount').focus();
+        }
+    };
+
+    // New function — computes the amount and 
+    // writes it (and a descriptive name) into the existing fields.
+
+    window.esRecalculateOvertimeAmount = function () {
+        const ctx = document.querySelector('[data-payroll-id]');
+        const gross = parseFloat(ctx.dataset.naturalGross || 0);
+        const workingDays = parseFloat(ctx.dataset.workingDays || 26);
+        const dailyRate = workingDays > 0 ? gross / workingDays : 0;
+
+        const hours = parseFloat(document.getElementById('esOtHours').value) || 0;
+        const otType = document.getElementById('esOtType').value;
+        const multiplier = otType === 'double' ? 2.0 : 1.5;
+
+        // Normal OT = (DailyRate / 8) x 1.5 x Hours | Double OT = (DailyRate / 8) x 2 x Hours
+        const amount = (dailyRate / 8) * multiplier * hours;
+
+        document.getElementById('adjAmount').value = amount.toFixed(2);
+
+        const typeLabel = otType === 'double' ? 'Double Time' : 'Normal Overtime';
+        document.getElementById('adjName').value = `Overtime (${typeLabel}) — ${hours || 0} hrs`;
     };
 
     /* ── Clear rule selection ─────────────────────────────────── */
@@ -764,6 +798,8 @@ function formatMoney(value)
         document.getElementById('esRuleBanner').style.display = 'none';
         document.getElementById('adjName').value   = '';
         document.getElementById('adjAmount').value = '';
+        document.getElementById('adjAmount').style.display = '';       // ← new
+        document.getElementById('esOvertimeInputs').style.display = 'none'; // ← new
         esMakeFormEditable();
     };
 

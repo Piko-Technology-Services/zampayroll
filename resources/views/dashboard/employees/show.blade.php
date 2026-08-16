@@ -28,6 +28,7 @@
             <span>ID</span>
             <span>PERSONAL</span>
             <span>EMPLOYMENT</span>
+            <span>PAYROLL</span>
             <span>FINANCE</span>
             <span>DOCS</span>
         </div>
@@ -117,10 +118,10 @@
                 @endif
             </div>
 
-            @if($employee->salary)
+            @if($employee->net_salary)
             <div class="hrf-salary-stamp">
-                <div class="hrf-salary-label">Monthly Salary</div>
-                <div class="hrf-salary-amount">K {{ number_format($employee->salary, 2) }}</div>
+                <div class="hrf-salary-label">Monthly Net Salary</div>
+                <div class="hrf-salary-amount">K {{ number_format($employee->net_salary, 2) }}</div>
             </div>
             @endif
 
@@ -184,6 +185,7 @@
                 </div>
             </section>
 
+
             @if($employee->probation_start || $employee->probation_end || $employee->contract_start || $employee->contract_end)
             <section class="hrf-section">
                 <div class="hrf-section-head"><span class="hrf-section-no">03</span>Employment Dates</div>
@@ -213,7 +215,28 @@
             @endif
 
             <section class="hrf-section">
-                <div class="hrf-section-head"><span class="hrf-section-no">04</span>Documents</div>
+                <div class="hrf-section-head"><span class="hrf-section-no">04</span>Payroll &amp; Leave</div>
+                <div class="hrf-grid">
+                    @if($employee->net_salary)
+                    <div class="hrf-field"><div class="hrf-field-label">Net Salary</div><div class="hrf-field-value">K {{ number_format($employee->net_salary, 2) }}</div></div>
+                    @endif
+                    @if($employee->natural_gross_salary)
+                    <div class="hrf-field"><div class="hrf-field-label">Gross Salary</div><div class="hrf-field-value">K {{ number_format($employee->natural_gross_salary, 2) }}</div></div>
+                    @endif
+                    @if(!is_null($employee->leave_days_entitled))
+                    <div class="hrf-field"><div class="hrf-field-label">Leave Days Entitled</div><div class="hrf-field-value">{{ $employee->leave_days_entitled }}</div></div>
+                    @endif
+                    @if(!is_null($employee->leave_days_balance))
+                    <div class="hrf-field"><div class="hrf-field-label">Leave Days Balance</div><div class="hrf-field-value">{{ $employee->leave_days_balance }}</div></div>
+                    @endif
+                    @if($employee->leave_days_value)
+                    <div class="hrf-field"><div class="hrf-field-label">Leave Day Value</div><div class="hrf-field-value">K {{ number_format($employee->leave_days_value, 2) }}</div></div>
+                    @endif
+                </div>
+            </section>
+
+            <section class="hrf-section">
+                <div class="hrf-section-head"><span class="hrf-section-no">05</span>Documents</div>
                 <div class="hrf-docs">
                     @if(!empty($employee->uploads))
                         @foreach($employee->uploads as $doc)

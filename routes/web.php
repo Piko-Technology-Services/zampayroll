@@ -25,6 +25,11 @@ use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AttendanceSettingsController;
 use App\Http\Controllers\AttendanceReportController;
 
+use App\Http\Controllers\OvertimeApplicationController;
+use App\Http\Controllers\OvertimeDashboardController;
+
+use App\Http\Controllers\LoanApplicationController;
+use App\Http\Controllers\LoanDashboardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -216,7 +221,33 @@ Route::middleware(['auth'])->prefix('leave')->name('leave.')->group(function () 
     Route::put('/{year}', [LeaveController::class, 'sheetUpdate'])
         ->where('year', '\d{4}')
         ->name('sheet.update');
+    
+    Route::post('/{year}/cell', [LeaveController::class, 'updateCell'])
+        ->where('year', '\d{4}')
+        ->name('cell.update');
  
+});
+
+// PUBLIC — outside your auth group, alongside leave.apply.*
+Route::get('/overtime/apply', [OvertimeApplicationController::class, 'form'])->name('overtime.apply.form');
+Route::post('/overtime/apply', [OvertimeApplicationController::class, 'store'])->name('overtime.apply.store');
+ 
+// AUTHENTICATED — inside your auth group, alongside leave.* / attendance.*
+Route::middleware(['auth'])->prefix('overtime')->name('overtime.')->group(function () {
+    Route::get('/dashboard/requests', [OvertimeDashboardController::class, 'index'])->name('dashboard');
+    Route::post('/dashboard/requests/{overtimeRequest}/approve', [OvertimeDashboardController::class, 'approve'])->name('approve');
+    Route::post('/dashboard/requests/{overtimeRequest}/reject', [OvertimeDashboardController::class, 'reject'])->name('reject');
+});
+
+// PUBLIC — outside your auth group, alongside leave.apply.* / overtime.apply.*
+Route::get('/loan/apply', [LoanApplicationController::class, 'form'])->name('loan.apply.form');
+Route::post('/loan/apply', [LoanApplicationController::class, 'store'])->name('loan.apply.store');
+ 
+// AUTHENTICATED — inside your auth group
+Route::middleware(['auth'])->prefix('loan')->name('loan.')->group(function () {
+    Route::get('/dashboard/requests', [LoanDashboardController::class, 'index'])->name('dashboard');
+    Route::post('/dashboard/requests/{loanRequest}/approve', [LoanDashboardController::class, 'approve'])->name('approve');
+    Route::post('/dashboard/requests/{loanRequest}/reject', [LoanDashboardController::class, 'reject'])->name('reject');
 });
 
 

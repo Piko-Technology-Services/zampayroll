@@ -93,6 +93,11 @@ class Employee extends Model
         'tpin',
         'salary',
         'net_salary',
+        'leave_days_entitled',
+        'leave_days_balance',
+        'leave_days_value',
+        'natural_gross_salary',
+        'daily_rate_salary',
 
         /*
         |--------------------------------------------------------------------------
@@ -178,5 +183,12 @@ class Employee extends Model
     public function company()
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function getWorkingDaysPerMonthAttribute(): int
+    {
+        $days = $this->company?->working_days_per_month;
+
+        return ($days && $days > 0) ? (int) $days : 26;
     }
 }

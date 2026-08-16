@@ -16,6 +16,7 @@ class Company extends Model
         'phone',
         'address',
         'work_days',
+        'working_days_per_month',
         'tpin',
         'access_code',
         'access_code_active',
@@ -24,6 +25,7 @@ class Company extends Model
     protected $casts = [
         'access_code_active' => 'boolean',
         'work_days' => 'array',
+        'working_days_per_month' => 'integer',
     ];
 
     public function users()

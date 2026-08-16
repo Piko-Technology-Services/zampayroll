@@ -18,7 +18,6 @@ class AttendanceSettingsController extends Controller
 
     public function updateWorkDays(Request $request)
     {
-
         \Log::info('Attendance workdays debug', [
             'user_id'    => $request->user()?->id,
             'company_id' => $request->user()?->company_id,
@@ -28,6 +27,7 @@ class AttendanceSettingsController extends Controller
         $request->validate([
             'work_days'   => 'array',
             'work_days.*' => 'integer|between:1,7',
+            'working_days_per_month' => 'nullable|integer|min:1|max:31',
         ]);
 
         $user = $request->user();
@@ -36,7 +36,10 @@ class AttendanceSettingsController extends Controller
         abort_unless($company, 404);
         abort_unless($user->isCompanyAdmin(), 403);
 
-        $company->update(['work_days' => $request->input('work_days', [])]);
+        $company->update([
+            'work_days' => $request->input('work_days', []),
+            'working_days_per_month' => $request->input('working_days_per_month', $company->working_days_per_month),
+        ]);
 
         return back()->with('success', 'Working days updated.');
     }

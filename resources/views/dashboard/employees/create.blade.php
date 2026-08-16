@@ -207,7 +207,7 @@
                 </div>
                 <div class="empf-field">
                     <label class="empf-label">NET Salary</label>
-                    <input type="number" class="empf-input" name="salary">
+                    <input type="number" class="empf-input" name="net_salary">
                 </div>
                 <div class="empf-field">
                     <label class="empf-label">SSN NAPSA</label>
@@ -224,6 +224,24 @@
                     <input class="empf-input" name="tpin">
                 </div>
                 
+            </div>
+        </div>
+
+        {{-- ================= LEAVE ENTITLEMENT ================= --}}
+        <div class="empf-card">
+            <div class="empf-section-label">Leave Entitlement</div>
+
+            <div class="empf-grid empf-grid-2">
+                <div class="empf-field">
+                    <label class="empf-label">Leave Days Entitled</label>
+                    <input type="number" step="0.5" min="0" class="empf-input" name="leave_days_entitled">
+                    <small class="empf-hint">Full annual entitlement — prorate this for employees starting mid-year.</small>
+                </div>
+                <div class="empf-field">
+                    <label class="empf-label">Leave Days Balance</label>
+                    <input type="number" step="0.5" min="0" class="empf-input" name="leave_days_balance">
+                    <small class="empf-hint">Days currently available to the employee (starting balance).</small>
+                </div>
             </div>
         </div>
 
@@ -332,6 +350,8 @@
     padding-bottom: .6rem;
     margin-bottom: 1.1rem;
 }
+
+.empf-hint { font-size: .7rem; color: #94A3B8; margin-top: -.15rem; }
 
 /* ---- Grid / fields ---- */
 .empf-grid { display: grid; gap: 1rem; }

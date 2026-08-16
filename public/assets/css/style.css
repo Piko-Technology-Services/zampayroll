@@ -1738,3 +1738,85 @@ html[data-theme="dark"] {
     border-radius: 8px;
     color: #000;
 }
+
+/* ---- Sidebar dropdown groups ---- */
+.nav-group {
+  display: grid;
+}
+
+.nav-group-toggle {
+  position: relative;
+  cursor: pointer;
+}
+
+.nav-caret {
+  margin-left: auto;
+  font-size: 0.72rem;
+  transition: transform 0.18s ease;
+  flex: 0 0 auto;
+}
+
+.nav-group-toggle[aria-expanded="true"] .nav-caret,
+.nav-group.open .nav-caret {
+  transform: rotate(180deg);
+}
+
+.nav-submenu {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.35rem 0.25rem 0.35rem 0.05rem;
+}
+
+.nav-sublink {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 6px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--admin-sidebar-muted, #9ca3af);
+  white-space: nowrap;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.nav-sublink i {
+  font-size: 0.85rem;
+  width: 16px;
+  text-align: center;
+  flex: 0 0 auto;
+}
+
+.nav-sublink:hover,
+.nav-sublink:focus,
+.nav-sublink.active {
+  background: var(--admin-sidebar-soft);
+  color: var(--admin-sidebar-text-strong, #ffffff);
+}
+
+.nav-group-label {
+  margin: 0.9rem 0.25rem 0.35rem;
+  padding: 0 0.65rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--admin-sidebar-muted, #9ca3af);
+  opacity: 0.75;
+}
+
+.nav-link-public {
+  opacity: 0.92;
+}
+
+.nav-link-public .nav-icon {
+  font-size: 0.82rem;
+}
+
+/* Mini/collapsed sidebar: hide submenus and group labels entirely,
+   consistent with how .nav-text/.brand-copy already collapse */
+body.sidebar-mini .nav-submenu,
+body.sidebar-mini .nav-group-label,
+body.sidebar-mini .nav-caret {
+  display: none;
+}

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Employee;
+use App\Services\PayrollEngine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -44,6 +45,8 @@ class EmployeeController extends Controller
             'gender' => 'required',
             'primary_phone' => 'required',
             'position' => 'required',
+            'leave_days_entitled' => 'nullable|numeric|min:0',
+            'leave_days_balance' => 'nullable|numeric|min:0',
         ]);
 
         // Generate Employee ID (EIN)
@@ -97,7 +100,9 @@ class EmployeeController extends Controller
             'ssn' => $request->ssn,
             'nhima_no' => $request->nhima_no,
             'tpin' => $request->tpin,
-            'salary' => $request->salary,
+            'net_salary' => $request->net_salary,
+            'leave_days_entitled' => $request->leave_days_entitled,
+            'leave_days_balance' => $request->leave_days_balance,
 
             'uploads' => null,
         ]);
@@ -125,6 +130,13 @@ class EmployeeController extends Controller
                 'uploads' => $uploads
             ]);
         }
+
+        // Seed natural_gross_salary / daily_rate_salary / leave_days_value
+        // /leave_days_balance so leave, overtime, and other modules have
+        // values to work with right away. Wrapped defensively — priming
+        // depends on payroll_rules being seeded, and a failure here should
+        // never block employee creation.
+        $this->primeDerivedSalaryValues($employee);
 
         return redirect()->route('employees.index')
             ->with('success', 'Employee created successfully');
@@ -165,7 +177,9 @@ public function update(Request $request, Employee $employee)
         'gender' => 'nullable|string',
         'primary_phone' => 'nullable',
         'position' => 'required',
-        'salary' => 'nullable|numeric',
+        'net_salary' => 'nullable|numeric',
+        'leave_days_entitled' => 'nullable|numeric|min:0',
+        'leave_days_balance' => 'nullable|numeric|min:0',
     ]);
 
     // 2. SAFE DATA (NO $request->all())
@@ -209,7 +223,13 @@ public function update(Request $request, Employee $employee)
     $employee->nhima_no = $request->nhima_no;
     $employee->tpin = $request->tpin;
 
-    $employee->salary = $request->salary ? (float) $request->salary : null;
+    $employee->net_salary = $request->net_salary ? (float) $request->net_salary : null;
+    $employee->leave_days_entitled = $request->leave_days_entitled !== null && $request->leave_days_entitled !== ''
+        ? (float) $request->leave_days_entitled
+        : null;
+    $employee->leave_days_balance = $request->leave_days_balance !== null && $request->leave_days_balance !== ''
+        ? (float) $request->leave_days_balance
+        : null;
 
     // 3. PASSPORT PHOTO UPLOAD
     if ($request->hasFile('passport_photo')) {
@@ -239,6 +259,10 @@ public function update(Request $request, Employee $employee)
 
     // 5. SAVE
     $employee->save();
+
+    // 6. Re-prime derived salary values in case salary, assignments, or
+    //    entitlements changed. Same defensive wrapper as store().
+    $this->primeDerivedSalaryValues($employee);
 
     return redirect()->route('employees.index')
         ->with('success', 'Employee updated successfully');
@@ -295,7 +319,7 @@ public function downloadSampleCsv()
         'ssn',
         'nhima_no',
         'tpin',
-        'salary',
+        'net_salary',
     ];
 
     $filename = 'employee_import_template.csv';
@@ -363,7 +387,7 @@ public function import(Request $request)
 
         $data = array_combine($header, $row);
 
-        Employee::create([
+        $employee = Employee::create([
             'employee_id' => $data['employee_id'] ?? null,
             'first_name' => $data['first_name'] ?? null,
             'middle_name' => $data['middle_name'] ?? null,
@@ -404,13 +428,45 @@ public function import(Request $request)
             'ssn' => $data['ssn'] ?? null,
             'nhima_no' => $data['nhima_no'] ?? null,
             'tpin' => $data['tpin'] ?? null,
-            'salary' => $data['salary'] ?? null,
+            'net_salary' => $data['net_salary'] ?? null,
+            'leave_days_entitled' => $data['leave_days_entitled'] ?? null,
+            'leave_days_balance' => $data['leave_days_balance'] ?? null,
         ]);
+
+        // Same priming as the single-employee create flow, so imported
+        // employees get natural_gross_salary / daily_rate_salary too.
+        $this->primeDerivedSalaryValues($employee);
     }
 
     fclose($file);
 
     return back()->with('success', 'Employees imported successfully.');
 }
+
+    /*
+    |--------------------------------------------------------------------------
+    | PRIME DERIVED SALARY VALUES (natural_gross_salary, daily_rate_salary,
+    | leave_days_value / leave_days_balance seeds) via PayrollEngine.
+    |
+    | NOTE: PayrollEngine::primeEmployeeInitialValues() reads
+    | $employee->net_salary as its target net figure. This form's "salary"
+    | field is what's saved to the `salary` column — if your schema uses a
+    | separate `net_salary` column set elsewhere (e.g. a payroll setup
+    | screen), priming will use that value as-is. If `net_salary` isn't
+    | populated yet for an employee, priming is skipped for that employee
+    | (see the guard inside PayrollEngine) rather than guessing at a value.
+    |--------------------------------------------------------------------------
+    */
+    private function primeDerivedSalaryValues(Employee $employee): void
+    {
+        try {
+            (new PayrollEngine())->primeEmployeeInitialValues($employee);
+        } catch (\Throwable $e) {
+            \Log::warning('EmployeeController: failed to prime derived salary values', [
+                'employee_id' => $employee->id,
+                'error'       => $e->getMessage(),
+            ]);
+        }
+    }
 
 }

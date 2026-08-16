@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\Employee;
 use App\Models\Payroll;
 use App\Models\PayrollItem;
 use App\Models\PayrollRule;
@@ -42,14 +41,6 @@ class PayrollEngine
     private Collection $deductionRules;
     private Collection $systemRules;
 
-
-    private int $workingDaysPerMonth;
-
-    private function loadWorkingDaysPerMonth(Employee $employee): void
-    {
-        $this->workingDaysPerMonth = $employee->working_days_per_month;
-    }
-
     // =========================================================================
     // PUBLIC ENTRY POINT
     // =========================================================================
@@ -65,7 +56,6 @@ class PayrollEngine
 
         // 1. Load rules
         $this->loadRules();
-        $this->loadWorkingDaysPerMonth($employee);
 
         // 2. Load per-employee data
         $assignments    = $this->loadAssignments($employee->id);
@@ -179,115 +169,6 @@ class PayrollEngine
         ]);
 
         return $payroll;
-    }
-
-    // =========================================================================
-    // EMPLOYEE INITIAL / DERIVED VALUES
-    // (natural_gross_salary, daily_rate_salary, leave_days_value/balance seeds
-    // — used by Leave, Overtime, and other modules ahead of any payroll run)
-    // =========================================================================
-
-    /**
-     * Compute and persist an employee's derived salary fields from their
-     * net_salary target and *standing* payroll rules/assignments — no
-     * payroll run required. Safe to call when an employee is created or
-     * their salary/assignments change, so leave/overtime calculations
-     * always have a value to work with even before a first payroll run.
-     *
-     * natural_gross_salary = Basic Pay + all recurring earnings
-     *                        (built-in allowances, recurring rule earnings,
-     *                        recurring assignment earnings). Run-specific
-     *                        one-off adjustments are intentionally excluded
-     *                        — those aren't part of a "natural"/standing gross.
-     *
-     * daily_rate_salary    = natural_gross_salary / company.working_days_per_month
-    *                        (falls back to 26 if the employee has no company
-    *                        or the company hasn't set a value).
-     * leave_days_value      seeded to the same daily rate, but only if HR
-     *                        hasn't already set a manual override.
-     * leave_days_balance     seeded to leave_days_entitled, but only if null
-     *                        (i.e. never overwrites an existing balance).
-     */
-    public function primeEmployeeInitialValues(Employee $employee): Employee
-    {
-        $this->targetNet = (float) ($employee->net_salary ?? 0);
-
-        if ($this->targetNet <= 0) {
-            Log::warning("PayrollEngine::primeEmployeeInitialValues: Employee {$employee->id} has zero target net — skipped.");
-            return $employee;
-        }
-
-        $this->loadRules();
-        $this->loadWorkingDaysPerMonth($employee);
-
-        $assignments = $this->loadAssignments($employee->id);
-
-        $this->grossMult = $this->computeGrossMultiplier();
-        $this->napsaCap  = $this->loadNapsaCap();
-
-        $this->grossPay = $this->solveGross($assignments);
-        $this->basicPay = $this->grossMult > 0
-            ? $this->grossPay / $this->grossMult
-            : $this->grossPay;
-
-        $basic           = round($this->basicPay, 2);
-        $allowanceTotals = $this->resolveAllowanceTotals($basic);
-        $grossBuiltIn    = $basic + array_sum($allowanceTotals);
-
-        [$rulesTaxable, $rulesNapsaOnly, $rulesNonTaxable] = $this->partitionRuleEarnings();
-        $assignmentEarnings = $this->sumAssignmentEarnings($assignments);
-
-        $naturalGross = round(
-            $grossBuiltIn + $rulesTaxable + $rulesNapsaOnly + $rulesNonTaxable + $assignmentEarnings,
-            2
-        );
-
-        $dailyRate = round($naturalGross / $this->workingDaysPerMonth, 2);
-
-        $updates = [
-            'natural_gross_salary' => $naturalGross,
-            'daily_rate_salary'    => $dailyRate,
-        ];
-
-        // Only seed these if they haven't already been set (manually or by
-        // a previous prime) — never clobber a value HR has deliberately set.
-        if ($employee->leave_days_value === null) {
-            $updates['leave_days_value'] = $dailyRate;
-        }
-        if ($employee->leave_days_balance === null) {
-            $updates['leave_days_balance'] = $employee->leave_days_entitled ?? 24;
-        }
-
-        $employee->update($updates);
-
-        Log::info('PayrollEngine: primed employee derived values', [
-            'employee_id'          => $employee->id,
-            'natural_gross_salary' => $naturalGross,
-            'daily_rate_salary'    => $dailyRate,
-        ]);
-
-        return $employee->fresh();
-    }
-
-    /**
-     * Bulk-prime every employee with a positive net_salary. Handy to run
-     * once after installing this feature, or periodically (e.g. nightly
-     * scheduled command) to keep derived values in sync with rule/
-     * assignment changes.
-     */
-    public function primeAllEmployees(): int
-    {
-        $primed = 0;
-
-        Employee::where('employment_status', 'Active')
-            ->whereNotNull('net_salary')
-            ->where('net_salary', '>', 0)
-            ->each(function (Employee $employee) use (&$primed) {
-                $this->primeEmployeeInitialValues($employee);
-                $primed++;
-            });
-
-        return $primed;
     }
 
     // =========================================================================

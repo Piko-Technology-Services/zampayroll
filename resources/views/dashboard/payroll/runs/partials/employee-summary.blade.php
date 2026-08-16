@@ -392,7 +392,9 @@
 <div class="es-wrap"
      data-payroll-id="{{ $payroll->id }}"
      data-employee-id="{{ $payroll->employee_id }}"
-     data-run-id="{{ $payroll->payroll_run_id }}">
+     data-run-id="{{ $payroll->payroll_run_id }}"
+     data-natural-gross="{{ $payroll->employee->natural_gross_salary ?? $payroll->employee->net_salary ?? 0 }}"
+     data-working-days="{{ $payroll->employee->working_days_per_month }}">
 
     {{-- ── Employee header ──────────────────────────────────── --}}
     <div class="es-header">
@@ -594,6 +596,7 @@
                          data-name="{{ $rule->name }}"
                          data-type="{{ $rule->type }}"
                          data-tax="{{ $rule->tax_profile }}"
+                         data-code="{{ $rule->code }}"
                          data-value="{{ $rule->formula_type === 'fixed' && $rule->value > 0 ? $rule->value : '' }}"
                          onclick="esSelectRule(this)">
 
@@ -656,14 +659,30 @@
                 </select>
             </div>
 
-            <div class="es-field">
-                <label for="adjAmount">Amount (K)</label>
+            <div class="es-field" id="esAmountFieldWrap">
+                <label for="adjAmount" id="esAmountLabel">Amount (K)</label>
                 <input type="number"
-                       id="adjAmount"
-                       placeholder="0.00"
-                       min="0"
-                       step="0.01"
-                       style="text-align:right">
+                    id="adjAmount"
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                    style="text-align:right">
+
+                <div id="esOvertimeInputs" style="display:none; margin-top:.5rem;">
+                    <input type="number"
+                        id="esOtHours"
+                        min="0"
+                        step="0.25"
+                        placeholder="Hours worked"
+                        oninput="esRecalculateOvertimeAmount()"
+                        style="width:100%; margin-bottom:.35rem; border:1px solid var(--es-border); border-radius:6px; padding:.42rem .6rem; font-size:.82rem;">
+                    <select id="esOtType"
+                            onchange="esRecalculateOvertimeAmount()"
+                            style="width:100%; border:1px solid var(--es-border); border-radius:6px; padding:.42rem .6rem; font-size:.82rem;">
+                        <option value="normal">Normal Overtime (x1.5)</option>
+                        <option value="double">Double Time (x2.0)</option>
+                    </select>
+                </div>
             </div>
 
             <button type="button"

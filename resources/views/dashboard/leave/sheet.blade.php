@@ -45,7 +45,7 @@
                 </thead>
                 <tbody>
                     @forelse($rows as $r)
-                        <tr>
+                        <tr data-employee-row="{{ $r['employee']->id }}">
                             <td class="lsh-sticky">
                                 <div class="lsh-emp-name">{{ $r['employee']->first_name }} {{ $r['employee']->last_name }}</div>
                                 <div class="lsh-emp-id"><i class="bi bi-hash"></i>{{ $r['employee']->employee_id }}</div>
@@ -53,15 +53,17 @@
                             @for($m = 1; $m <= 12; $m++)
                                 <td>
                                     <input type="number" step="0.5" min="0" max="31"
-                                           class="lsh-cell"
-                                           name="records[{{ $r['employee']->id }}][{{ $m }}]"
-                                           value="{{ $r['monthly'][$m] ?: '' }}">
+                                        class="lsh-cell"
+                                        data-employee-id="{{ $r['employee']->id }}"
+                                        data-month="{{ $m }}"
+                                        name="records[{{ $r['employee']->id }}][{{ $m }}]"
+                                        value="{{ $r['monthly'][$m] ?: '' }}">
                                 </td>
                             @endfor
-                            <td class="lsh-total-col lsh-mono">{{ $r['total'] }}</td>
-                            <td class="lsh-mono">{{ $r['entitled'] }}</td>
-                            <td class="lsh-mono {{ $r['balance'] < 0 ? 'lsh-negative' : '' }}">{{ $r['balance'] }}</td>
-                            <td class="lsh-mono">K {{ number_format($r['amountPayable'], 2) }}</td>
+                            <td class="lsh-total-col lsh-mono" data-field="total">{{ $r['total'] }}</td>
+                            <td class="lsh-mono" data-field="entitled">{{ $r['entitled'] }}</td>
+                            <td class="lsh-mono {{ $r['balance'] < 0 ? 'lsh-negative' : '' }}" data-field="balance">{{ $r['balance'] }}</td>
+                            <td class="lsh-mono" data-field="amount">K {{ number_format($r['amountPayable'], 2) }}</td>
                         </tr>
                     @empty
                         <tr><td colspan="17" class="lsh-empty">No employees found.</td></tr>
@@ -76,6 +78,75 @@
     </form>
 
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const year = {{ $year }};
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+    const cellUpdateUrl = "{{ route('leave.cell.update', $year) }}";
+
+    document.querySelectorAll('.lsh-cell').forEach(function (input) {
+        input.addEventListener('change', handleCellChange);
+        input.addEventListener('blur', handleCellChange);
+    });
+
+    let pending = new Set(); // avoid duplicate in-flight requests per employee+month
+
+    function handleCellChange(e) {
+        const input = e.target;
+        const key = input.dataset.employeeId + '-' + input.dataset.month;
+
+        if (pending.has(key)) return;
+        pending.add(key);
+
+        const row = document.querySelector('tr[data-employee-row="' + input.dataset.employeeId + '"]');
+        row?.classList.add('lsh-row-saving');
+
+        fetch(cellUpdateUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+                employee_id: input.dataset.employeeId,
+                month: input.dataset.month,
+                days_taken: input.value === '' ? 0 : input.value,
+            }),
+        })
+        .then(function (res) {
+            if (!res.ok) throw new Error('Save failed');
+            return res.json();
+        })
+        .then(function (data) {
+            if (!row) return;
+
+            row.querySelector('[data-field="total"]').textContent = data.total;
+            row.querySelector('[data-field="entitled"]').textContent = data.entitled;
+
+            const balanceEl = row.querySelector('[data-field="balance"]');
+            balanceEl.textContent = data.balance;
+            balanceEl.classList.toggle('lsh-negative', data.balance < 0);
+
+            row.querySelector('[data-field="amount"]').textContent =
+                'K ' + Number(data.amountPayable).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            row.classList.remove('lsh-row-saving');
+            row.classList.add('lsh-row-saved');
+            setTimeout(() => row.classList.remove('lsh-row-saved'), 700);
+        })
+        .catch(function () {
+            row?.classList.remove('lsh-row-saving');
+            row?.classList.add('lsh-row-error');
+            setTimeout(() => row?.classList.remove('lsh-row-error'), 1500);
+        })
+        .finally(function () {
+            pending.delete(key);
+        });
+    }
+});
+</script>
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
@@ -131,6 +202,10 @@ thead .lsh-sticky { background: #FCFBF8; z-index: 2; }
 .lsh-btn { display: inline-flex; align-items: center; gap: .4rem; font-size: .8rem; font-weight: 600; padding: .6rem 1.1rem; border-radius: 6px; border: none; cursor: pointer; }
 .lsh-btn-primary { background: var(--ink); color: #fff; }
 .lsh-btn-primary:hover { background: #23374F; }
+
+.lsh-row-saving { background: #FCFBF8; }
+.lsh-row-saved { background: var(--brass-soft); transition: background .4s ease; }
+.lsh-row-error { background: #FBE9E7; transition: background .4s ease; }
 </style>
 
 @endsection

@@ -121,7 +121,7 @@ class PayrollRunController extends Controller
                     'branch'       => $employee->branch,
                     'cost_centre'  => $employee->department,
                     'date_engaged' => $employee->contract_start,
-                    'salary_rate'  => $employee->salary ?? 0,
+                    'salary_rate'  => $employee->net_salary ?? 0,
                     'status'       => 'Draft',
                 ]
             );

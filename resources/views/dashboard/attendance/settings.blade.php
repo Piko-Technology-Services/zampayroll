@@ -33,10 +33,18 @@
                 @foreach($weekdays as $iso => $label)
                     <label class="ats-day-toggle">
                         <input type="checkbox" name="work_days[]" value="{{ $iso }}"
-                               {{ in_array($iso, $workDays) ? 'checked' : '' }}>
+                            {{ in_array($iso, $workDays) ? 'checked' : '' }}>
                         <span>{{ $label }}</span>
                     </label>
                 @endforeach
+            </div>
+
+            <div class="ats-field-row">
+                <label class="ats-field-label" for="working_days_per_month">Working Days per Month</label>
+                <input type="number" id="working_days_per_month" name="working_days_per_month"
+                    class="ats-input ats-input-narrow" min="1" max="31"
+                    value="{{ old('working_days_per_month', $company->working_days_per_month ?? 26) }}">
+                <span class="ats-field-hint">Used as the divisor for daily-rate and leave-day-value calculations.</span>
             </div>
 
             <div class="ats-actions">
@@ -120,6 +128,11 @@
 .ats-eyebrow { font-family: 'IBM Plex Sans', serif; font-size: .68rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--brass); margin-bottom: .2rem; }
 .ats-title { font-family: 'IBM Plex Sans', serif; font-size: 1.3rem; font-weight: 700; margin: 0; color: var(--ink); }
 .ats-subtitle { font-size: .8rem; color: var(--ink-faint); margin-top: .2rem; }
+
+.ats-field-row { display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; margin-bottom: 1.1rem; }
+.ats-field-label { font-size: .78rem; font-weight: 600; color: var(--ink-soft); }
+.ats-input-narrow { width: 90px; }
+.ats-field-hint { font-size: .72rem; color: var(--ink-faint); }
 
 .ats-alert { border-radius: 6px; font-size: .84rem; padding: .7rem 1rem; margin: 1rem 0; background: var(--active-bg); color: var(--active); border: 1px solid #C7E0CD; }
 

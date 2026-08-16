@@ -240,9 +240,9 @@
                                    value="{{ old('bank_account_no', $employee->bank_account_no) }}">
                         </div>
                         <div class="empf-field">
-                            <label class="empf-label">Salary</label>
-                            <input class="empf-input" name="salary"
-                                   value="{{ old('salary', $employee->salary) }}">
+                            <label class="empf-label">Net Salary</label>
+                            <input class="empf-input" name="net_salary"
+                                   value="{{ old('net_salary', $employee->net_salary) }}">
                         </div>
                         <div class="empf-field">
                             <label class="empf-label">SSN NAPSA</label>
@@ -260,6 +260,26 @@
                             <label class="empf-label">TPIN</label>
                             <input class="empf-input" name="tpin"
                                    value="{{ old('tpin', $employee->tpin) }}">
+                        </div>
+                    </div>
+                </div>
+
+                {{-- ================= LEAVE ENTITLEMENT ================= --}}
+                <div class="empf-card">
+                    <div class="empf-section-label">Leave Entitlement</div>
+
+                    <div class="empf-grid empf-grid-2">
+                        <div class="empf-field">
+                            <label class="empf-label">Leave Days Entitled</label>
+                            <input type="number" step="0.5" min="0" class="empf-input" name="leave_days_entitled"
+                                value="{{ old('leave_days_entitled', $employee->leave_days_entitled) }}">
+                            <small class="empf-hint">Full annual entitlement — prorate for mid-year starts.</small>
+                        </div>
+                        <div class="empf-field">
+                            <label class="empf-label">Leave Days Balance</label>
+                            <input type="number" step="0.5" min="0" class="empf-input" name="leave_days_balance"
+                                value="{{ old('leave_days_balance', $employee->leave_days_balance) }}">
+                            <small class="empf-hint">Days currently available to the employee.</small>
                         </div>
                     </div>
                 </div>
@@ -366,8 +386,9 @@
 
                 <div class="empf-summary-label">Finance</div>
                 <div class="empf-summary-section">
-                    <div class="empf-summary-row"><span>Salary</span><strong>{{ number_format($employee->salary ?? 0) }}</strong></div>
+                    <div class="empf-summary-row"><span>Net Salary</span><strong>{{ number_format($employee->net_salary ?? 0, 2) }}</strong></div>
                     <div class="empf-summary-row"><span>Bank</span><strong>{{ $employee->bank_name ?? '—' }}</strong></div>
+                    <div class="empf-summary-row"><span>Leave Balance</span><strong>{{ $employee->leave_days_balance ?? '—' }} / {{ $employee->leave_days_entitled ?? '—' }}</strong></div>
                 </div>
 
             </div>
@@ -431,6 +452,7 @@
 .empf-btn-primary:hover { background: #00611F; color: #fff; transform: translateY(-1px); }
 .empf-btn-outline { background: #fff; color: #475569; border-color: #E5E9F0; }
 .empf-btn-outline:hover { border-color: #CBD5E1; color: #0F172A; }
+.empf-hint { font-size: .7rem; color: #94A3B8; margin-top: -.15rem; }
 
 /* ---- Layout ---- */
 .empf-layout { display: grid; grid-template-columns: 1fr 320px; gap: 1rem; align-items: start; }
