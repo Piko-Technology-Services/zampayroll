@@ -34,6 +34,15 @@
 
     $builtInEarnings   = ['P00', '010', '023', 'P06'];
     $builtInDeductions = ['D00', 'D02', 'D11'];
+
+    // Basic Pay actually used to build THIS payslip — written by
+    // PayrollEngine as item code P00. This is the only figure guaranteed
+    // to be in sync with what the engine computed for this run; the old
+    // employee->salary column is a separate, unrelated field that can
+    // silently drift (e.g. never updated after the switch to net_salary),
+    // which is what was causing overtime to be calculated against the
+    // wrong basic pay in production.
+    $basicPayItem = $payroll->items->firstWhere('code', 'P00');
 @endphp
 
 {{-- ════════════════════════════════════════════════════════════════
@@ -395,7 +404,7 @@
      data-run-id="{{ $payroll->payroll_run_id }}"
      data-natural-gross="{{ $payroll->employee->natural_gross_salary ?? $payroll->employee->net_salary ?? 0 }}"
      data-working-days="{{ $payroll->employee->working_days_per_month }}"
-     data-basic-pay="{{ $payroll->employee->salary }}"
+     data-basic-pay="{{ $basicPayItem->amount ?? 0 }}"
      >
 
     {{-- ── Employee header ──────────────────────────────────── --}}
