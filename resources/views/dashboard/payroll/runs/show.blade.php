@@ -338,9 +338,10 @@ function submitAdjustment() {
     const name       = document.getElementById('adjName').value.trim();
     const type       = document.getElementById('adjType').value;
     const taxProfile = document.getElementById('adjTaxProfile').value;
-    const ruleId = document.getElementById('adjRuleId').value;
-    const amount     = document.getElementById('adjAmount').value;
+    const ruleId     = document.getElementById('adjRuleId').value;
     const errorBox   = document.getElementById('adjError');
+    const otPanel    = document.getElementById('esOvertimeInputs');
+    let amount       = document.getElementById('adjAmount').value;
 
     // console.log("Rule ID : ", ruleId);
 
@@ -348,9 +349,28 @@ function submitAdjustment() {
     errorBox.classList.add('d-none');
     errorBox.textContent = '';
 
-    if (!name)   { showAdjError('Description is required.');    return; }
-    if (!amount || parseFloat(amount) <= 0) {
-                   showAdjError('Enter a valid amount.');        return; }
+    if (!name) { showAdjError('Description is required.'); return; }
+
+    const isOvertimeSelected = otPanel && getComputedStyle(otPanel).display !== 'none';
+
+    if (isOvertimeSelected) {
+        const otHours = parseFloat(document.getElementById('esOtHours').value) || 0;
+
+        if (otHours <= 0) {
+            showAdjError('Overtime hours must be greater than 0.');
+            return;
+        }
+
+        if (!amount || parseFloat(amount) <= 0) {
+            window.esRecalculateOvertimeAmount();
+            amount = document.getElementById('adjAmount').value;
+        }
+    }
+
+    if (!isOvertimeSelected && (!amount || parseFloat(amount) <= 0)) {
+        showAdjError('Enter a valid amount.');
+        return;
+    }
 
     // Read context from parent div written by Blade
     const ctx        = document.querySelector('[data-payroll-id]');
