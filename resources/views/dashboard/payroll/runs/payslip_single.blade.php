@@ -51,7 +51,7 @@
     .payslip {
         max-width: 900px;
         margin: 0 auto 26px;
-        border: 1px solid #C7A548;
+        border: 1px solid #000000;
         page-break-after: always;
         font-size: 11px;
     }
@@ -76,7 +76,7 @@
         font-size: 13px;
         font-weight: 700;
         letter-spacing: .1em;
-        color: #C7A548;
+        color: #000000;
         text-transform: uppercase;
     }
     .lh-doc-period { font-size: 15px; font-weight: 700; color: #1A2530; margin-top: 2px; }
@@ -100,7 +100,7 @@
         font-size: 9px;
         font-weight: 700;
         color: #fff;
-        background: #C7A548;
+        background: #000000;
         padding: 1px 5px;
         border-radius: 2px;
     }
@@ -147,7 +147,7 @@
     .lines-table td.days { text-align: right; width: 60px; font-family: 'Courier New', Courier, monospace; color: #7A8595; }
 
     .code-cell { display: flex; gap: 6px; }
-    .code-cell .code { font-family: 'Courier New', Courier, monospace; font-weight: 700; color: #C7A548; width: 30px; flex-shrink: 0; }
+    .code-cell .code { font-family: 'Courier New', Courier, monospace; font-weight: 700; color: #000000; width: 30px; flex-shrink: 0; }
 
     .table-total-row td {
         border-top: 1px solid #1A2530;
@@ -187,7 +187,7 @@
         text-align: right;
     }
     .net-stamp-label { font-size: 9px; text-transform: uppercase; letter-spacing: .08em; color: #7A8595; margin-bottom: 2px; }
-    .net-stamp-value { font-family: 'Courier New', Courier, monospace; font-size: 17px; font-weight: 700; color: #1F6B3C; }
+    .net-stamp-value { font-family: 'Courier New', Courier, monospace; font-size: 17px; font-weight: 700; color: #000000; }
 
     /* ── Footer strap ─────────────────────────────────── */
     .strap-line {
@@ -201,7 +201,7 @@
 
     @media print {
         .print-bar { display: none; }
-        .payslip { border: 1px solid #C7A548; }
+        .payslip { border: 1px solid #000000; }
     }
 
     @media screen {

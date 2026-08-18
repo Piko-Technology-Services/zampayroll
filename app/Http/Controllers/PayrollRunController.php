@@ -278,12 +278,17 @@ class PayrollRunController extends Controller
     ) {
         $run = $adjustment->run;
 
-        if ($run->status === 'Approved') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Cannot modify a finalized payroll run.',
-            ], 403);
-        }
+        // Log::info('Payroll Run DESTROY - ', [
+        //     'run_id'      => $run->id,
+        //     'Run Status'      => $run->status,
+        // ]);
+
+        // if ($run->status === 'Approved') {
+        //     return response()->json([
+        //         'success' => false,
+        //         'message' => 'Cannot modify a finalized payroll run.',
+        //     ], 403);
+        // }
 
         $payroll = Payroll::where('payroll_run_id', $adjustment->payroll_run_id)
             ->where('employee_id', $adjustment->employee_id)

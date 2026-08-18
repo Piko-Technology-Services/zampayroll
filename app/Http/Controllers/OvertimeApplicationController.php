@@ -49,10 +49,12 @@ class OvertimeApplicationController extends Controller
         $hours = round($end->diffInMinutes($start) / 60, 2);
 
         $multiplier = OvertimeRequest::TYPES[$validated['type']]['multiplier'];
-        $grossForOt = $employee->natural_gross_salary ?? $employee->salary ?? 0;
-        $dailyRate = round($grossForOt / $employee->working_days_per_month, 2);
+        $basicPay = $employee->salary ?? 0;
+        $dailyRate = round($basicPay / $employee->working_days_per_month, 2);
         // Normal OT = (DailyRate / 8) x 1.5 x Hours | Double OT = (DailyRate / 8) x 2 x Hours
         $amount = round(($dailyRate / 8) * $multiplier * $hours, 2);
+
+        
 
         $overtimeRequest = OvertimeRequest::create([
             'employee_id'     => $employee->id,

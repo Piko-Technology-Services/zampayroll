@@ -221,7 +221,7 @@
                     <div class="hrf-field"><div class="hrf-field-label">Net Salary</div><div class="hrf-field-value">K {{ number_format($employee->net_salary, 2) }}</div></div>
                     @endif
                     @if($employee->natural_gross_salary)
-                    <div class="hrf-field"><div class="hrf-field-label">Gross Salary</div><div class="hrf-field-value">K {{ number_format($employee->natural_gross_salary, 2) }}</div></div>
+                    <div class="hrf-field"><div class="hrf-field-label">Natural Gross Salary</div><div class="hrf-field-value">K {{ number_format($employee->natural_gross_salary, 2) }}</div></div>
                     @endif
                     @if(!is_null($employee->leave_days_entitled))
                     <div class="hrf-field"><div class="hrf-field-label">Leave Days Entitled</div><div class="hrf-field-value">{{ $employee->leave_days_entitled }}</div></div>

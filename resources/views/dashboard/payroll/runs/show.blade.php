@@ -774,8 +774,9 @@ function formatMoney(value)
     window.esRecalculateOvertimeAmount = function () {
         const ctx = document.querySelector('[data-payroll-id]');
         const gross = parseFloat(ctx.dataset.naturalGross || 0);
+        const basicPay = parseFloat(ctx.dataset.basicPay || 0);
         const workingDays = parseFloat(ctx.dataset.workingDays || 26);
-        const dailyRate = workingDays > 0 ? gross / workingDays : 0;
+        const dailyRate = workingDays > 0 ? basicPay / workingDays : 0;
 
         const hours = parseFloat(document.getElementById('esOtHours').value) || 0;
         const otType = document.getElementById('esOtType').value;

@@ -394,7 +394,9 @@
      data-employee-id="{{ $payroll->employee_id }}"
      data-run-id="{{ $payroll->payroll_run_id }}"
      data-natural-gross="{{ $payroll->employee->natural_gross_salary ?? $payroll->employee->net_salary ?? 0 }}"
-     data-working-days="{{ $payroll->employee->working_days_per_month }}">
+     data-working-days="{{ $payroll->employee->working_days_per_month }}"
+     data-basic-pay="{{ $payroll->employee->salary }}"
+     >
 
     {{-- ── Employee header ──────────────────────────────────── --}}
     <div class="es-header">

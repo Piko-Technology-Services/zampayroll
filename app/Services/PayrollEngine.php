@@ -247,6 +247,7 @@ class PayrollEngine
         $updates = [
             'natural_gross_salary' => $naturalGross,
             'daily_rate_salary'    => $dailyRate,
+            'salary' => $basic
         ];
 
         // Only seed these if they haven't already been set (manually or by
@@ -264,6 +265,7 @@ class PayrollEngine
             'employee_id'          => $employee->id,
             'natural_gross_salary' => $naturalGross,
             'daily_rate_salary'    => $dailyRate,
+            
         ]);
 
         return $employee->fresh();
