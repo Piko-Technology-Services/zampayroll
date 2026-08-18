@@ -348,9 +348,9 @@ function submitAdjustment() {
     errorBox.classList.add('d-none');
     errorBox.textContent = '';
 
-    // if (!name)   { showAdjError('Description is required.');    return; }
-    // if (!amount || parseFloat(amount) <= 0) {
-    //                showAdjError('Enter a valid amount.');        return; }
+    if (!name)   { showAdjError('Description is required.');    return; }
+    if (!amount || parseFloat(amount) <= 0) {
+                   showAdjError('Enter a valid amount.');        return; }
 
     // Read context from parent div written by Blade
     const ctx        = document.querySelector('[data-payroll-id]');
