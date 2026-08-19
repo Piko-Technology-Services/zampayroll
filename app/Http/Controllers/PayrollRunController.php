@@ -9,6 +9,7 @@ use App\Models\PayrollItem;
 use App\Models\PayrollRule;
 use App\Models\PayrollRunAdjustment;
 use App\Services\PayrollEngine;
+use App\Services\LoanRepaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
@@ -100,8 +101,17 @@ class PayrollRunController extends Controller
     |--------------------------------------------------------------------------
     | GENERATE PAYROLL FOR ALL ACTIVE EMPLOYEES
     |--------------------------------------------------------------------------
+    |
+    | Loan integration: for each employee, BEFORE the engine builds their
+    | payslip, LoanRepaymentService checks their active loans and creates
+    | a "Loan Repayment" deduction adjustment for any loan due this period
+    | (per its payment_plan). The engine then reads that adjustment like
+    | any other and includes it on the payslip automatically. AFTER the
+    | payslip is built, recordDeductions() confirms it landed and posts
+    | the payment against the loan's running balance in the ledger.
+    |
     */
-    public function generate(PayrollRun $run, PayrollEngine $engine)
+    public function generate(PayrollRun $run, PayrollEngine $engine, LoanRepaymentService $loanService)
     {
         if ($run->status === 'Approved') {
             return back()->with('error', 'This payroll run has already been finalized.');
@@ -126,7 +136,15 @@ class PayrollRunController extends Controller
                 ]
             );
 
+            // Sync any due loan-repayment deductions BEFORE the engine
+            // reads adjustments, so they're included in this build.
+            $loanService->syncForEmployee($run, $employee->id);
+
             $engine->build($payroll);
+
+            // Now that the payslip items exist, confirm the loan
+            // deduction landed and post it against the loan ledger.
+            $loanService->recordDeductions($payroll);
         }
 
         $run->update(['status' => 'Processed']);

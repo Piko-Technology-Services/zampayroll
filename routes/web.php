@@ -30,6 +30,7 @@ use App\Http\Controllers\OvertimeDashboardController;
 
 use App\Http\Controllers\LoanApplicationController;
 use App\Http\Controllers\LoanDashboardController;
+use App\Http\Controllers\LoanLedgerController;
 
 /*
 |--------------------------------------------------------------------------
@@ -249,7 +250,14 @@ Route::middleware(['auth'])->prefix('loan')->name('loan.')->group(function () {
     Route::post('/dashboard/requests/{loanRequest}/approve', [LoanDashboardController::class, 'approve'])->name('approve');
     Route::post('/dashboard/requests/{loanRequest}/reject', [LoanDashboardController::class, 'reject'])->name('reject');
 });
-
+Route::middleware(['auth'])->prefix('loan/ledger')->name('loan.ledger.')->group(function () {
+    Route::get('/', [LoanLedgerController::class, 'index'])->name('index');
+    Route::get('/create', [LoanLedgerController::class, 'create'])->name('create');
+    Route::post('/', [LoanLedgerController::class, 'store'])->name('store');
+    Route::get('/{loan}', [LoanLedgerController::class, 'show'])->name('show');
+    Route::put('/{loan}', [LoanLedgerController::class, 'updatePlan'])->name('update');
+    Route::post('/{loan}/payments', [LoanLedgerController::class, 'recordPayment'])->name('payments.store');
+});
 
 Route::get('/payroll/rules', function () {
     return "RULES WORKING";

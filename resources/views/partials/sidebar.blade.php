@@ -122,6 +122,14 @@
                    href="{{ route('loan.dashboard') }}">
                     <i class="bi bi-inbox"></i> Loan Requests
                 </a>
+                <a class="nav-sublink {{ request()->routeIs('loan.ledger.*') ? 'active' : '' }}"
+                   href="{{ route('loan.ledger.index') }}">
+                    <i class="bi bi-journal-text"></i> Loan Ledger
+                </a>
+                <a class="nav-sublink {{ request()->routeIs('loan.ledger.create') ? 'active' : '' }}"
+                   href="{{ route('loan.ledger.create') }}">
+                    <i class="bi bi-plus-circle"></i> Add Loan Ledger
+                </a>
             </div>
         </div>
 
