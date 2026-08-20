@@ -4,8 +4,8 @@
 
 {{-- =====================================================================
      PAYROLL RUNS — ZamPayroll
-     Redesign: same light card language as the dashboard —
-     thin borders, hover-reactive cards, single green accent.
+     Same light card language as the dashboard — thin borders,
+     hover-reactive cards, single green accent.
 ====================================================================== --}}
 
 <style>
@@ -39,6 +39,34 @@
     color: #94A3B8;
     margin-top: .15rem;
 }
+
+.pr-header-actions { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+
+.pr-shortcut {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    background: #fff;
+    border: 1px solid #E5E9F0;
+    color: #475569;
+    font-weight: 600;
+    font-size: .8rem;
+    padding: .55rem .95rem;
+    border-radius: 10px;
+    text-decoration: none;
+    transition: border-color .15s ease, color .15s ease;
+}
+.pr-shortcut:hover { border-color: #CBD5E1; color: #0F172A; }
+.pr-shortcut-count {
+    font-size: .68rem;
+    font-weight: 700;
+    background: #F1F5F9;
+    color: #64748B;
+    padding: .1rem .45rem;
+    border-radius: 20px;
+}
+.pr-shortcut.has-items .pr-shortcut-count { background: #FFF7ED; color: #D97706; }
+
 .pr-new-btn {
     display: inline-flex;
     align-items: center;
@@ -53,6 +81,11 @@
     transition: background .18s ease, transform .18s ease;
 }
 .pr-new-btn:hover { background: #00611F; color: #fff; transform: translateY(-1px); }
+
+.pr-alert-success {
+    background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0;
+    border-radius: 10px; padding: .7rem 1rem; font-size: .84rem; margin-bottom: 1.2rem;
+}
 
 /* ── Grid ── */
 .pr-grid {
@@ -161,7 +194,7 @@
 .pr-audit-row.locked strong { color: #F43F5E; }
 .pr-audit-row.pending strong { color: #D97706; }
 
-/* Action bar */
+/* Action bar — trimmed to Open / Hide / Trash only */
 .pr-actions {
     margin-top: 1.1rem;
     padding: .75rem 1.1rem;
@@ -170,17 +203,22 @@
     align-items: center;
     justify-content: space-around;
 }
-.pr-actions a {
+.pr-actions a, .pr-actions button {
     color: #94A3B8;
     font-size: 1rem;
     width: 32px; height: 32px;
     border-radius: 8px;
     display: flex; align-items: center; justify-content: center;
     text-decoration: none;
+    background: transparent;
+    border: none;
+    cursor: pointer;
     transition: background .15s ease, color .15s ease;
 }
 .pr-actions a:hover { background: #F1F5F9; color: #00742D; }
-.pr-actions a.danger:hover { background: #FFF1F2; color: #F43F5E; }
+.pr-actions button.hide-btn:hover { background: #F1F5F9; color: #B45309; }
+.pr-actions button.trash-btn:hover { background: #FFF1F2; color: #F43F5E; }
+.pr-actions form { margin: 0; }
 
 /* Empty state */
 .pr-empty {
@@ -211,10 +249,24 @@
             <div class="subtitle">Monthly payroll processing cycles</div>
         </div>
 
-        <a href="{{ route('payroll.runs.create') }}" class="pr-new-btn">
-            <i class="bi bi-plus-circle"></i> New Run
-        </a>
+        <div class="pr-header-actions">
+            <a href="{{ route('payroll.runs.hidden') }}" class="pr-shortcut {{ $hiddenCount > 0 ? 'has-items' : '' }}">
+                <i class="bi bi-eye-slash"></i> Hidden
+                <span class="pr-shortcut-count">{{ $hiddenCount }}</span>
+            </a>
+            <a href="{{ route('payroll.runs.trash') }}" class="pr-shortcut {{ $trashedCount > 0 ? 'has-items' : '' }}">
+                <i class="bi bi-trash3"></i> Trash
+                <span class="pr-shortcut-count">{{ $trashedCount }}</span>
+            </a>
+            <a href="{{ route('payroll.runs.create') }}" class="pr-new-btn">
+                <i class="bi bi-plus-circle"></i> New Run
+            </a>
+        </div>
     </div>
+
+    @if(session('success'))
+        <div class="pr-alert-success"><i class="bi bi-check-circle"></i> {{ session('success') }}</div>
+    @endif
 
     {{-- ===== GRID ===== --}}
     @if($runs->isEmpty())
@@ -287,26 +339,27 @@
                         </div>
                     </div>
 
-                    {{-- ACTION BAR --}}
+                    {{-- ACTION BAR — Open / Hide / Trash only --}}
                     <div class="pr-actions" onclick="event.stopPropagation()">
                         <a href="{{ route('payroll.runs.show', $run->id) }}" title="Open">
                             <i class="bi bi-folder2-open"></i>
                         </a>
-                        <a href="{{ route('payroll.runs.generate', $run->id) }}" title="Generate">
-                            <i class="bi bi-gear-wide-connected"></i>
-                        </a>
-                        <a href="#" title="Reports">
-                            <i class="bi bi-file-earmark-bar-graph"></i>
-                        </a>
-                        <a href="#" title="Backup">
-                            <i class="bi bi-cloud-arrow-down"></i>
-                        </a>
-                        <a href="#" title="Share">
-                            <i class="bi bi-share"></i>
-                        </a>
-                        <a href="#" class="danger" title="Delete">
-                            <i class="bi bi-trash"></i>
-                        </a>
+
+                        <form method="POST" action="{{ route('payroll.runs.hide', $run->id) }}">
+                            @csrf
+                            <button type="submit" class="hide-btn" title="Hide">
+                                <i class="bi bi-eye-slash"></i>
+                            </button>
+                        </form>
+
+                        <form method="POST" action="{{ route('payroll.runs.trash.store', $run->id) }}"
+                              onsubmit="return confirm('Move this payroll run to trash? You can restore it later from the Trash view.');">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="trash-btn" title="Move to Trash">
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        </form>
                     </div>
 
                 </div>

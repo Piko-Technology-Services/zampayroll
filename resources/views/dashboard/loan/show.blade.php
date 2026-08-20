@@ -2,7 +2,7 @@
 
 @section('content')
 
-<div class="lls">
+<div class="lls p-5">
 
     <div class="lls-header">
         <a href="{{ route('loan.ledger.index') }}" class="lls-back"><i class="bi bi-arrow-left"></i> Loan Ledger</a>
@@ -151,18 +151,19 @@
 </div>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
 .lls * { box-sizing: border-box; }
 .lls {
-    --paper: #FAF8F3; --ink: #17263A; --ink-soft: #58687D; --ink-faint: #93A0B2;
-    --brass: #9C7A32; --brass-soft: #E9DFC7; --line: #E1DACB;
-    --active: #2F6F4E; --active-bg: #EAF3EC; --warn: #9B3A2A; --warn-bg: #F7E7E2; --sick: #B5651D; --sick-bg: #FBEEE0;
+    --paper: #ffffff; --ink: #00742E; --ink-soft: #58687D; --ink-faint: #93A0B2;
+    --brass: #00742E; --brass-soft: #EAF7ED; --line: #D9E9DE;
+    --accent-orange: #E97B00; --accent-red: #D50115;
+    --active: #00742E; --active-bg: #EAF7ED; --warn: #D50115; --warn-bg: #FDE7EA; --sick: #E97B00; --sick-bg: #FFF1E1;
     font-family: 'IBM Plex Sans', sans-serif; color: var(--ink); background: var(--paper); padding: 1.5rem 0 2.5rem;
 }
 .lls-back { display: inline-flex; align-items: center; gap: .35rem; font-size: .78rem; font-weight: 600; color: var(--ink-soft); text-decoration: none; margin-bottom: .6rem; }
 .lls-back:hover { color: var(--brass); }
-.lls-eyebrow { font-family: 'Roboto Slab', serif; font-size: .68rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--brass); margin-bottom: .2rem; }
-.lls-title { font-family: 'Roboto Slab', serif; font-size: 1.4rem; font-weight: 700; margin: 0 0 .4rem; display: inline-block; margin-right: .6rem; }
+.lls-eyebrow { font-family: 'IBM Plex Sans', sans-serif; font-size: .68rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--brass); margin-bottom: .2rem; }
+.lls-title { font-family: 'IBM Plex Sans', sans-serif; font-size: 1.4rem; font-weight: 700; margin: 0 0 .4rem; display: inline-block; margin-right: .6rem; }
 .lls-header { margin-bottom: 1rem; }
 
 .lls-status { display: inline-block; font-size: .68rem; font-weight: 700; padding: .22rem .65rem; border-radius: 4px; text-transform: uppercase; vertical-align: middle; }
@@ -171,14 +172,14 @@
 .lls-status-paused { background: var(--sick-bg); color: var(--sick); }
 .lls-status-written_off { background: var(--warn-bg); color: var(--warn); }
 
-.lls-alert { border-radius: 6px; font-size: .84rem; padding: .7rem 1rem; margin-bottom: 1rem; background: var(--active-bg); color: var(--active); border: 1px solid #C7E0CD; }
+.lls-alert { border-radius: 6px; font-size: .84rem; padding: .7rem 1rem; margin-bottom: 1rem; background: var(--active-bg); color: var(--active); border: 1px solid var(--line); }
 
 .lls-layout { display: grid; grid-template-columns: 1fr 1.3fr; gap: 1rem; align-items: start; }
 @media (max-width: 992px) { .lls-layout { grid-template-columns: 1fr; } }
 
 .lls-card { background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 1.3rem; margin-bottom: 1rem; position: relative; }
 .lls-card::before { content: ""; position: absolute; top: 0; left: 24px; width: 52px; height: 5px; background: var(--brass); border-radius: 0 0 3px 3px; }
-.lls-section-label { font-family: 'Roboto Slab', serif; font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--ink); border-bottom: 1px solid var(--line); padding-bottom: .6rem; margin: .3rem 0 1rem; }
+.lls-section-label { font-family: 'IBM Plex Sans', sans-serif; font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--ink); border-bottom: 1px solid var(--line); padding-bottom: .6rem; margin: .3rem 0 1rem; }
 
 .lls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem; }
 .lls-field { display: flex; flex-direction: column; gap: .3rem; }
@@ -189,20 +190,20 @@
 
 .lls-btn { display: inline-flex; align-items: center; gap: .4rem; font-size: .78rem; font-weight: 600; padding: .5rem .95rem; border-radius: 6px; border: 1px solid transparent; cursor: pointer; }
 .lls-btn-primary { background: var(--ink); color: #fff; border-color: var(--ink); }
-.lls-btn-primary:hover { background: #23374F; }
+.lls-btn-primary:hover { background: #005A24; }
 .lls-btn-outline { background: #fff; color: var(--ink-soft); border-color: var(--line); }
 .lls-btn-outline:hover { border-color: var(--brass); color: var(--brass); }
 
 .lls-balance-card { background: #fff; border: 2px solid var(--ink); border-radius: 6px; padding: 1.3rem; margin-bottom: 1rem; text-align: center; }
-.lls-balance-label { font-family: 'Roboto Slab', serif; font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-faint); }
+.lls-balance-label { font-family: 'IBM Plex Sans', sans-serif; font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-faint); }
 .lls-balance-value { font-family: 'IBM Plex Mono', monospace; font-size: 1.8rem; font-weight: 700; color: var(--ink); margin: .3rem 0; }
 .lls-balance-sub { font-size: .74rem; color: var(--ink-faint); margin-bottom: .8rem; }
-.lls-balance-bar { height: 6px; background: #F1EEE4; border-radius: 4px; overflow: hidden; }
+.lls-balance-bar { height: 6px; background: var(--brass-soft); border-radius: 4px; overflow: hidden; }
 .lls-balance-fill { height: 100%; background: var(--active); }
 .lls-balance-pct { font-size: .7rem; color: var(--ink-faint); margin-top: .4rem; }
 
 .lls-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
-.lls-table thead th { font-family: 'Roboto Slab', serif; font-size: .62rem; font-weight: 600; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .05em; padding: .6rem .5rem; border-bottom: 2px solid var(--ink); text-align: left; }
+.lls-table thead th { font-family: 'IBM Plex Sans', sans-serif; font-size: .62rem; font-weight: 600; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .05em; padding: .6rem .5rem; border-bottom: 2px solid var(--ink); text-align: left; }
 .lls-table thead th.num, .lls-table td.num { text-align: right; }
 .lls-table td { padding: .55rem .5rem; border-bottom: 1px solid var(--line); vertical-align: top; }
 .lls-mono { font-family: 'IBM Plex Mono', monospace; }

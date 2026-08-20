@@ -20,16 +20,118 @@ class PayrollRunController extends Controller
 {
     /*
     |--------------------------------------------------------------------------
-    | LIST ALL PAYROLL RUNS
+    | LIST ALL PAYROLL RUNS (excludes hidden and trashed)
     |--------------------------------------------------------------------------
     */
     public function index()
     {
         $runs = PayrollRun::with('payrolls.employee')
+            ->visible()
             ->latest()
             ->get();
 
-        return view('dashboard.payroll.runs.index', compact('runs'));
+        $hiddenCount  = PayrollRun::hiddenOnly()->count();
+        $trashedCount = PayrollRun::onlyTrashed()->count();
+
+        return view('dashboard.payroll.runs.index', compact('runs', 'hiddenCount', 'trashedCount'));
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | HIDDEN RUNS — archived out of the main view, not deleted
+    |--------------------------------------------------------------------------
+    */
+    public function hiddenIndex()
+    {
+        $runs = PayrollRun::with('payrolls.employee')
+            ->hiddenOnly()
+            ->latest('hidden_at')
+            ->get();
+
+        return view('dashboard.payroll.runs.hidden', compact('runs'));
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | TRASH — soft-deleted runs, recoverable until force-deleted
+    |--------------------------------------------------------------------------
+    */
+    public function trashIndex()
+    {
+        $runs = PayrollRun::onlyTrashed()
+            ->with('payrolls.employee')
+            ->latest('deleted_at')
+            ->get();
+
+        return view('dashboard.payroll.runs.trash', compact('runs'));
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | HIDE / UNHIDE
+    |--------------------------------------------------------------------------
+    */
+    public function hide(PayrollRun $run)
+    {
+        $run->update(['hidden_at' => now()]);
+
+        return back()->with('success', 'Payroll run hidden. Find it again under Hidden.');
+    }
+
+    public function unhide(PayrollRun $run)
+    {
+        $run->update(['hidden_at' => null]);
+
+        return back()->with('success', 'Payroll run restored to the main view.');
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | MOVE TO TRASH (soft delete) — this is what the card's Delete control does
+    |--------------------------------------------------------------------------
+    */
+    public function trash(PayrollRun $run)
+    {
+        $run->delete(); // soft delete — recoverable from the Trash view
+
+        return redirect()->route('payroll.runs.index')
+            ->with('success', 'Payroll run moved to trash.');
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | RESTORE FROM TRASH
+    |--------------------------------------------------------------------------
+    */
+    public function restore($id)
+    {
+        $run = PayrollRun::onlyTrashed()->findOrFail($id);
+        $run->restore();
+
+        return redirect()->route('payroll.runs.trash')
+            ->with('success', 'Payroll run restored.');
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | PERMANENTLY DELETE — only reachable from the Trash view
+    |--------------------------------------------------------------------------
+    |
+    | NOTE: this deletes the payroll_runs row itself. It does NOT cascade
+    | to related payrolls/payroll_items/payroll_run_adjustments here — check
+    | your foreign key constraints (cascadeOnDelete vs restrict) on those
+    | tables. If this throws a constraint violation, either add
+    | cascadeOnDelete() to those migrations or delete related payrolls
+    | first before calling forceDelete().
+    |
+    */
+    public function forceDelete($id)
+    {
+        $run = PayrollRun::onlyTrashed()->findOrFail($id);
+        $run->forceDelete();
+
+        return redirect()->route('payroll.runs.trash')
+            ->with('success', 'Payroll run permanently deleted.');
     }
 
     /*

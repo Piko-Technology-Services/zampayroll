@@ -2,7 +2,7 @@
 
 @section('content')
 
-<div class="llc">
+<div class="llc p-5">
 
     <div class="llc-header">
         <a href="{{ route('loan.ledger.index') }}" class="llc-back"><i class="bi bi-arrow-left"></i> Loan Ledger</a>
@@ -89,15 +89,16 @@
 @import url('https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
 .llc * { box-sizing: border-box; }
 .llc {
-    --paper: #FAF8F3; --ink: #17263A; --ink-soft: #58687D; --ink-faint: #93A0B2;
-    --brass: #9C7A32; --brass-soft: #E9DFC7; --line: #E1DACB; --warn: #9B3A2A; --warn-bg: #F7E7E2;
+    --paper: #ffffff; --ink: #00742E; --ink-soft: #58687D; --ink-faint: #93A0B2;
+    --brass: #00742E; --brass-soft: #EAF7ED; --line: #D9E9DE; --accent-orange: #E97B00; --accent-red: #D50115;
+    --warn: var(--accent-red); --warn-bg: #FFF0F1;
     font-family: 'IBM Plex Sans', sans-serif; color: var(--ink); background: var(--paper); padding: 1.5rem 0 2.5rem;
     max-width: 760px; margin: 0 auto;
 }
 .llc-back { display: inline-flex; align-items: center; gap: .35rem; font-size: .78rem; font-weight: 600; color: var(--ink-soft); text-decoration: none; margin-bottom: .6rem; }
 .llc-back:hover { color: var(--brass); }
-.llc-eyebrow { font-family: 'Roboto Slab', serif; font-size: .68rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--brass); margin-bottom: .2rem; }
-.llc-title { font-family: 'Roboto Slab', serif; font-size: 1.3rem; font-weight: 700; margin: 0; }
+.llc-eyebrow { font-family: 'IBM Plex Sans', sans-serif; font-size: .68rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--brass); margin-bottom: .2rem; }
+.llc-title { font-family: 'IBM Plex Sans', sans-serif; font-size: 1.3rem; font-weight: 700; margin: 0; }
 .llc-subtitle { font-size: .8rem; color: var(--ink-faint); margin: .2rem 0 1.2rem; }
 
 .llc-alert-error { background: var(--warn-bg); color: var(--warn); border: 1px solid #E3C6BC; border-radius: 6px; padding: .8rem 1rem; font-size: .82rem; margin-bottom: 1rem; }
@@ -105,7 +106,7 @@
 
 .llc-card { background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 1.4rem; margin-bottom: 1rem; position: relative; }
 .llc-card::before { content: ""; position: absolute; top: 0; left: 26px; width: 56px; height: 5px; background: var(--brass); border-radius: 0 0 3px 3px; }
-.llc-section-label { font-family: 'Roboto Slab', serif; font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--ink); border-bottom: 1px solid var(--line); padding-bottom: .7rem; margin: .3rem 0 1.1rem; }
+.llc-section-label { font-family: 'IBM Plex Sans', sans-serif; font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--ink); border-bottom: 1px solid var(--line); padding-bottom: .7rem; margin: .3rem 0 1.1rem; }
 
 .llc-grid { display: grid; gap: 1rem; }
 .llc-grid-2 { grid-template-columns: 1fr 1fr; }

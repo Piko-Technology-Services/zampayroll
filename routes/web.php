@@ -101,6 +101,27 @@ Route::post('/payroll/{payroll}/email', [PayslipMailController::class, 'sendSing
 Route::post('/payroll/runs/{run}/email-all', [PayslipMailController::class, 'sendBulk'])
     ->name('payroll.email.bulk');
 
+Route::prefix('payroll/runs')->name('payroll.runs.')->group(function () {
+ 
+    // ... your existing routes (index, create, store, show, generate,
+    //     finalize, adjustments, etc.) stay exactly as they are ...
+ 
+    Route::get('/hidden', [PayrollRunController::class, 'hiddenIndex'])->name('hidden');
+    Route::get('/trash', [PayrollRunController::class, 'trashIndex'])->name('trash');
+ 
+    Route::post('/{run}/hide', [PayrollRunController::class, 'hide'])->name('hide');
+    Route::post('/{run}/unhide', [PayrollRunController::class, 'unhide'])->name('unhide');
+ 
+    // "Delete" on a run card = move to trash (soft delete), not permanent.
+    Route::delete('/{run}/trash', [PayrollRunController::class, 'trash'])->name('trash.store');
+ 
+    // Trashed rows are excluded from default route-model binding, so these
+    // two use a plain {id} + onlyTrashed()->findOrFail() in the controller.
+    Route::post('/{id}/restore', [PayrollRunController::class, 'restore'])->name('restore');
+    Route::delete('/{id}/force-delete', [PayrollRunController::class, 'forceDelete'])->name('force-delete');
+ 
+});
+
 
 
 /*
