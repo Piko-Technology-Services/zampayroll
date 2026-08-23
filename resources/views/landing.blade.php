@@ -99,11 +99,13 @@
   .nlinks{display:flex;align-items:center;gap:30px}
   .nlinks a{font-size:.86rem;font-weight:500;color:var(--ink2);text-decoration:none}
   .nlinks a:hover{color:var(--ink)}
+  .nav-ctas{display:flex;align-items:center;gap:10px}
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:600;font-size:.86rem;border-radius:9px;text-decoration:none;border:1px solid transparent;cursor:pointer;transition:transform .15s, filter .15s, background .15s;}
   .btn-primary{background:var(--green);color:#fff;padding:11px 20px}
   .btn-primary:hover{background:var(--green-dk);transform:translateY(-1px)}
   .btn-line{background:transparent;color:var(--ink);border-color:var(--line);padding:10px 19px}
   .btn-line:hover{border-color:var(--ink3);transform:translateY(-1px)}
+  .btn-ghost{background:transparent;color:var(--ink2);border:none;padding:8px 4px;text-decoration:underline;text-underline-offset:3px;}
   #hero{padding:76px 0 60px;position:relative;overflow:hidden}
   .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center}
   .badges{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0 26px}
@@ -150,21 +152,36 @@
   .ic-black{background:var(--black)}
   .ic-red{background:var(--red)}
   .ic-orange{background:var(--orange)}
-  .steps-strip{display:flex;align-items:center;gap:0;margin-top:26px;background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:22px 26px;overflow-x:auto;}
-  .step{display:flex;align-items:center;gap:12px;white-space:nowrap}
-  .step-n{width:30px;height:30px;border-radius:50%;background:var(--green-lt);color:var(--green-dk);font-weight:700;font-size:.82rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-  .step-t{font-weight:600;font-size:.88rem}
-  .step-arrow{color:var(--ink3);margin:0 20px;font-size:.9rem}
-  #calcs{padding:70px 0;border-top:1px solid var(--line)}
-  .cgrid3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
-  .ccard{border-radius:16px;padding:26px;color:#fff;position:relative;overflow:hidden;min-height:170px;display:flex;flex-direction:column;justify-content:space-between;}
-  .ccard .ci{font-size:1.3rem;margin-bottom:26px;opacity:.9}
-  .ccard .ct{font-family:'Fraunces',serif;font-weight:700;font-size:1.1rem;margin-bottom:6px}
-  .ccard .cd{font-size:.8rem;opacity:.85;line-height:1.5}
-  .ccard.c1{background:linear-gradient(150deg,var(--green),var(--green-dk))}
-  .ccard.c2{background:linear-gradient(150deg,#2b2d31,var(--black))}
-  .ccard.c3{background:linear-gradient(150deg,var(--orange),#B7621F)}
-  .soon-tag{position:absolute;top:18px;right:18px;font-size:.65rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:rgba(255,255,255,.18);padding:5px 10px;border-radius:100px}
+
+  /* ── How it works ─────────────────────────────────────────── */
+  #how{padding:70px 0;border-top:1px solid var(--line)}
+  .how-rail{display:grid;grid-template-columns:repeat(5,1fr);gap:0;position:relative;margin-top:12px}
+  .how-step{position:relative;padding:0 16px 0 0}
+  .how-step:not(:last-child):after{
+    content:'';position:absolute;top:23px;right:-2px;width:calc(100% - 46px);height:1px;
+    background:repeating-linear-gradient(90deg, var(--line) 0 6px, transparent 6px 12px);
+  }
+  .how-n{width:46px;height:46px;border-radius:50%;background:var(--paper);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:700;color:var(--green-dk);font-size:1.05rem;margin-bottom:16px;position:relative;z-index:1;}
+  .how-t{font-weight:700;font-size:.94rem;margin-bottom:6px}
+  .how-d{font-size:.8rem;color:var(--ink3);line-height:1.55;padding-right:6px}
+  @media (max-width:920px){
+    .how-rail{grid-template-columns:1fr 1fr;gap:24px}
+    .how-step:after{display:none}
+  }
+  @media (max-width:560px){ .how-rail{grid-template-columns:1fr} }
+
+  /* ── Self-service portals (replaces old "calculators" section) ── */
+  #portals{padding:70px 0;border-top:1px solid var(--line)}
+  .portal-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .portal-card{border-radius:16px;padding:26px;color:#fff;position:relative;overflow:hidden;min-height:170px;display:flex;flex-direction:column;justify-content:space-between;}
+  .portal-card .ci{font-size:1.3rem;margin-bottom:26px;opacity:.9}
+  .portal-card .ct{font-family:'Fraunces',serif;font-weight:700;font-size:1.1rem;margin-bottom:6px}
+  .portal-card .cd{font-size:.8rem;opacity:.85;line-height:1.5}
+  .portal-card.p1{background:linear-gradient(150deg,var(--green),var(--green-dk))}
+  .portal-card.p2{background:linear-gradient(150deg,#2b2d31,var(--black))}
+  .portal-card.p3{background:linear-gradient(150deg,var(--orange),#B7621F)}
+  .portal-tag{position:absolute;top:18px;right:18px;font-size:.65rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:rgba(255,255,255,.18);padding:5px 10px;border-radius:100px}
+
   #industries{padding:70px 0;border-top:1px solid var(--line)}
   .pillgrid{display:flex;flex-wrap:wrap;gap:10px;margin-top:30px}
   .pill{font-size:.83rem;font-weight:500;padding:10px 16px;border-radius:100px;background:var(--paper);border:1px solid var(--line);color:var(--ink2);}
@@ -213,11 +230,22 @@
   .soc{display:flex;gap:9px}
   .soc a{width:32px;height:32px;border-radius:9px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;text-decoration:none;color:var(--ink2);font-size:.8rem}
   .soc a:hover{border-color:var(--ink3);color:var(--ink)}
+
+  /* ── Video demo modal ─────────────────────────────────────── */
+  .video-modal{position:fixed;inset:0;z-index:100;display:none;}
+  .video-modal.is-open{display:block}
+  .video-modal-backdrop{position:absolute;inset:0;background:rgba(14,16,17,.72);backdrop-filter:blur(3px);}
+  .video-modal-content{position:relative;max-width:920px;margin:6vh auto;padding:0 20px;}
+  .video-modal-close{position:absolute;top:-44px;right:12px;width:36px;height:36px;border-radius:50%;background:var(--paper);border:1px solid var(--line);color:var(--ink);font-size:1.2rem;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .video-modal-frame{position:relative;width:100%;padding-top:56.25%;background:#000;border-radius:14px;overflow:hidden;box-shadow:0 30px 70px -20px rgba(0,0,0,.55);}
+  .video-modal-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
+  @media (max-width:640px){ .video-modal-content{margin:14vh auto} }
+
   @media (max-width:920px){
     .hero-grid{grid-template-columns:1fr}
     .statgrid{grid-template-columns:repeat(2,1fr)}
     .fgrid{grid-template-columns:repeat(2,1fr)}
-    .cgrid3{grid-template-columns:1fr}
+    .portal-grid{grid-template-columns:1fr}
     .rwrap{grid-template-columns:1fr}
     .demo-wrap{grid-template-columns:1fr}
     .nlinks{display:none}
@@ -229,7 +257,6 @@
     .rwrap{padding:34px 24px}
     .demo-card{padding:24px}
     #hero{padding:50px 0 40px}
-    .step-arrow{margin:0 10px}
   }
 </style>
 </head>
@@ -242,12 +269,16 @@
     </a>
     <div class="nlinks">
       <a href="#features">Features</a>
-      <a href="#calcs">Calculators</a>
+      <a href="#how">How it works</a>
+      <a href="#portals">Self-service</a>
       <a href="#industries">Industries</a>
       <a href="#reseller">Resellers</a>
       <a href="#contact">Contact</a>
     </div>
-    <a href="#demo" class="btn btn-primary">Request a Demo</a>
+    <div class="nav-ctas">
+      <button type="button" class="btn-ghost" onclick="openVideoModal()"><i class="fa-solid fa-circle-play"></i> Watch demo</button>
+      <a href="#demo" class="btn btn-primary">Request a Demo</a>
+    </div>
   </div>
 </nav>
 
@@ -255,15 +286,15 @@
   <div class="container hero-grid">
     <div>
       <span class="eyebrow"><span class="ln"></span>Now live in Zambia</span>
-      <h1 class="h1">AI-powered HR &amp; Payroll,<br><em>made simple.</em></h1>
+      <h1 class="h1">One platform for HR<br>and payroll, <em>end to end.</em></h1>
       <div class="badges">
-        <span class="badge"><i class="fa-solid fa-circle-check"></i> NAPSA Recommended Payroll</span>
-        <span class="badge"><i class="fa-solid fa-circle-check"></i> ZRA Recommended Payroll</span>
+        <span class="badge"><i class="fa-solid fa-circle-check"></i> Built for NAPSA, ZRA &amp; NHIMA compliance</span>
+        <span class="badge"><i class="fa-solid fa-circle-check"></i> Multi-company, role-based access</span>
       </div>
-      <p class="hero-sub">ZamPayroll runs your payroll from generate to finalise in a few clicks, explains to every employee exactly why they were taxed what they were taxed, and catches errors before they reach a payslip.</p>
+      <p class="hero-sub">ZamPayroll takes you from employee records to a finalised payroll run in one place — attendance, leave, overtime and loan requests, payroll processing, payslips, and statutory reports for NAPSA, ZRA, NHIMA and WCFCB.</p>
       <div class="hero-ctas">
         <a href="#demo" class="btn btn-primary">Request a Demo <i class="fa-solid fa-arrow-right fa-sm"></i></a>
-        <a href="#features" class="btn btn-line">See how it works</a>
+        <button type="button" class="btn btn-line" onclick="openVideoModal()"><i class="fa-solid fa-circle-play"></i> Watch Demo Video</button>
       </div>
       <p class="fine">Live and onboarding new companies across Zambia.</p>
     </div>
@@ -292,7 +323,7 @@
           <i style="height:70%;background:var(--green)"></i>
         </div>
       </div>
-      <div class="ai-chip"><i class="fa-solid fa-wand-magic-sparkles"></i> AI: "Here's why you paid more tax this month"</div>
+      <div class="ai-chip"><i class="fa-solid fa-file-export"></i> One export, ready for NAPSA &amp; ZRA</div>
     </div>
   </div>
 </section>
@@ -300,9 +331,9 @@
 <section id="stats">
   <div class="container">
     <div class="statgrid">
-      <div class="statcard"><div class="num">3</div><div class="lbl">Clicks from generate to finalised payroll</div></div>
-      <div class="statcard"><div class="num">100%</div><div class="lbl">NAPSA, ZRA &amp; NHIMA compliant exports</div></div>
-      <div class="statcard"><div class="num">AI</div><div class="lbl">Payroll assistant for every employee query</div></div>
+      <div class="statcard"><div class="num">1</div><div class="lbl">Platform for employees, attendance, leave &amp; payroll</div></div>
+      <div class="statcard"><div class="num">4</div><div class="lbl">Statutory exports built in — NAPSA, ZRA, NHIMA &amp; WCFCB</div></div>
+      <div class="statcard"><div class="num">3</div><div class="lbl">Self-service request forms — leave, overtime &amp; loans</div></div>
       <div class="statcard"><div class="num">24/7</div><div class="lbl">Access to payslips, reports &amp; dashboards</div></div>
     </div>
   </div>
@@ -311,38 +342,78 @@
 <section id="features">
   <div class="container">
     <div class="sec-head">
-      <span class="eyebrow"><span class="ln"></span>Why ZamPayroll</span>
-      <h2 class="sec-title">Built to remove the guesswork from payroll</h2>
-      <p class="sec-sub">From the first draft run to the finalised payslip, every step is designed to be fast, explainable and error-free.</p>
+      <span class="eyebrow"><span class="ln"></span>What's inside</span>
+      <h2 class="sec-title">Every HR and payroll module, connected</h2>
+      <p class="sec-sub">Each module feeds the next — attendance and approved requests flow straight into payroll, so nothing gets re-typed or reconciled by hand.</p>
     </div>
     <div class="fgrid">
-      <div class="fcard"><div class="fic ic-green"><i class="fa-solid fa-flask"></i></div><div class="ft">Simulation Mode</div><div class="fd">Run a "what-if" payroll before you commit &mdash; test raises, bonuses or new hires with zero risk.</div></div>
-      <div class="fcard"><div class="fic ic-black"><i class="fa-solid fa-magnifying-glass-chart"></i></div><div class="ft">Anomaly Detection</div><div class="fd">Automatically flags unusual pay changes before a payslip ever reaches an employee.</div></div>
-      <div class="fcard"><div class="fic ic-orange"><i class="fa-solid fa-robot"></i></div><div class="ft">AI Payroll Assistant</div><div class="fd">Explains to any employee, in plain language, exactly why they were taxed what they were taxed.</div></div>
-      <div class="fcard"><div class="fic ic-red"><i class="fa-solid fa-calculator"></i></div><div class="ft">Inbuilt Calculator</div><div class="fd">Salary, overtime and gratuity calculations built right into the workflow &mdash; no spreadsheets needed.</div></div>
-      <div class="fcard"><div class="fic ic-green"><i class="fa-solid fa-file-csv"></i></div><div class="ft">One-Time Payroll</div><div class="fd">Download CSVs, output payslips, and export directly to ZRA, NAPSA and NHIMA in a click.</div></div>
-      <div class="fcard"><div class="fic ic-black"><i class="fa-solid fa-gauge-high"></i></div><div class="ft">One Time Dashboard</div><div class="fd">View, adjust and finalise a one-off pay run without touching your main payroll cycle.</div></div>
-    </div>
-    <div class="steps-strip">
-      <div class="step"><span class="step-n">1</span><span class="step-t">Generate</span></div>
-      <span class="step-arrow"><i class="fa-solid fa-arrow-right"></i></span>
-      <div class="step"><span class="step-n">2</span><span class="step-t">Adjust</span></div>
-      <span class="step-arrow"><i class="fa-solid fa-arrow-right"></i></span>
-      <div class="step"><span class="step-n">3</span><span class="step-t">Finalise</span></div>
+      <div class="fcard"><div class="fic ic-green"><i class="fa-solid fa-id-card"></i></div><div class="ft">Employee Records</div><div class="fd">One master record per employee — contract, salary, bank details, statutory IDs and documents, all in one place.</div></div>
+      <div class="fcard"><div class="fic ic-black"><i class="fa-solid fa-calendar-check"></i></div><div class="ft">Attendance Tracking</div><div class="fd">Mark attendance on a monthly calendar, import from a CSV, and configure working days and public holidays company-wide.</div></div>
+      <div class="fcard"><div class="fic ic-orange"><i class="fa-solid fa-plane-departure"></i></div><div class="ft">Leave Management</div><div class="fd">Employees apply publicly, HR approves or rejects with a comment, and the annual leave sheet stays up to date automatically.</div></div>
+      <div class="fcard"><div class="fic ic-red"><i class="fa-solid fa-clock"></i></div><div class="ft">Overtime &amp; Loans</div><div class="fd">Public request forms for overtime and staff loans, with an approval workflow and a running loan repayment ledger.</div></div>
+      <div class="fcard"><div class="fic ic-green"><i class="fa-solid fa-money-check-dollar"></i></div><div class="ft">Payroll Processing</div><div class="fd">Create a payroll run, generate pay for every active employee, apply rules and adjustments, then finalise when it's ready.</div></div>
+      <div class="fcard"><div class="fic ic-black"><i class="fa-solid fa-file-invoice"></i></div><div class="ft">Payslips &amp; Reports</div><div class="fd">PDF payslips, management reports by department or branch, bank bulk-payment files, and statutory exports — all exportable.</div></div>
     </div>
   </div>
 </section>
 
-<section id="calcs">
+<section id="how">
   <div class="container">
     <div class="sec-head">
-      <span class="eyebrow"><span class="ln"></span>Free tools</span>
-      <h2 class="sec-title">Quick calculators, built into the platform</h2>
+      <span class="eyebrow"><span class="ln"></span>How it works</span>
+      <h2 class="sec-title">From a new employee to a finalised payslip</h2>
+      <p class="sec-sub">The same five steps every month — set up your team once, then repeat the payroll cycle in minutes.</p>
     </div>
-    <div class="cgrid3">
-      <div class="ccard c1"><div class="ci"><i class="fa-solid fa-sack-dollar"></i></div><div><div class="ct">Salary Calculator</div><div class="cd">Instant gross-to-net breakdown with PAYE, NAPSA &amp; NHIMA.</div></div></div>
-      <div class="ccard c2"><div class="ci"><i class="fa-solid fa-business-time"></i></div><div><div class="ct">Overtime Calculator</div><div class="cd">Work out overtime pay in line with Zambian labour law.</div></div></div>
-      <div class="ccard c3"><span class="soon-tag">Coming Soon</span><div class="ci"><i class="fa-solid fa-handshake"></i></div><div><div class="ct">Gratuity Calculator</div><div class="cd">Calculate end-of-contract gratuity in seconds.</div></div></div>
+    <div class="how-rail">
+      <div class="how-step">
+        <div class="how-n">1</div>
+        <div class="how-t">Set up your company</div>
+        <div class="how-d">Add your company profile, generate an access code, and invite HR and managers to your team.</div>
+      </div>
+      <div class="how-step">
+        <div class="how-n">2</div>
+        <div class="how-t">Add your employees</div>
+        <div class="how-d">Enter contract, salary, bank and statutory details once — every other module reads from this record.</div>
+      </div>
+      <div class="how-step">
+        <div class="how-n">3</div>
+        <div class="how-t">Track the month</div>
+        <div class="how-d">Mark attendance, and let employees submit leave, overtime and loan requests for HR to approve.</div>
+      </div>
+      <div class="how-step">
+        <div class="how-n">4</div>
+        <div class="how-t">Run payroll</div>
+        <div class="how-d">Generate pay for all active employees, review adjustments, and finalise the run when it's correct.</div>
+      </div>
+      <div class="how-step">
+        <div class="how-n">5</div>
+        <div class="how-t">Deliver &amp; report</div>
+        <div class="how-d">Send payslips, download the bank payment file, and export NAPSA, ZRA and NHIMA returns.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="portals">
+  <div class="container">
+    <div class="sec-head">
+      <span class="eyebrow"><span class="ln"></span>Self-service</span>
+      <h2 class="sec-title">Employees submit their own requests</h2>
+      <p class="sec-sub">Public forms mean staff don't need an account or an HR screen walkthrough just to ask for leave.</p>
+    </div>
+    <div class="portal-grid">
+      <div class="portal-card p1">
+        <div class="ci"><i class="fa-solid fa-plane-departure"></i></div>
+        <div><div class="ct">Leave Applications</div><div class="cd">Employees pick a leave type and date range from a public link; HR approves or rejects with an optional comment.</div></div>
+      </div>
+      <div class="portal-card p2">
+        <div class="ci"><i class="fa-solid fa-business-time"></i></div>
+        <div><div class="ct">Overtime Requests</div><div class="cd">Log the date, hours and reason for overtime worked, ready for a manager to review before payroll runs.</div></div>
+      </div>
+      <div class="portal-card p3">
+        <div class="ci"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+        <div><div class="ct">Loan Requests</div><div class="cd">Employees apply with an amount and payment plan; approved loans post to a ledger with automatic payroll deductions.</div></div>
+      </div>
     </div>
   </div>
 </section>
@@ -400,12 +471,13 @@
       <div>
         <span class="eyebrow"><span class="ln"></span>See it live</span>
         <h2 class="sec-title">Request a demo</h2>
-        <p class="sec-sub">Tell us a little about your company and we'll walk you through ZamPayroll &mdash; generating payroll, running the AI assistant, and exporting straight to NAPSA, ZRA and NHIMA.</p>
+        <p class="sec-sub">Tell us a little about your company and we'll walk you through ZamPayroll — from employee records and attendance to a finalised payroll run and statutory exports.</p>
         <ul class="demo-points">
           <li><i class="fa-solid fa-circle-check"></i> A live walkthrough tailored to your industry and company size</li>
           <li><i class="fa-solid fa-circle-check"></i> No obligation &mdash; just a clear look at how ZamPayroll fits your payroll</li>
           <li><i class="fa-solid fa-circle-check"></i> We typically respond within one business day</li>
         </ul>
+        <button type="button" class="btn btn-line" style="margin-top:22px" onclick="openVideoModal()"><i class="fa-solid fa-circle-play"></i> Prefer to watch first? See the demo video</button>
       </div>
 
       <div class="demo-card">
@@ -492,7 +564,7 @@
 
           <div class="field">
             <label for="message">What would you like us to cover? (optional)</label>
-            <textarea id="message" name="message" placeholder="E.g. we run payroll across 3 branches and want to see the AI assistant in action.">{{ old('message') }}</textarea>
+            <textarea id="message" name="message" placeholder="E.g. we run payroll across 3 branches and want to see the leave and loan workflows.">{{ old('message') }}</textarea>
             @error('message') <div class="field-err">{{ $message }}</div> @enderror
           </div>
 
@@ -531,6 +603,45 @@
     </div>
   </div>
 </footer>
+
+{{-- ═══════════════════════════════════════════════════════════
+     DEMO VIDEO MODAL — replace DEMO_VIDEO_URL below with your
+     actual hosted video (YouTube/Vimeo embed URL or direct file).
+═══════════════════════════════════════════════════════════ --}}
+<div class="video-modal" id="videoModal" aria-hidden="true">
+  <div class="video-modal-backdrop" onclick="closeVideoModal()"></div>
+  <div class="video-modal-content">
+    <button type="button" class="video-modal-close" onclick="closeVideoModal()" aria-label="Close video">&times;</button>
+    <div class="video-modal-frame">
+      <iframe id="demoVideoFrame" src="" title="ZamPayroll product demo" allow="autoplay; fullscreen" allowfullscreen></iframe>
+    </div>
+  </div>
+</div>
+
+<script>
+  // TODO: replace with your actual demo video URL (YouTube/Vimeo embed link, or a direct .mp4 wrapped in a <video> tag instead of this iframe).
+  const DEMO_VIDEO_URL = "https://www.youtube.com/embed/REPLACE_WITH_VIDEO_ID";
+
+  function openVideoModal() {
+    const modal = document.getElementById('videoModal');
+    document.getElementById('demoVideoFrame').src = DEMO_VIDEO_URL + "?autoplay=1";
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeVideoModal() {
+    const modal = document.getElementById('videoModal');
+    document.getElementById('demoVideoFrame').src = "";
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeVideoModal();
+  });
+</script>
 
 <script>
   (function () {
