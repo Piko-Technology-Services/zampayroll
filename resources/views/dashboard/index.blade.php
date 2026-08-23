@@ -366,28 +366,6 @@
             </div>
         </div>
 
-        <div class="hrd-card">
-            <div class="stat-label">Total Payroll Cost</div>
-            <div class="stat-value">K{{ $payrollSummary ? number_format($payrollSummary['total_earnings'], 0) : '0' }}</div>
-            <div class="stat-sub">{{ $payrollSummary['period'] ?? 'No run yet' }}</div>
-        </div>
-
-        <div class="hrd-card">
-            <div class="stat-label">Net Pay</div>
-            <div class="stat-value">K{{ $payrollSummary ? number_format($payrollSummary['net_pay'], 0) : '0' }}</div>
-            <div class="stat-sub">{{ $payrollSummary['employee_count'] ?? 0 }} employees paid</div>
-        </div>
-
-        <div class="hrd-card compliance-card">
-            <div class="stat-label">Compliance</div>
-            <div class="compliance-value {{ $compliance['ok'] ? 'ok' : 'warn' }}">
-                <span class="compliance-dot {{ $compliance['ok'] ? 'ok' : 'warn' }}">
-                    <i class="bi {{ $compliance['ok'] ? 'bi-check-lg' : 'bi-exclamation-lg' }}"></i>
-                </span>
-                {{ $compliance['ok'] ? 'All Clear' : $compliance['count'].' Issue'.($compliance['count'] > 1 ? 's' : '') }}
-            </div>
-        </div>
-
     </div>
 
         {{-- ===== QUICK ACTIONS ===== --}}
@@ -510,7 +488,7 @@
 
         {{-- Anomalies Detected --}}
         <div class="hrd-card">
-            <div class="panel-title">Anomalies Detected</div>
+            <div class="panel-title">Alerts</div>
 
             <div class="anomaly-count-row">
                 <div class="anomaly-icon {{ $alerts->isEmpty() ? 'clear' : '' }}">

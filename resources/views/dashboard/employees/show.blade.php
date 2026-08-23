@@ -2,7 +2,7 @@
 
 @section('content')
 
-<div class="hrf-wrap">
+<div class="hrf-wrap p-5">
 
     {{-- ===== TOP BAR ===== --}}
     <div class="hrf-topbar">
@@ -220,18 +220,14 @@
                     @if($employee->net_salary)
                     <div class="hrf-field"><div class="hrf-field-label">Net Salary</div><div class="hrf-field-value">K {{ number_format($employee->net_salary, 2) }}</div></div>
                     @endif
-                    @if($employee->natural_gross_salary)
-                    <div class="hrf-field"><div class="hrf-field-label">Natural Gross Salary</div><div class="hrf-field-value">K {{ number_format($employee->natural_gross_salary, 2) }}</div></div>
-                    @endif
+                    
                     @if(!is_null($employee->leave_days_entitled))
                     <div class="hrf-field"><div class="hrf-field-label">Leave Days Entitled</div><div class="hrf-field-value">{{ $employee->leave_days_entitled }}</div></div>
                     @endif
                     @if(!is_null($employee->leave_days_balance))
                     <div class="hrf-field"><div class="hrf-field-label">Leave Days Balance</div><div class="hrf-field-value">{{ $employee->leave_days_balance }}</div></div>
                     @endif
-                    @if($employee->leave_days_value)
-                    <div class="hrf-field"><div class="hrf-field-label">Leave Day Value</div><div class="hrf-field-value">K {{ number_format($employee->leave_days_value, 2) }}</div></div>
-                    @endif
+                    
                 </div>
             </section>
 
@@ -379,7 +375,7 @@ body {
     font-size: .58rem;
     font-weight: 600;
     letter-spacing: .12em;
-    color: #7E92AC;
+    color: #f9fbfe;
 }
 
 /* ---- Identity panel ---- */

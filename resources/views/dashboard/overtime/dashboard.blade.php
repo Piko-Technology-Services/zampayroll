@@ -16,11 +16,44 @@
     @endif
 
     <div class="otd-tabs">
-        @foreach(['pending' => 'Pending', 'approved' => 'Approved', 'rejected' => 'Rejected', 'all' => 'All'] as $key => $label)
+        @foreach([ 'all' => 'All Requests', 'pending' => 'Pending', 'approved' => 'Approved', 'rejected' => 'Rejected'] as $key => $label)
             <a href="{{ route('overtime.dashboard', ['status' => $key]) }}" class="otd-tab {{ $status === $key ? 'otd-tab-active' : '' }}">
                 {{ $label }} @if(isset($counts[$key]))<span class="otd-tab-count">{{ $counts[$key] }}</span>@endif
             </a>
         @endforeach
+        <form
+            action="{{ route('overtime.export.approved') }}"
+            method="GET"
+            class="d-flex align-items-end gap-2"
+            onsubmit="return delayOvertimeExport(event, this)"
+        >
+            <div>
+                <!-- <label for="month" class="form-label">Month</label> -->
+                <select name="month" id="month" class="form-select" required>
+                    @for($month = 1; $month <= 12; $month++)
+                        <option value="{{ $month }}" {{ $month == now()->month ? 'selected' : '' }}>
+                            {{ \Carbon\Carbon::create()->month($month)->format('F') }}
+                        </option>
+                    @endfor
+                </select>
+            </div>
+
+            <div>
+                <!-- <label for="year" class="form-label">Year</label> -->
+                <select name="year" id="year" class="form-select" required>
+                    @for($year = now()->year; $year >= now()->year - 5; $year--)
+                        <option value="{{ $year }}" {{ $year == now()->year ? 'selected' : '' }}>
+                            {{ $year }}
+                        </option>
+                    @endfor
+                </select>
+            </div>
+
+            <button type="submit" class="btn btn-outline-success">
+                <i class="bi bi-download me-1"></i>
+                Export Approved Overtime Sheet
+            </button>
+        </form>
     </div>
 
     <div class="otd-card">
@@ -68,6 +101,57 @@
     </div>
 
 </div>
+
+<script>
+function delayOvertimeExport(event, form) {
+    event.preventDefault();
+
+    if (form.dataset.submitting === 'true') {
+        return false;
+    }
+
+    form.dataset.submitting = 'true';
+    const button = form.querySelector('button[type="submit"]');
+    button.disabled = true;
+    button.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Preparing export...';
+
+    fetch(form.action + '?' + new URLSearchParams(new FormData(form)).toString(), {
+        method: 'GET',
+        headers: { 'Accept': 'application/octet-stream' }
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Export failed');
+            }
+
+            const disposition = response.headers.get('Content-Disposition') || '';
+            const filenameMatch = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/i);
+            const filename = filenameMatch ? filenameMatch[1].replace(/['"]/g, '') : 'approved-overtime-sheet';
+
+            return response.blob().then(blob => ({ blob, filename }));
+        })
+        .then(({ blob, filename }) => {
+            const downloadUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(downloadUrl);
+
+            window.location.reload();
+        })
+        .catch(() => {
+            form.dataset.submitting = 'false';
+            button.disabled = false;
+            button.innerHTML = '<i class="bi bi-download me-1"></i> Export Approved Overtime Sheet';
+            alert('Unable to prepare the export. Please try again.');
+        });
+
+    return false;
+}
+</script>
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');

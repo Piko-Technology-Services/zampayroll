@@ -11,7 +11,7 @@ class LoanDashboardController extends Controller
 {
     public function index(Request $request)
     {
-        $status = $request->query('status', 'pending');
+        $status = $request->query('status', 'all');
 
         $requests = LoanRequest::with(['employee', 'reviewedBy'])
             ->when($status !== 'all', fn ($q) => $q->where('status', $status))
@@ -31,7 +31,10 @@ class LoanDashboardController extends Controller
     {
         $this->decide($request, $loanRequest, 'approved');
 
-        return back()->with('success', 'Loan request approved.');
+        return back()->with(
+            'success',
+            'Loan request approved. Add it to the loan ledger from the "New Loan" form when ready.'
+        );
     }
 
     public function reject(Request $request, LoanRequest $loanRequest)
@@ -41,6 +44,13 @@ class LoanDashboardController extends Controller
         return back()->with('success', 'Loan request rejected.');
     }
 
+    /**
+     * NOTE: approving here only changes the application's status and
+     * notifies the employee — it deliberately does NOT create a Loan
+     * ledger entry. HR adds approved loans to the ledger explicitly via
+     * LoanLedgerController::create(), which offers a "prefill from an
+     * approved application" picker so nothing needs retyping.
+     */
     private function decide(Request $request, LoanRequest $loanRequest, string $status): void
     {
         $request->validate(['comment' => 'nullable|string|max:500']);

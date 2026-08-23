@@ -158,7 +158,7 @@
 
         {{-- REPORTS (general) --}}
         <a class="nav-link {{ request()->routeIs('reports.*') ? 'active' : '' }}"
-           href="{{ route('reports.index') }}">
+           href="{{ route('payroll.reports.index') }}">
             <i class="bi bi-bar-chart nav-icon"></i>
             <span class="nav-text">Reports</span>
         </a>
@@ -197,7 +197,7 @@
             </a>
             <div class="collapse nav-submenu {{ request()->routeIs('settings.*') ? 'show' : '' }}" id="navSettings">
                 <a class="nav-sublink {{ request()->routeIs('settings.index') ? 'active' : '' }}"
-                   href="{{ route('settings.index') }}">
+                   href="{{ route('company.settings') }}">
                     <i class="bi bi-building"></i> Company Settings
                 </a>
                 <a class="nav-sublink {{ request()->routeIs('profile.index') || request()->routeIs('profile.edit') ? 'active' : '' }}"

@@ -47,12 +47,32 @@ class LoanLedgerController extends Controller
             ->orderBy('first_name')
             ->get();
 
-        return view('dashboard.loan.create', compact('employees'));
+        // Employees who already have an active loan on the ledger —
+        // excluded below regardless of whether THIS specific application
+        // is the one linked to it, since showing "add a loan" for someone
+        // who already has one tracked is the case we're avoiding.
+        $employeeIdsWithActiveLoans = Loan::where('status', 'active')->pluck('employee_id');
+
+        // Approved applications that (a) don't already have a ledger entry
+        // of their own, AND (b) aren't for an employee who already has a
+        // different active loan on the ledger. Shown as a "prefill" picker
+        // so HR can turn an approval into a tracked loan without retyping
+        // anything, but only when they deliberately choose to (approving
+        // no longer auto-creates one).
+        $approvedApplications = LoanRequest::with('employee')
+            ->where('status', 'approved')
+            ->whereDoesntHave('loan')
+            ->whereNotIn('employee_id', $employeeIdsWithActiveLoans)
+            ->orderByDesc('reviewed_at')
+            ->get();
+
+        return view('dashboard.loan.create', compact('employees', 'approvedApplications'));
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
+            'loan_request_id'     => 'nullable|exists:loan_requests,id',
             'employee_id'         => 'required|exists:employees,id',
             'principal_amount'    => 'required|numeric|min:0.01',
             'balance'             => 'nullable|numeric|min:0',
@@ -65,6 +85,7 @@ class LoanLedgerController extends Controller
 
         $loan = Loan::create([
             'employee_id'         => $validated['employee_id'],
+            'loan_request_id'     => $validated['loan_request_id'] ?? null,
             'principal_amount'    => $validated['principal_amount'],
             'balance'             => $validated['balance'] ?? $validated['principal_amount'],
             'payment_plan'        => $validated['payment_plan'],

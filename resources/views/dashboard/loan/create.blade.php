@@ -21,13 +21,45 @@
     <form method="POST" action="{{ route('loan.ledger.store') }}">
         @csrf
 
+        {{-- ================= PREFILL FROM APPROVED APPLICATION ================= --}}
+        <div class="llc-card llc-prefill-card">
+            <div class="llc-section-label">Prefill From an Approved Application <span class="llc-optional">(optional)</span></div>
+
+            @if($approvedApplications->isEmpty())
+                <div class="llc-empty-note">
+                    <i class="bi bi-inbox"></i> No approved applications are waiting to be added to the ledger.
+                </div>
+            @else
+                <div class="llc-field">
+                    <label class="llc-label">Approved Application</label>
+                    <select id="prefillSelect" class="llc-input">
+                        <option value="">— Start blank —</option>
+                        @foreach($approvedApplications as $app)
+                            <option value="{{ $app->id }}"
+                                    data-employee-id="{{ $app->employee_id }}"
+                                    data-amount="{{ $app->amount }}"
+                                    data-plan="{{ $app->payment_plan }}"
+                                    data-plan-note="{{ $app->payment_plan_note }}">
+                                {{ $app->employee->first_name }} {{ $app->employee->last_name }} —
+                                K {{ number_format($app->amount, 2) }} —
+                                approved {{ $app->reviewed_at?->format('d M Y') }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <small class="llc-hint">Picking one fills in the fields below — you can still adjust anything before saving. Only shows applications not already added to the ledger.</small>
+                </div>
+            @endif
+
+            <input type="hidden" name="loan_request_id" id="loanRequestIdInput">
+        </div>
+
         <div class="llc-card">
             <div class="llc-section-label">Loan Details</div>
 
             <div class="llc-grid llc-grid-2">
                 <div class="llc-field">
                     <label class="llc-label">Employee</label>
-                    <select name="employee_id" class="llc-input" required>
+                    <select name="employee_id" id="employeeSelect" class="llc-input" required>
                         <option value="">Select employee…</option>
                         @foreach($employees as $employee)
                             <option value="{{ $employee->id }}" {{ old('employee_id') == $employee->id ? 'selected' : '' }}>
@@ -43,7 +75,7 @@
 
                 <div class="llc-field">
                     <label class="llc-label">Principal Amount</label>
-                    <input type="number" step="0.01" min="0.01" name="principal_amount" class="llc-input" value="{{ old('principal_amount') }}" required>
+                    <input type="number" step="0.01" min="0.01" name="principal_amount" id="principalInput" class="llc-input" value="{{ old('principal_amount') }}" required>
                 </div>
                 <div class="llc-field">
                     <label class="llc-label">Current Balance</label>
@@ -67,11 +99,11 @@
                 </div>
 
                 <div class="llc-field" id="planNoteField">
-                    <label class="llc-label">Plan Detail</label>
-                    <input type="text" name="payment_plan_note" class="llc-input" value="{{ old('payment_plan_note') }}" placeholder="e.g. K500 every 3 months">
+                    <label class="llc-label">Payment Plan Descrption</label>
+                    <input type="text" name="payment_plan_note" id="planNoteInput" class="llc-input" value="{{ old('payment_plan_note') }}" placeholder="e.g. K500 every 3 months">
                 </div>
                 <div class="llc-field">
-                    <label class="llc-label">Notes</label>
+                    <label class="llc-label">Notes / Comments</label>
                     <input type="text" name="notes" class="llc-input" value="{{ old('notes') }}" placeholder="Internal note (optional)">
                 </div>
             </div>
@@ -107,6 +139,10 @@
 .llc-card { background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 1.4rem; margin-bottom: 1rem; position: relative; }
 .llc-card::before { content: ""; position: absolute; top: 0; left: 26px; width: 56px; height: 5px; background: var(--brass); border-radius: 0 0 3px 3px; }
 .llc-section-label { font-family: 'IBM Plex Sans', sans-serif; font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--ink); border-bottom: 1px solid var(--line); padding-bottom: .7rem; margin: .3rem 0 1.1rem; }
+.llc-optional { color: var(--ink-faint); font-weight: 500; text-transform: none; letter-spacing: 0; font-size: .7rem; }
+
+.llc-prefill-card::before { background: var(--accent-orange); }
+.llc-empty-note { font-size: .8rem; color: var(--ink-faint); display: flex; align-items: center; gap: .4rem; }
 
 .llc-grid { display: grid; gap: 1rem; }
 .llc-grid-2 { grid-template-columns: 1fr 1fr; }
@@ -116,6 +152,7 @@
 .llc-hint { font-size: .7rem; color: var(--ink-faint); line-height: 1.4; }
 .llc-input { font-size: .84rem; padding: .6rem .8rem; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); outline: none; width: 100%; }
 .llc-input:focus { border-color: var(--brass); box-shadow: 0 0 0 3px var(--brass-soft); }
+.llc-input.llc-prefilled { border-color: var(--accent-orange); background: #FFFAF3; }
 
 .llc-actions { display: flex; justify-content: flex-end; gap: .6rem; }
 .llc-btn { display: inline-flex; align-items: center; gap: .4rem; font-size: .8rem; font-weight: 600; padding: .55rem 1.1rem; border-radius: 6px; border: 1px solid transparent; cursor: pointer; text-decoration: none; }
@@ -127,18 +164,54 @@
 
 <script>
 (function () {
-    const select = document.getElementById('planSelect');
+    const prefillSelect   = document.getElementById('prefillSelect');
+    const loanRequestId   = document.getElementById('loanRequestIdInput');
+    const employeeSelect  = document.getElementById('employeeSelect');
+    const principalInput  = document.getElementById('principalInput');
+    const planSelect      = document.getElementById('planSelect');
+    const planNoteInput   = document.getElementById('planNoteInput');
     const installmentField = document.getElementById('installmentField');
-    const noteField = document.getElementById('planNoteField');
+    const planNoteField    = document.getElementById('planNoteField');
 
-    function toggle() {
-        const isOnceOff = select.value === 'once_off';
+    function toggleInstallment() {
+        const isOnceOff = planSelect.value === 'once_off';
         installmentField.style.opacity = isOnceOff ? '.45' : '1';
         installmentField.querySelector('input').disabled = isOnceOff;
-        noteField.style.display = select.value === 'other' ? 'flex' : 'flex';
     }
-    select.addEventListener('change', toggle);
-    toggle();
+
+    function markPrefilled(el, on) {
+        el.classList.toggle('llc-prefilled', on);
+    }
+
+    function applyPrefill() {
+        if (!prefillSelect) return;
+
+        const opt = prefillSelect.options[prefillSelect.selectedIndex];
+
+        if (!prefillSelect.value) {
+            loanRequestId.value = '';
+            [employeeSelect, principalInput, planSelect, planNoteInput].forEach(el => markPrefilled(el, false));
+            return;
+        }
+
+        loanRequestId.value = prefillSelect.value;
+
+        employeeSelect.value = opt.dataset.employeeId || '';
+        principalInput.value = opt.dataset.amount || '';
+        planSelect.value = opt.dataset.plan || '';
+        planNoteInput.value = opt.dataset.planNote || '';
+
+        [employeeSelect, principalInput, planSelect, planNoteInput].forEach(el => markPrefilled(el, true));
+
+        toggleInstallment();
+    }
+
+    if (prefillSelect) {
+        prefillSelect.addEventListener('change', applyPrefill);
+    }
+
+    planSelect.addEventListener('change', toggleInstallment);
+    toggleInstallment();
 })();
 </script>
 

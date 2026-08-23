@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\PayrollRun;
 use App\Models\Payroll;
 use App\Models\PayrollItem;
+use App\Models\Company;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -176,8 +177,9 @@ class PayrollReportController extends Controller
         [$year, $month] = $this->parsePeriod($run->period);
 
         $filename = "napsa-returns-{$run->period}.csv";
+        $companyNapsaNumber = auth()->user()?->company?->napsa_employer_number ?? '';
 
-        return response()->streamDownload(function () use ($run, $year, $month) {
+        return response()->streamDownload(function () use ($run, $year, $month, $companyNapsaNumber) {
 
             $handle = fopen('php://output', 'w');
 
@@ -190,13 +192,14 @@ class PayrollReportController extends Controller
 
             foreach ($run->payrolls as $payroll) {
                 $employee = $payroll->employee;
+            
 
                 $napsaAmount = $payroll->items
                     ->whereIn('code', ['D02', 'NAPSA'])
                     ->sum('amount');
 
                 fputcsv($handle, [
-                    $employee->napsa_employer_no ?? '',
+                    $companyNapsaNumber,
                     $year,
                     $month,
                     // Force as string to prevent Excel/PHP casting long SSNs
@@ -207,7 +210,7 @@ class PayrollReportController extends Controller
                     $employee->last_name,
                     $employee->first_name,
                     $employee->middle_name ?? '',
-                    $employee->dob ? \Carbon\Carbon::parse($employee->dob)->format('d/m/Y') : '',
+                    $employee->date_of_birth ? \Carbon\Carbon::parse($employee->date_of_birth)->format('d/m/Y') : '',
                     number_format($payroll->total_income, 2, '.', ''),
                     number_format($napsaAmount, 2, '.', ''),
                     number_format($napsaAmount, 2, '.', ''), // employer matches employee contribution
@@ -312,7 +315,7 @@ class PayrollReportController extends Controller
                     $employee->last_name,
                     $employee->first_name,
                     $employee->middle_name ?? '',
-                    $employee->dob ? \Carbon\Carbon::parse($employee->dob)->format('d/m/Y') : '',
+                    $employee->date_of_birth ? \Carbon\Carbon::parse($employee->date_of_birth)->format('d/m/Y') : '',
                     number_format($payroll->total_income, 2, '.', ''),
                     number_format($nhimaAmount, 2, '.', ''),
                     number_format($nhimaAmount, 2, '.', ''),
@@ -381,60 +384,44 @@ class PayrollReportController extends Controller
         ]);
     }
 
+
     /*
     |==========================================================================
-    | BANKING — BULK PAYMENT CSV
+    | BANKING — PRE-EXPORT CHECK
     |==========================================================================
     |
-    | Column order confirmed against live bank upload template:
-    |
-    |   # Account Number, Amount, Beneficiary Name, My Reference,
-    |   Beneficiary Reference, # Bank sort Code, #Bank reference Number, Address
-    |
-    | The "#" prefixes are literal — they appear in both the header row and
-    | populated data rows in the reference files, so they're reproduced
-    | exactly here rather than treated as comment markers.
+    | Shows which employees' bank_name couldn't be matched to a known bank
+    | (so no SWIFT/BIC could be auto-filled) BEFORE the file is downloaded and
+    | sent to the bank. Bulk payment files move real money — better to catch
+    | a blank SWIFT code here than after upload.
     |
     */
-    public function exportBankPaymentsCsv(Request $request, PayrollRun $run)
+    public function bankPaymentsPreview(PayrollRun $run)
     {
         $run->load(['payrolls.employee']);
+        $company = auth()->user()->company;
 
-        $reference = $request->get('reference', strtoupper($run->period) . ' SALARY');
+        $templates = \App\Models\BankPaymentTemplate::where('company_id', $company->id)->get();
 
-        $filename = "bank-bulk-payments-{$run->period}.csv";
+        $rows = $run->payrolls->map(function ($payroll) {
+            $employee = $payroll->employee;
+            $matchedBank = $employee ? \App\Models\Bank::findMatch($employee->bank_name ?? null) : null;
 
-        return response()->streamDownload(function () use ($run, $reference) {
+            return [
+                'employee' => $employee,
+                'matched_bank' => $matchedBank,
+                'has_account_number' => (bool) ($employee->bank_account_no ?? null),
+            ];
+        });
 
-            $handle = fopen('php://output', 'w');
+        $unmatchedCount = $rows->filter(fn ($r) => !$r['matched_bank'])->count();
+        $missingAccountCount = $rows->filter(fn ($r) => !$r['has_account_number'])->count();
 
-            fputcsv($handle, [
-                '# Account Number', 'Amount', 'Beneficiary Name', 'My Reference',
-                'Beneficiary Reference', '# Bank sort Code', '#Bank reference Number', 'Address',
-            ]);
-
-            foreach ($run->payrolls as $payroll) {
-                $employee = $payroll->employee;
-                $fullName = $employee->first_name . ' ' . $employee->last_name;
-
-                fputcsv($handle, [
-                    '#' . ($employee->bank_account_no ?? ''),
-                    number_format($payroll->net_pay, 2, '.', ''),
-                    $fullName,
-                    $reference,
-                    $fullName,
-                    '#' . ($employee->bank_sort_code ?? ''),
-                    '#' . ($employee->id ?? ''),
-                    $employee->bank_branch ?? ($payroll->branch ?? ''),
-                ]);
-            }
-
-            fclose($handle);
-
-        }, $filename, [
-            'Content-Type' => 'text/csv',
-        ]);
+        return view('dashboard.company.bank-templates', compact('run', 'templates', 'rows', 'unmatchedCount', 'missingAccountCount'));
     }
+
+
+
 
     /*
     |==========================================================================

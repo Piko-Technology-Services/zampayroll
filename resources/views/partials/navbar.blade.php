@@ -56,8 +56,8 @@
                     </li>
 
                     <li>
-                        <a class="dropdown-item" href="{{ route('settings.index') }}">
-                            Settings
+                        <a class="dropdown-item" href="{{ route('attendance.settings') }}">
+                            Company Settings
                         </a>
                     </li>
 

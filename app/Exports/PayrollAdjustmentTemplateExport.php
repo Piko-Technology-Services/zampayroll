@@ -20,7 +20,7 @@ class PayrollAdjustmentTemplateExport implements FromArray
         $rows = [];
 
         $rows[] = [
-            'employee_id',
+            // 'employee_id',
             'employee_number',
             'employee_name',
             'amount'
@@ -31,7 +31,7 @@ class PayrollAdjustmentTemplateExport implements FromArray
         foreach ($employees as $employee) {
 
             $rows[] = [
-                $employee->id,
+                // $employee->id,
                 $employee->employee_id,
                 trim(
                     $employee->first_name .

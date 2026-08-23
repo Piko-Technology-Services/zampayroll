@@ -324,7 +324,7 @@
                             </label>
 
                             <p class="text-muted small mb-0">
-                                Download Excel with employees prefilled
+                                Download CSV with employees prefilled
                             </p>
                         </div>
 
@@ -343,14 +343,14 @@
                     <!-- File Upload -->
                     <div class="mb-3">
                         <label class="form-label fw-semibold">
-                            <i class="bi bi-file-earmark-arrow-up"></i> Upload Excel File
+                            <i class="bi bi-file-earmark-arrow-up"></i> Upload CSV File
                         </label>
 
                         <input
                             type="file"
                             name="file"
                             class="form-control"
-                            accept=".xlsx,.xls"
+                            accept=".csv"
                             required>
                     </div>
 

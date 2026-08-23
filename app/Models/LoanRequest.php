@@ -48,4 +48,15 @@ class LoanRequest extends Model
     {
         return $this->belongsTo(User::class, 'reviewed_by');
     }
+
+    /**
+     * The ledger entry created from this application, if HR has added
+     * one. Used to filter the "prefill from approved application"
+     * picker on the Add Loan form so an already-ledgered application
+     * doesn't show up again.
+     */
+    public function loan()
+    {
+        return $this->hasOne(Loan::class);
+    }
 }

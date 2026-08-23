@@ -73,11 +73,18 @@
                                    value="{{ old('nationality', $employee->nationality) }}">
                         </div>
 
-                        <div class="empf-field empf-span-2">
+                        <div class="empf-field">
                             <label class="empf-label">NRC Number</label>
                             <input class="empf-input" name="nrc_no"
                                    value="{{ old('nrc_no', $employee->nrc_no) }}">
                         </div>
+
+                        <div class="empf-field">
+                            <label class="empf-label">Employee ID</label>
+                            <input class="empf-input" name="employee_id"
+                                   value="{{ old('employee_id', $employee->employee_id) }}">
+                        </div>
+
                         <div class="empf-field">
                             <label class="empf-label">Passport Number</label>
                             <input class="empf-input" name="passport_number"

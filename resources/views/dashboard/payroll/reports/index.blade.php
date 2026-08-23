@@ -193,18 +193,7 @@
                 </div>
                 <a href="{{ route('payroll.reports.nhima.csv', $run->id) }}" class="btn-rp-export">Download</a>
             </div>
-
-            <div class="rp-export-row">
-                <div class="rp-export-info">
-                    <span class="rp-export-badge rp-badge-csv">CSV</span>
-                    <div>
-                        <div class="rp-export-title">Workers' Compensation Fund (WCFCB)</div>
-                        <div class="rp-export-desc">Insurable earnings return — confirm column order with WCFCB before filing</div>
-                    </div>
-                </div>
-                <a href="{{ route('payroll.reports.wcfcb.csv', $run->id) }}" class="btn-rp-export">Download</a>
-            </div>
-
+            
         </div>
 
     </div>
@@ -229,6 +218,7 @@
                         <div class="rp-export-desc">Account number, amount, beneficiary, and sort code per employee</div>
                     </div>
                 </div>
+                <a href="{{ route('payroll.reports.bank_payments.preview', $run->id) }}" class="btn-rp-export">Preview</a>
                 <a href="{{ route('payroll.reports.bank_payments.csv', $run->id) }}" class="btn-rp-export">Download</a>
             </div>
 

@@ -16,7 +16,7 @@ class EmployeeController extends Controller
     */
     public function index()
     {
-        $employees = Employee::latest()->paginate(10);
+        $employees = Employee::latest()->get();
 
         return view('dashboard.employees.index', compact('employees'));
     }
@@ -171,6 +171,7 @@ public function update(Request $request, Employee $employee)
 {
     // 1. VALIDATION
     $request->validate([
+        'employee_id'=> 'required',
         'first_name' => 'required',
         'last_name' => 'required',
         'date_of_birth' => 'nullable|date',
@@ -183,6 +184,7 @@ public function update(Request $request, Employee $employee)
     ]);
 
     // 2. SAFE DATA (NO $request->all())
+    $employee->employee_id = $request->employee_id;
     $employee->first_name = $request->first_name;
     $employee->middle_name = $request->middle_name;
     $employee->last_name = $request->last_name;
@@ -295,31 +297,22 @@ public function downloadSampleCsv()
         'gender',
         'nationality',
         'nrc_no',
-        'passport_number',
-        'personal_email',
         'primary_phone',
-        'secondary_phone',
+        'personal_email',
         'position',
         'department',
         'branch',
         'supervisor',
-        'employment_status',
-        'probation_start',
-        'probation_end',
         'contract_start',
         'contract_end',
-        'emergency_name',
-        'emergency_relationship',
-        'emergency_phone',
-        'next_of_kin_name',
-        'next_of_kin_phone',
-        'next_of_kin_address',
         'bank_name',
         'bank_account_no',
         'ssn',
         'nhima_no',
         'tpin',
         'net_salary',
+        'leave_days_entitled',
+        'leave_days_balance',
     ];
 
     $filename = 'employee_import_template.csv';
@@ -327,10 +320,10 @@ public function downloadSampleCsv()
     $callback = function () use ($headers) {
         $file = fopen('php://output', 'w');
 
-        // header row
+        // Header row
         fputcsv($file, $headers);
 
-        // sample row
+        // Sample row
         fputcsv($file, [
             'EMP001',
             'John',
@@ -340,107 +333,431 @@ public function downloadSampleCsv()
             'Male',
             'Zambian',
             '123456/78/9',
-            'P1234567',
-            'john@example.com',
             '0977000000',
-            '0966000000',
+            'john@example.com',
             'Accountant',
             'Finance',
             'Head Office',
             'Jane Manager',
-            'Active',
-            '2025-01-01',
-            '2025-03-01',
             '2025-04-01',
             '2027-04-01',
-            'Mary Doe',
-            'Mother',
-            '0977000001',
-            'Peter Doe',
-            '0977000002',
-            'Lusaka',
             'Zanaco',
             '1234567890',
             'SSN12345',
             'NHIMA98765',
             'TIN98765',
             '5000',
+            '24',
+            '24',
         ]);
 
         fclose($file);
     };
 
-    return response()->streamDownload($callback, $filename);
+    return response()->streamDownload(
+        $callback,
+        $filename,
+        ['Content-Type' => 'text/csv']
+    );
 }
 
 public function import(Request $request)
 {
     $request->validate([
-        'file' => 'required|mimes:csv,txt'
+        'file' => 'required|mimes:csv,txt',
     ]);
 
     $file = fopen($request->file('file')->getRealPath(), 'r');
 
-    $header = array_map('trim', fgetcsv($file));
+    if (!$file) {
+        return back()->with('error', 'Unable to open the CSV file.');
+    }
 
-    while ($row = fgetcsv($file)) {
+    /*
+    |--------------------------------------------------------------------------
+    | READ HEADER
+    |--------------------------------------------------------------------------
+    */
+
+    $header = fgetcsv($file);
+
+    if (!$header) {
+        fclose($file);
+
+        return back()->with('error', 'The CSV file is empty.');
+    }
+
+    // Remove BOM and whitespace from headers
+    $header = array_map(function ($value) {
+        return trim(str_replace("\xEF\xBB\xBF", '', $value));
+    }, $header);
+
+    /*
+    |--------------------------------------------------------------------------
+    | REQUIRED CSV HEADERS
+    |--------------------------------------------------------------------------
+    */
+
+    $requiredHeaders = [
+        'employee_id',
+        'first_name',
+        'last_name',
+        'date_of_birth',
+        'gender',
+        'position',
+        'net_salary',
+    ];
+
+    $missingHeaders = array_diff($requiredHeaders, $header);
+
+    if (!empty($missingHeaders)) {
+        fclose($file);
+
+        return back()->with(
+            'error',
+            'The CSV is missing the following required columns: ' .
+            implode(', ', $missingHeaders)
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | IMPORT EMPLOYEES
+    |--------------------------------------------------------------------------
+    */
+
+    $imported = 0;
+    $failed = 0;
+    $errors = [];
+
+    $rowNumber = 1;
+
+    while (($row = fgetcsv($file)) !== false) {
+
+        $rowNumber++;
+
+        // Skip completely empty rows
+        if (
+            empty(array_filter($row, function ($value) {
+                return trim((string) $value) !== '';
+            }))
+        ) {
+            continue;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | PROTECT AGAINST INCORRECT COLUMN COUNT
+        |--------------------------------------------------------------------------
+        */
+
+        if (count($header) !== count($row)) {
+
+            $failed++;
+
+            $errors[] = "Row {$rowNumber}: Number of columns does not match the CSV header.";
+
+            continue;
+        }
 
         $data = array_combine($header, $row);
 
-        $employee = Employee::create([
-            'employee_id' => $data['employee_id'] ?? null,
-            'first_name' => $data['first_name'] ?? null,
-            'middle_name' => $data['middle_name'] ?? null,
-            'last_name' => $data['last_name'] ?? null,
-            'date_of_birth' => $data['date_of_birth'] ?? null,
-            'gender' => $data['gender'] ?? null,
-            'nationality' => $data['nationality'] ?? null,
-            'nrc_no' => $data['nrc_no'] ?? null,
-            'passport_number' => $data['passport_number'] ?? null,
-            'passport_photo' => $data['passport_photo'] ?? null,
+        /*
+        |--------------------------------------------------------------------------
+        | CLEAN DATA
+        |--------------------------------------------------------------------------
+        */
 
-            'personal_email' => $data['personal_email'] ?? null,
-            'company_email' => $data['company_email'] ?? null,
-            'primary_phone' => $data['primary_phone'] ?? null,
-            'secondary_phone' => $data['secondary_phone'] ?? null,
+        $data = array_map(function ($value) {
+            return is_string($value)
+                ? trim($value)
+                : $value;
+        }, $data);
 
-            'position' => $data['position'] ?? null,
-            'department' => $data['department'] ?? null,
-            'branch' => $data['branch'] ?? null,
-            'supervisor' => $data['supervisor'] ?? null,
-            'employment_status' => $data['employment_status'] ?? 'Active',
+        /*
+        |--------------------------------------------------------------------------
+        | VALIDATE REQUIRED VALUES
+        |--------------------------------------------------------------------------
+        */
 
-            'probation_start' => $data['probation_start'] ?? null,
-            'probation_end' => $data['probation_end'] ?? null,
-            'contract_start' => $data['contract_start'] ?? null,
-            'contract_end' => $data['contract_end'] ?? null,
+        $requiredFields = [
+            'employee_id',
+            'first_name',
+            'last_name',
+            'date_of_birth',
+            'gender',
+            'position',
+            'net_salary',
+        ];
 
-            'emergency_name' => $data['emergency_name'] ?? null,
-            'emergency_relationship' => $data['emergency_relationship'] ?? null,
-            'emergency_phone' => $data['emergency_phone'] ?? null,
+        $missingFields = [];
 
-            'next_of_kin_name' => $data['next_of_kin_name'] ?? null,
-            'next_of_kin_phone' => $data['next_of_kin_phone'] ?? null,
-            'next_of_kin_address' => $data['next_of_kin_address'] ?? null,
+        foreach ($requiredFields as $field) {
+            if (
+                !isset($data[$field]) ||
+                trim((string) $data[$field]) === ''
+            ) {
+                $missingFields[] = $field;
+            }
+        }
 
-            'bank_name' => $data['bank_name'] ?? null,
-            'bank_account_no' => $data['bank_account_no'] ?? null,
-            'ssn' => $data['ssn'] ?? null,
-            'nhima_no' => $data['nhima_no'] ?? null,
-            'tpin' => $data['tpin'] ?? null,
-            'net_salary' => $data['net_salary'] ?? null,
-            'leave_days_entitled' => $data['leave_days_entitled'] ?? null,
-            'leave_days_balance' => $data['leave_days_balance'] ?? null,
-        ]);
+        if (!empty($missingFields)) {
 
-        // Same priming as the single-employee create flow, so imported
-        // employees get natural_gross_salary / daily_rate_salary too.
-        $this->primeDerivedSalaryValues($employee);
+            $failed++;
+
+            $errors[] =
+                "Row {$rowNumber}: Missing required fields: " .
+                implode(', ', $missingFields);
+
+            continue;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | VALIDATE DATE OF BIRTH
+        |--------------------------------------------------------------------------
+        */
+
+        try {
+
+            if (!empty($data['date_of_birth'])) {
+                \Carbon\Carbon::parse($data['date_of_birth']);
+            }
+
+        } catch (\Throwable $e) {
+
+            $failed++;
+
+            $errors[] =
+                "Row {$rowNumber} ({$data['employee_id']}): Invalid date of birth.";
+
+            continue;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | VALIDATE SALARY
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            !is_numeric($data['net_salary']) ||
+            (float) $data['net_salary'] < 0
+        ) {
+
+            $failed++;
+
+            $errors[] =
+                "Row {$rowNumber} ({$data['employee_id']}): Net salary must be a valid number.";
+
+            continue;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | CHECK DUPLICATE EMPLOYEE ID
+        |--------------------------------------------------------------------------
+        */
+
+        $existingEmployee = Employee::where(
+            'employee_id',
+            $data['employee_id']
+        )->first();
+
+        if ($existingEmployee) {
+
+            $failed++;
+
+            $errors[] =
+                "Row {$rowNumber}: Employee ID '{$data['employee_id']}' already exists.";
+
+            continue;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | LEAVE DAYS
+        |--------------------------------------------------------------------------
+        */
+
+        $leaveDaysEntitled = (
+            isset($data['leave_days_entitled']) &&
+            $data['leave_days_entitled'] !== ''
+        )
+            ? (float) $data['leave_days_entitled']
+            : null;
+
+        $leaveDaysBalance = (
+            isset($data['leave_days_balance']) &&
+            $data['leave_days_balance'] !== ''
+        )
+            ? (float) $data['leave_days_balance']
+            : $leaveDaysEntitled;
+
+        /*
+        |--------------------------------------------------------------------------
+        | CREATE EMPLOYEE
+        |--------------------------------------------------------------------------
+        */
+
+        try {
+
+            $employee = Employee::create([
+
+                /*
+                |--------------------------------------------------------------------------
+                | IDENTIFICATION
+                |--------------------------------------------------------------------------
+                */
+
+                // IMPORTANT:
+                // Employee ID comes directly from the CSV.
+                'employee_id' => $data['employee_id'] ?? 'EMP-' . date('Y') . '-' . strtoupper(Str::random(5)),
+
+                /*
+                |--------------------------------------------------------------------------
+                | PERSONAL INFORMATION
+                |--------------------------------------------------------------------------
+                */
+
+                'first_name' => $data['first_name'],
+                'middle_name' => $data['middle_name'] ?? null,
+                'last_name' => $data['last_name'],
+
+                'date_of_birth' => !empty($data['date_of_birth'])
+                    ? $data['date_of_birth']
+                    : null,
+
+                'gender' => $data['gender'] ?? null,
+
+                'nationality' => !empty($data['nationality'])
+                    ? $data['nationality']
+                    : 'Zambian',
+
+                'nrc_no' => $data['nrc_no'] ?? null,
+
+                /*
+                |--------------------------------------------------------------------------
+                | CONTACT
+                |--------------------------------------------------------------------------
+                */
+
+                'primary_phone' => $data['primary_phone'] ?? null,
+                'personal_email' => $data['personal_email'] ?? null,
+
+                /*
+                |--------------------------------------------------------------------------
+                | JOB
+                |--------------------------------------------------------------------------
+                */
+
+                'position' => $data['position'],
+                'department' => $data['department'] ?? null,
+                'branch' => $data['branch'] ?? null,
+                'supervisor' => $data['supervisor'] ?? null,
+
+                // Automatically set new imports as Active
+                'employment_status' => 'Active',
+
+                /*
+                |--------------------------------------------------------------------------
+                | EMPLOYMENT DATES
+                |--------------------------------------------------------------------------
+                */
+
+                'contract_start' => $data['contract_start'] ?? null,
+                'contract_end' => $data['contract_end'] ?? null,
+
+                /*
+                |--------------------------------------------------------------------------
+                | FINANCE
+                |--------------------------------------------------------------------------
+                */
+
+                'bank_name' => $data['bank_name'] ?? null,
+                'bank_account_no' => $data['bank_account_no'] ?? null,
+
+                'ssn' => $data['ssn'] ?? null,
+                'nhima_no' => $data['nhima_no'] ?? null,
+                'tpin' => $data['tpin'] ?? null,
+
+                'net_salary' => (float) $data['net_salary'],
+
+                /*
+                |--------------------------------------------------------------------------
+                | LEAVE
+                |--------------------------------------------------------------------------
+                */
+
+                'leave_days_entitled' => $leaveDaysEntitled,
+                'leave_days_balance' => $leaveDaysBalance,
+
+                /*
+                |--------------------------------------------------------------------------
+                | SYSTEM FIELDS
+                |--------------------------------------------------------------------------
+                */
+
+                'passport_photo' => null,
+                'uploads' => null,
+            ]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | PRIME DERIVED SALARY VALUES
+            |--------------------------------------------------------------------------
+            */
+
+            $this->primeDerivedSalaryValues($employee);
+
+            $imported++;
+
+        } catch (\Throwable $e) {
+
+            $failed++;
+
+            \Log::error('Employee CSV import failed', [
+                'row' => $rowNumber,
+                'employee_id' => $data['employee_id'] ?? null,
+                'error' => $e->getMessage(),
+            ]);
+
+            $errors[] =
+                "Row {$rowNumber} ({$data['employee_id']}): " .
+                $e->getMessage();
+
+            continue;
+        }
     }
 
     fclose($file);
 
-    return back()->with('success', 'Employees imported successfully.');
+    /*
+    |--------------------------------------------------------------------------
+    | IMPORT RESULT
+    |--------------------------------------------------------------------------
+    */
+
+    if ($failed > 0) {
+
+        $message =
+            "{$imported} employee(s) imported successfully. " .
+            "{$failed} row(s) could not be imported.";
+
+        if (!empty($errors)) {
+            $message .= ' Errors: ' . implode(' | ', $errors);
+        }
+
+        return back()->with(
+            $imported > 0 ? 'warning' : 'error',
+            $message
+        );
+    }
+
+    return back()->with(
+        'success',
+        "{$imported} employee(s) imported successfully."
+    );
 }
 
     /*

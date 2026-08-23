@@ -22,18 +22,95 @@ class PayrollRunController extends Controller
     |--------------------------------------------------------------------------
     | LIST ALL PAYROLL RUNS (excludes hidden and trashed)
     |--------------------------------------------------------------------------
+    |
+    | Supports:
+    |   - free-text search (?q=)              → alias, period, or run id
+    |   - status filter (?status=)             → Draft / Processing / Processed / Approved / Paid
+    |   - year → month drill-down (?year=&month=), driven by the PAY PERIOD
+    |
+    | `period` is free text ("2026-07", "July 2026", etc.), not a real date
+    | column, so we can't reliably filter it with whereYear()/whereMonth() in
+    | SQL. Instead PayrollRun::period_date (accessor, see the model) parses
+    | it into a Carbon date, and filtering/grouping happens in memory against
+    | that. Fine at payroll-run volumes (a handful of rows per month).
+    |
     */
-    public function index()
+    public function index(Request $request)
     {
-        $runs = PayrollRun::with('payrolls.employee')
-            ->visible()
-            ->latest()
-            ->get();
+        $search = trim((string) $request->query('q', ''));
+        $status = $request->query('status');
+        $year   = $request->query('year');
+        $month  = $request->query('month');
+
+        $allRuns = PayrollRun::with('payrolls.employee')->visible()->get();
+
+        $filtered = $allRuns;
+
+        if ($search !== '') {
+            $needle = strtolower($search);
+            $filtered = $filtered->filter(fn ($run) =>
+                str_contains(strtolower($run->alias ?? ''), $needle) ||
+                str_contains(strtolower($run->period ?? ''), $needle) ||
+                (string) $run->id === $search
+            );
+        }
+
+        if ($status) {
+            $filtered = $filtered->filter(fn ($run) => $run->status === $status);
+        }
+
+        if ($year) {
+            $filtered = $filtered->filter(fn ($run) => $run->period_date && (int) $run->period_date->year === (int) $year);
+        }
+
+        if ($month) {
+            $filtered = $filtered->filter(fn ($run) => $run->period_date && (int) $run->period_date->month === (int) $month);
+        }
+
+        $runs = $filtered
+            ->sortByDesc(fn ($run) => $run->period_date ?? $run->created_at)
+            ->values();
 
         $hiddenCount  = PayrollRun::hiddenOnly()->count();
         $trashedCount = PayrollRun::onlyTrashed()->count();
 
-        return view('dashboard.payroll.runs.index', compact('runs', 'hiddenCount', 'trashedCount'));
+        // Years available to drill into — computed from ALL visible runs
+        // (unfiltered by year/month) so the year chip row never disappears.
+        $availableYears = $allRuns
+            ->map(fn ($run) => $run->period_date?->year)
+            ->filter()
+            ->unique()
+            ->sortDesc()
+            ->values();
+
+        $activeYear = $year ?: ($availableYears->first() ?? now()->year);
+
+        // Month chip counts for whichever year is active.
+        $monthCounts = $allRuns
+            ->filter(fn ($run) => $run->period_date && (int) $run->period_date->year === (int) $activeYear)
+            ->groupBy(fn ($run) => $run->period_date->month)
+            ->map->count();
+
+        // Runs whose period couldn't be parsed at all — surfaced so HR can fix them,
+        // rather than having them silently vanish from every year/month filter.
+        $unparsedCount = $allRuns->filter(fn ($run) => $run->period_date === null)->count();
+
+        $statusOptions = ['Draft', 'Processing', 'Processed', 'Approved', 'Paid'];
+
+        return view('dashboard.payroll.runs.index', compact(
+            'runs',
+            'hiddenCount',
+            'trashedCount',
+            'availableYears',
+            'activeYear',
+            'monthCounts',
+            'unparsedCount',
+            'statusOptions',
+            'search',
+            'status',
+            'year',
+            'month'
+        ));
     }
 
     /*
@@ -345,7 +422,7 @@ class PayrollRunController extends Controller
     public function downloadAdjustmentTemplate(
         PayrollRun $run, PayrollRule $rule
     ) {
-        $file_name = "ADJ-" . $rule->code . "-" . $rule->name . "-" . $run->alias . ".xlsx";
+        $file_name = "ADJ-" . $rule->code . "-" . $rule->name . "-" . $run->alias . ".csv";
 
         return Excel::download(
             new PayrollAdjustmentTemplateExport($run),
@@ -359,7 +436,7 @@ class PayrollRunController extends Controller
     ) {
         $request->validate([
             'rule_id' => 'required|exists:payroll_rules,id',
-            'file' => 'required|file|mimes:xlsx,xls'
+            'file' => 'required|file|mimes:csv'
         ]);
 
         if ($run->status === 'Approved') {

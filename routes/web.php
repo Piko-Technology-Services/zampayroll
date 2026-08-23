@@ -13,6 +13,7 @@ use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\PayrollRunController;
 use App\Http\Controllers\PayrollRuleController;
 use App\Http\Controllers\PayrollReportController;
+use App\Http\Controllers\BankPaymentTemplateController;
 use App\Http\Controllers\PayslipMailController;
 use App\Http\Controllers\CompanyAccessCodeController;
 use App\Http\Controllers\CompanyController;
@@ -92,6 +93,10 @@ Route::prefix('payroll/reports')->name('payroll.reports.')->group(function () {
     Route::get('/{run}/bank-payments/csv',
         [PayrollReportController::class, 'exportBankPaymentsCsv'])
         ->name('bank_payments.csv');
+    
+    Route::get('/{run}/bank-payments/preview',
+        [BankPaymentTemplateController::class, 'index'])
+        ->name('bank_payments.preview');
  
 });
 
@@ -158,6 +163,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });
 
+
+
 Route::middleware('auth')->group(function () {
 
     // My Profile / Password & Security (any authenticated user)
@@ -172,6 +179,12 @@ Route::middleware('auth')->group(function () {
         Route::post('/company/access-code/generate', [CompanyAccessCodeController::class, 'generate'])->name('company.access-code.generate');
         Route::post('/company/access-code/regenerate', [CompanyAccessCodeController::class, 'regenerate'])->name('company.access-code.regenerate');
         Route::post('/company/access-code/deactivate', [CompanyAccessCodeController::class, 'deactivate'])->name('company.access-code.deactivate');
+
+        Route::get('/settings/company', [CompanyController::class, 'edit'])->name('company.settings');
+        Route::put('/settings/company', [CompanyController::class, 'update'])->name('company.settings.update');
+        Route::post('/settings/company/access-code/generate', [CompanyController::class, 'regenerateAccessCode'])->name('company.settings.access-code.generate');
+        Route::post('/settings/company/access-code/deactivate', [CompanyController::class, 'deactivateAccessCode'])->name('company.settings.access-code.deactivate');
+
 
         Route::post('/team/invite', [InvitationController::class, 'store'])->name('invitations.store');
         Route::delete('/team/invite/{invitation}', [InvitationController::class, 'revoke'])->name('invitations.revoke');
@@ -259,6 +272,10 @@ Route::middleware(['auth'])->prefix('overtime')->name('overtime.')->group(functi
     Route::get('/dashboard/requests', [OvertimeDashboardController::class, 'index'])->name('dashboard');
     Route::post('/dashboard/requests/{overtimeRequest}/approve', [OvertimeDashboardController::class, 'approve'])->name('approve');
     Route::post('/dashboard/requests/{overtimeRequest}/reject', [OvertimeDashboardController::class, 'reject'])->name('reject');
+    Route::get(
+    '/dashboard/export-approved',
+        [OvertimeDashboardController::class, 'exportApprovedOvertime']
+    )->name('export.approved');
 });
 
 // PUBLIC — outside your auth group, alongside leave.apply.* / overtime.apply.*
