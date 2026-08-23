@@ -215,10 +215,10 @@
 
     <div class="print-bar">
         <h2>{{ $run->period }} — Payslips</h2>
-        <div>
+        <!-- <div>
             <button onclick="window.print()">Print</button>
             <button type="button" onclick="window.location.href='{{ route('payroll.pdf', $payroll) }}'">Download</button>
-        </div>
+        </div> -->
     </div>
 
     @php
@@ -261,7 +261,7 @@
                     @endif
                     <div>
                         <div class="lh-company-name">{{ $companyName }}</div>
-                        <div class="lh-company-sub">Payroll Department</div>
+                        <div class="lh-company-sub">Payroll Simplified</div>
                     </div>
                 </div>
                 <div class="lh-doc">

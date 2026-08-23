@@ -13,7 +13,7 @@ class LoanDashboardController extends Controller
     {
         $status = $request->query('status', 'all');
 
-        $requests = LoanRequest::with(['employee', 'reviewedBy'])
+        $requests = LoanRequest::with(['employee', 'reviewedBy', 'loan'])
             ->when($status !== 'all', fn ($q) => $q->where('status', $status))
             ->orderByDesc('created_at')
             ->get();
@@ -24,7 +24,16 @@ class LoanDashboardController extends Controller
             'rejected' => LoanRequest::where('status', 'rejected')->count(),
         ];
 
-        return view('dashboard.loan.dashboard', compact('requests', 'status', 'counts'));
+        // A "comprehensive view" for HR: not just counts, but the money
+        // involved and how many approvals are still waiting to become an
+        // actual tracked loan (approved but not yet added to the ledger).
+        $totals = [
+            'pending_amount'  => LoanRequest::where('status', 'pending')->sum('amount'),
+            'approved_amount' => LoanRequest::where('status', 'approved')->sum('amount'),
+            'awaiting_ledger' => LoanRequest::where('status', 'approved')->whereDoesntHave('loan')->count(),
+        ];
+
+        return view('dashboard.loan.dashboard', compact('requests', 'status', 'counts', 'totals'));
     }
 
     public function approve(Request $request, LoanRequest $loanRequest)

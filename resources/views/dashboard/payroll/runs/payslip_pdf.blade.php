@@ -340,9 +340,9 @@
                     <div class="doc-header-cell doc-header-logo-cell">
                         <div class="logo-frame">
                             @if($companyLogo)
-                                <img src="{{ $companyLogo }}" alt="{{ $companyName }} logo">
+                                <img src="data:image/png;base64,{{ base64_encode(file_get_contents(public_path('assets/images/logo.png'))) }}" alt="{{ $companyName }} logo exists">
                             @else
-                                <div class="logo-fallback">{{ $companyInitials }}</div>
+                                <img src="data:image/png;base64,{{ base64_encode(file_get_contents(public_path('assets/images/logo.png'))) }}" alt="{{ $companyName }} logo">
                             @endif
                         </div>
                     </div>

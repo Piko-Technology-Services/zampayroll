@@ -47,18 +47,8 @@ class LoanLedgerController extends Controller
             ->orderBy('first_name')
             ->get();
 
-        // Employees who already have an active loan on the ledger —
-        // excluded below regardless of whether THIS specific application
-        // is the one linked to it, since showing "add a loan" for someone
-        // who already has one tracked is the case we're avoiding.
         $employeeIdsWithActiveLoans = Loan::where('status', 'active')->pluck('employee_id');
 
-        // Approved applications that (a) don't already have a ledger entry
-        // of their own, AND (b) aren't for an employee who already has a
-        // different active loan on the ledger. Shown as a "prefill" picker
-        // so HR can turn an approval into a tracked loan without retyping
-        // anything, but only when they deliberately choose to (approving
-        // no longer auto-creates one).
         $approvedApplications = LoanRequest::with('employee')
             ->where('status', 'approved')
             ->whereDoesntHave('loan')

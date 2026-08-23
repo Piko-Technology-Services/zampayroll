@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasInstallmentSchedule;
 use Illuminate\Database\Eloquent\Model;
 
 class LoanRequest extends Model
 {
+    use HasInstallmentSchedule;
+
     public const STATUSES = [
         'pending'  => 'Pending',
         'approved' => 'Approved',
@@ -25,6 +28,7 @@ class LoanRequest extends Model
         'amount',
         'payment_plan',
         'payment_plan_note',
+        'installment_amount',
         'reason',
         'documents',
         'status',
@@ -34,9 +38,10 @@ class LoanRequest extends Model
     ];
 
     protected $casts = [
-        'amount'      => 'decimal:2',
-        'documents'   => 'array',
-        'reviewed_at' => 'datetime',
+        'amount'              => 'decimal:2',
+        'installment_amount'  => 'decimal:2',
+        'documents'           => 'array',
+        'reviewed_at'         => 'datetime',
     ];
 
     public function employee()
@@ -53,7 +58,8 @@ class LoanRequest extends Model
      * The ledger entry created from this application, if HR has added
      * one. Used to filter the "prefill from approved application"
      * picker on the Add Loan form so an already-ledgered application
-     * doesn't show up again.
+     * doesn't show up again, and to show an "In Ledger" flag on the
+     * applications dashboard.
      */
     public function loan()
     {

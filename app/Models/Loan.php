@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasInstallmentSchedule;
 use Illuminate\Database\Eloquent\Model;
 
 class Loan extends Model
 {
+    use HasInstallmentSchedule;
+
     public const STATUSES = [
         'active'      => 'Active',
         'completed'   => 'Completed',

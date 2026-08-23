@@ -19,13 +19,16 @@ class LoanApplicationController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name'               => 'required|string|max:255',
-            'email'              => 'required|email',
-            'amount'             => 'required|numeric|min:1',
-            'payment_plan'       => 'required|in:' . implode(',', array_keys(LoanRequest::PAYMENT_PLANS)),
-            'payment_plan_note'  => 'nullable|string|max:255',
-            'reason'             => 'nullable|string|max:1000',
-            'documents.*'        => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:5120',
+            'name'                => 'required|string|max:255',
+            'email'               => 'required|email',
+            'amount'              => 'required|numeric|min:1',
+            'payment_plan'        => 'required|in:' . implode(',', array_keys(LoanRequest::PAYMENT_PLANS)),
+            'payment_plan_note'   => 'nullable|string|max:255',
+            // Required for anything except once_off, since once_off always
+            // deducts the full amount in a single payroll run.
+            'installment_amount'  => 'nullable|required_unless:payment_plan,once_off|numeric|min:0.01',
+            'reason'              => 'nullable|string|max:1000',
+            'documents.*'         => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:5120',
         ]);
 
         $employee = Employee::where('employment_status', 'Active')
@@ -51,14 +54,17 @@ class LoanApplicationController extends Controller
         }
 
         $loanRequest = LoanRequest::create([
-            'employee_id'        => $employee->id,
-            'company_email'      => $validated['email'],
-            'amount'             => $validated['amount'],
-            'payment_plan'       => $validated['payment_plan'],
-            'payment_plan_note'  => $validated['payment_plan_note'] ?? null,
-            'reason'             => $validated['reason'] ?? null,
-            'documents'          => $documents ?: null,
-            'status'             => 'pending',
+            'employee_id'         => $employee->id,
+            'company_email'       => $validated['email'],
+            'amount'              => $validated['amount'],
+            'payment_plan'        => $validated['payment_plan'],
+            'payment_plan_note'   => $validated['payment_plan_note'] ?? null,
+            'installment_amount'  => $validated['payment_plan'] === 'once_off'
+                                        ? null
+                                        : ($validated['installment_amount'] ?? null),
+            'reason'              => $validated['reason'] ?? null,
+            'documents'           => $documents ?: null,
+            'status'              => 'pending',
         ]);
 
         $this->notifyHr($loanRequest);

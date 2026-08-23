@@ -402,6 +402,19 @@ class PayrollReportController extends Controller
         $company = auth()->user()->company;
 
         $templates = \App\Models\BankPaymentTemplate::where('company_id', $company->id)->get();
+        $banks = \App\Models\Bank::orderBy('name')->get();
+
+        $fields = [
+            'employee_name'  => 'Employee name',
+            'account_name'   => 'Account name',
+            'account_number' => 'Account number',
+            'bank_name'      => 'Bank name',
+            'swift_code'     => 'SWIFT/BIC code',
+            'amount'         => 'Payment amount',
+            'reference'      => 'Payment reference',
+        ];
+
+        $genericColumns = $fields;
 
         $rows = $run->payrolls->map(function ($payroll) {
             $employee = $payroll->employee;
@@ -417,7 +430,61 @@ class PayrollReportController extends Controller
         $unmatchedCount = $rows->filter(fn ($r) => !$r['matched_bank'])->count();
         $missingAccountCount = $rows->filter(fn ($r) => !$r['has_account_number'])->count();
 
-        return view('dashboard.company.bank-templates', compact('run', 'templates', 'rows', 'unmatchedCount', 'missingAccountCount'));
+        return view('dashboard.company.bank-templates', compact('run', 'templates', 'banks', 'fields', 'genericColumns', 'rows', 'unmatchedCount', 'missingAccountCount'));
+    }
+
+    public function exportBankPaymentsCsv(Request $request, PayrollRun $run)
+    {
+        $run->load(['payrolls.employee']);
+
+        $company = auth()->user()->company;
+
+        $template = $request->filled('template_id')
+            ? \App\Models\BankPaymentTemplate::where('company_id', $company->id)->findOrFail($request->get('template_id'))
+            : \App\Models\BankPaymentTemplate::where('company_id', $company->id)->where('is_default', true)->first();
+
+        if (!$template) {
+            return back()->with('error', 'No bank payment template is configured yet. Set one up under Settings → Bank Payment Templates.');
+        }
+
+        $reference = $request->get('reference', strtoupper($run->period) . ' SALARY');
+        $filename = "bank-bulk-payments-{$run->period}.csv";
+
+        return response()->streamDownload(function () use ($run, $template, $reference) {
+
+            $handle = fopen('php://output', 'w');
+            $delimiter = $template->delimiter ?: ',';
+
+            if ($template->include_header) {
+                fputcsv($handle, $template->headerRow(), $delimiter);
+            }
+
+            // Resolve each employee's bank once per row — cheap enough at payroll-run volumes.
+            foreach ($run->payrolls as $payroll) {
+                $employee = $payroll->employee;
+                if (!$employee) {
+                    continue;
+                }
+
+                $matchedBank = \App\Models\Bank::findMatch($employee->bank_name ?? null);
+
+                $row = $template->buildRow([
+                    'employee' => $employee,
+                    'payroll' => $payroll,
+                    'run' => $run,
+                    'company' => $employee->company,
+                    'matchedBank' => $matchedBank,
+                    'reference' => $reference,
+                ]);
+
+                fputcsv($handle, $row, $delimiter);
+            }
+
+            fclose($handle);
+
+        }, $filename, [
+            'Content-Type' => 'text/csv',
+        ]);
     }
 
 

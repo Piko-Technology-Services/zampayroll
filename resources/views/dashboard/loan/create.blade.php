@@ -39,7 +39,8 @@
                                     data-employee-id="{{ $app->employee_id }}"
                                     data-amount="{{ $app->amount }}"
                                     data-plan="{{ $app->payment_plan }}"
-                                    data-plan-note="{{ $app->payment_plan_note }}">
+                                    data-plan-note="{{ $app->payment_plan_note }}"
+                                    data-installment="{{ $app->installment_amount }}">
                                 {{ $app->employee->first_name }} {{ $app->employee->last_name }} —
                                 K {{ number_format($app->amount, 2) }} —
                                 approved {{ $app->reviewed_at?->format('d M Y') }}
@@ -70,7 +71,7 @@
                 </div>
                 <div class="llc-field">
                     <label class="llc-label">Start Date</label>
-                    <input type="date" name="start_date" class="llc-input" value="{{ old('start_date', now()->toDateString()) }}" required>
+                    <input type="date" name="start_date" id="startDateInput" class="llc-input" value="{{ old('start_date', now()->toDateString()) }}" required>
                 </div>
 
                 <div class="llc-field">
@@ -79,7 +80,7 @@
                 </div>
                 <div class="llc-field">
                     <label class="llc-label">Current Balance</label>
-                    <input type="number" step="0.01" min="0" name="balance" class="llc-input" value="{{ old('balance') }}" placeholder="Defaults to principal amount">
+                    <input type="number" step="0.01" min="0" name="balance" id="balanceInput" class="llc-input" value="{{ old('balance') }}" placeholder="Defaults to principal amount">
                     <small class="llc-hint">Only set this if recording an existing loan already partially repaid.</small>
                 </div>
 
@@ -94,19 +95,35 @@
                 </div>
                 <div class="llc-field" id="installmentField">
                     <label class="llc-label">Installment Amount</label>
-                    <input type="number" step="0.01" min="0" name="installment_amount" class="llc-input" value="{{ old('installment_amount') }}">
+                    <input type="number" step="0.01" min="0" name="installment_amount" id="installmentInput" class="llc-input" value="{{ old('installment_amount') }}">
                     <small class="llc-hint">Required for Monthly / Every Two Months / Other. Ignored for Once-off (the full balance is deducted in one payroll run).</small>
                 </div>
 
                 <div class="llc-field" id="planNoteField">
-                    <label class="llc-label">Payment Plan Descrption</label>
+                    <label class="llc-label">Plan Detail</label>
                     <input type="text" name="payment_plan_note" id="planNoteInput" class="llc-input" value="{{ old('payment_plan_note') }}" placeholder="e.g. K500 every 3 months">
                 </div>
                 <div class="llc-field">
-                    <label class="llc-label">Notes / Comments</label>
+                    <label class="llc-label">Notes</label>
                     <input type="text" name="notes" class="llc-input" value="{{ old('notes') }}" placeholder="Internal note (optional)">
                 </div>
             </div>
+        </div>
+
+        {{-- ================= LIVE REPAYMENT SCHEDULE PREVIEW ================= --}}
+        <div class="llc-card llc-schedule-card">
+            <div class="llc-section-label">Repayment Schedule Preview</div>
+            <div id="scheduleEmpty" class="llc-empty-note">
+                <i class="bi bi-calendar3"></i> Fill in Principal, Payment Plan, and Installment Amount to see the projected schedule.
+            </div>
+            <div id="scheduleSummary" class="llc-schedule-summary" style="display:none;"></div>
+            <table class="llc-schedule-table" id="scheduleTable" style="display:none;">
+                <thead>
+                    <tr><th>#</th><th>Date</th><th class="num">Amount</th><th class="num">Balance After</th></tr>
+                </thead>
+                <tbody id="scheduleBody"></tbody>
+            </table>
+            <div id="scheduleMore" class="llc-schedule-more" style="display:none;"></div>
         </div>
 
         <div class="llc-actions">
@@ -125,7 +142,7 @@
     --brass: #00742E; --brass-soft: #EAF7ED; --line: #D9E9DE; --accent-orange: #E97B00; --accent-red: #D50115;
     --warn: var(--accent-red); --warn-bg: #FFF0F1;
     font-family: 'IBM Plex Sans', sans-serif; color: var(--ink); background: var(--paper); padding: 1.5rem 0 2.5rem;
-    max-width: 760px; margin: 0 auto;
+    max-width: 800px; margin: 0 auto;
 }
 .llc-back { display: inline-flex; align-items: center; gap: .35rem; font-size: .78rem; font-weight: 600; color: var(--ink-soft); text-decoration: none; margin-bottom: .6rem; }
 .llc-back:hover { color: var(--brass); }
@@ -154,24 +171,40 @@
 .llc-input:focus { border-color: var(--brass); box-shadow: 0 0 0 3px var(--brass-soft); }
 .llc-input.llc-prefilled { border-color: var(--accent-orange); background: #FFFAF3; }
 
+.llc-schedule-card::before { background: var(--ink); }
+.llc-schedule-summary { font-size: .84rem; font-weight: 600; color: var(--ink); background: var(--brass-soft); border-radius: 6px; padding: .7rem .9rem; margin-bottom: .9rem; }
+.llc-schedule-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+.llc-schedule-table thead th { font-size: .64rem; font-weight: 600; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .05em; padding: .5rem; border-bottom: 2px solid var(--ink); text-align: left; }
+.llc-schedule-table thead th.num, .llc-schedule-table td.num { text-align: right; }
+.llc-schedule-table td { padding: .45rem .5rem; border-bottom: 1px solid var(--line); font-family: 'IBM Plex Mono', monospace; }
+.llc-schedule-more { font-size: .72rem; color: var(--ink-faint); margin-top: .6rem; text-align: center; }
+
 .llc-actions { display: flex; justify-content: flex-end; gap: .6rem; }
 .llc-btn { display: inline-flex; align-items: center; gap: .4rem; font-size: .8rem; font-weight: 600; padding: .55rem 1.1rem; border-radius: 6px; border: 1px solid transparent; cursor: pointer; text-decoration: none; }
 .llc-btn-primary { background: var(--ink); color: #fff; border-color: var(--ink); }
-.llc-btn-primary:hover { background: #23374F; }
+.llc-btn-primary:hover { background: #005A24; }
 .llc-btn-outline { background: #fff; color: var(--ink-soft); border-color: var(--line); }
 .llc-btn-outline:hover { border-color: var(--brass); color: var(--brass); }
 </style>
 
 <script>
 (function () {
-    const prefillSelect   = document.getElementById('prefillSelect');
-    const loanRequestId   = document.getElementById('loanRequestIdInput');
-    const employeeSelect  = document.getElementById('employeeSelect');
-    const principalInput  = document.getElementById('principalInput');
-    const planSelect      = document.getElementById('planSelect');
-    const planNoteInput   = document.getElementById('planNoteInput');
+    const prefillSelect    = document.getElementById('prefillSelect');
+    const loanRequestId    = document.getElementById('loanRequestIdInput');
+    const employeeSelect   = document.getElementById('employeeSelect');
+    const principalInput   = document.getElementById('principalInput');
+    const balanceInput     = document.getElementById('balanceInput');
+    const planSelect       = document.getElementById('planSelect');
+    const planNoteInput    = document.getElementById('planNoteInput');
+    const installmentInput = document.getElementById('installmentInput');
     const installmentField = document.getElementById('installmentField');
-    const planNoteField    = document.getElementById('planNoteField');
+    const startDateInput   = document.getElementById('startDateInput');
+
+    const scheduleEmpty   = document.getElementById('scheduleEmpty');
+    const scheduleSummary = document.getElementById('scheduleSummary');
+    const scheduleTable   = document.getElementById('scheduleTable');
+    const scheduleBody    = document.getElementById('scheduleBody');
+    const scheduleMore    = document.getElementById('scheduleMore');
 
     function toggleInstallment() {
         const isOnceOff = planSelect.value === 'once_off';
@@ -185,33 +218,109 @@
 
     function applyPrefill() {
         if (!prefillSelect) return;
-
         const opt = prefillSelect.options[prefillSelect.selectedIndex];
 
         if (!prefillSelect.value) {
             loanRequestId.value = '';
-            [employeeSelect, principalInput, planSelect, planNoteInput].forEach(el => markPrefilled(el, false));
+            [employeeSelect, principalInput, planSelect, planNoteInput, installmentInput].forEach(el => markPrefilled(el, false));
+            recalcSchedule();
             return;
         }
 
         loanRequestId.value = prefillSelect.value;
-
         employeeSelect.value = opt.dataset.employeeId || '';
         principalInput.value = opt.dataset.amount || '';
         planSelect.value = opt.dataset.plan || '';
         planNoteInput.value = opt.dataset.planNote || '';
+        installmentInput.value = opt.dataset.installment || '';
 
-        [employeeSelect, principalInput, planSelect, planNoteInput].forEach(el => markPrefilled(el, true));
+        [employeeSelect, principalInput, planSelect, planNoteInput, installmentInput].forEach(el => markPrefilled(el, true));
 
         toggleInstallment();
+        recalcSchedule();
     }
 
-    if (prefillSelect) {
-        prefillSelect.addEventListener('change', applyPrefill);
+    function formatMoney(v) {
+        return 'K ' + v.toLocaleString('en-ZM', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
-    planSelect.addEventListener('change', toggleInstallment);
+    function recalcSchedule() {
+        const principal = parseFloat(balanceInput.value) || parseFloat(principalInput.value) || 0;
+        const plan = planSelect.value;
+        const start = startDateInput.value ? new Date(startDateInput.value + 'T00:00:00') : new Date();
+
+        scheduleTable.style.display = 'none';
+        scheduleSummary.style.display = 'none';
+        scheduleMore.style.display = 'none';
+
+        if (!principal || !plan) {
+            scheduleEmpty.style.display = 'flex';
+            return;
+        }
+
+        if (plan === 'once_off') {
+            scheduleEmpty.style.display = 'none';
+            scheduleSummary.style.display = 'block';
+            scheduleSummary.textContent = formatMoney(principal) + ' deducted in full on ' +
+                start.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + '.';
+            return;
+        }
+
+        const installment = parseFloat(installmentInput.value) || 0;
+        if (installment <= 0) {
+            scheduleEmpty.style.display = 'flex';
+            scheduleEmpty.querySelector('span') || null;
+            scheduleEmpty.innerHTML = '<i class="bi bi-calendar3"></i> Enter an installment amount to see the projected schedule.';
+            return;
+        }
+
+        scheduleEmpty.style.display = 'none';
+
+        const intervalMonths = plan === 'bi_monthly' ? 2 : 1;
+        let balance = principal;
+        let date = new Date(start);
+        const rows = [];
+        let n = 1;
+        const MAX_ROWS = 36;
+
+        while (balance > 0 && n <= MAX_ROWS) {
+            const amount = Math.min(installment, balance);
+            balance = Math.round((balance - amount) * 100) / 100;
+            rows.push({ no: n, date: new Date(date), amount, balanceAfter: balance });
+            date.setMonth(date.getMonth() + intervalMonths);
+            n++;
+        }
+
+        scheduleSummary.style.display = 'block';
+        const lastDate = rows[rows.length - 1].date.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+        scheduleSummary.textContent = rows.length + ' installment' + (rows.length === 1 ? '' : 's') +
+            ' of up to ' + formatMoney(installment) + ' — projected payoff around ' + lastDate + '.';
+
+        scheduleBody.innerHTML = '';
+        const visibleRows = rows.slice(0, 12);
+        visibleRows.forEach(r => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = '<td>' + r.no + '</td>' +
+                '<td>' + r.date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + '</td>' +
+                '<td class="num">' + formatMoney(r.amount) + '</td>' +
+                '<td class="num">' + formatMoney(r.balanceAfter) + '</td>';
+            scheduleBody.appendChild(tr);
+        });
+        scheduleTable.style.display = 'table';
+
+        if (rows.length > visibleRows.length) {
+            scheduleMore.style.display = 'block';
+            scheduleMore.textContent = '+ ' + (rows.length - visibleRows.length) + ' more installment' +
+                ((rows.length - visibleRows.length) === 1 ? '' : 's') + ' not shown';
+        }
+    }
+
+    if (prefillSelect) prefillSelect.addEventListener('change', applyPrefill);
+    planSelect.addEventListener('change', () => { toggleInstallment(); recalcSchedule(); });
+    [principalInput, balanceInput, installmentInput, startDateInput].forEach(el => el.addEventListener('input', recalcSchedule));
+
     toggleInstallment();
+    recalcSchedule();
 })();
 </script>
 

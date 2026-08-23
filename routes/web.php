@@ -94,9 +94,8 @@ Route::prefix('payroll/reports')->name('payroll.reports.')->group(function () {
         [PayrollReportController::class, 'exportBankPaymentsCsv'])
         ->name('bank_payments.csv');
     
-    Route::get('/{run}/bank-payments/preview',
-        [BankPaymentTemplateController::class, 'index'])
-        ->name('bank_payments.preview');
+    Route::get('/{run}/bank-payments/preview', [PayrollReportController::class, 'bankPaymentsPreview'])->name('bank_payments.preview');
+
  
 });
 
@@ -184,6 +183,14 @@ Route::middleware('auth')->group(function () {
         Route::put('/settings/company', [CompanyController::class, 'update'])->name('company.settings.update');
         Route::post('/settings/company/access-code/generate', [CompanyController::class, 'regenerateAccessCode'])->name('company.settings.access-code.generate');
         Route::post('/settings/company/access-code/deactivate', [CompanyController::class, 'deactivateAccessCode'])->name('company.settings.access-code.deactivate');
+
+        // Bank payment template management (Company Settings)
+        Route::get('/settings/bank-templates', [BankPaymentTemplateController::class, 'index'])->name('bank-templates.index');
+        Route::post('/settings/bank-templates/preset', [BankPaymentTemplateController::class, 'storePreset'])->name('bank-templates.preset');
+        Route::post('/settings/bank-templates/custom/parse', [BankPaymentTemplateController::class, 'parseCustomUpload'])->name('bank-templates.custom.parse');
+        Route::post('/settings/bank-templates/custom', [BankPaymentTemplateController::class, 'storeCustom'])->name('bank-templates.custom');
+        Route::post('/settings/bank-templates/{template}/default', [BankPaymentTemplateController::class, 'setDefault'])->name('bank-templates.default');
+        Route::delete('/settings/bank-templates/{template}', [BankPaymentTemplateController::class, 'destroy'])->name('bank-templates.destroy');
 
 
         Route::post('/team/invite', [InvitationController::class, 'store'])->name('invitations.store');
