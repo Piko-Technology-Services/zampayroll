@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class LeaveRecord extends Model
 {
+    use \App\Models\Concerns\BelongsToCompany;
+
     protected $fillable = ['employee_id', 'year', 'month', 'days_taken'];
 
     protected $casts = [

@@ -3,10 +3,10 @@
     {{-- BRAND --}}
     <div class="sidebar-header">
         <a class="brand-mark" href="{{ route('dashboard') }}">
-            <img src="http://misc.zampayroll.com/logo.png" width="36" height="36" alt="ZamPayroll Logo" class="brand-logo">
+            <img src="{{ asset('assets/images/logo.png') }}" width="36" height="36" alt="ZamPayroll Logo" class="brand-logo">
             <span class="brand-copy">
                 <span class="brand-title">ZamPayroll</span>
-                <span class="brand-subtitle">Payroll Made Simple</span>
+                <span class="brand-subtitle" title="{{ auth()->user()?->company?->name }}">{{ \Illuminate\Support\Str::limit(auth()->user()?->company?->name ?? 'Payroll Made Simple', 26) }}</span>
             </span>
         </a>
     </div>
@@ -41,6 +41,9 @@
                 </a>
                 <a class="nav-sublink" href="{{ route('employees.sample-csv') }}">
                     <i class="bi bi-file-earmark-arrow-down"></i> Import Template
+                </a>
+                <a class="nav-sublink" href="{{ route('employees.index') }}#portal" title="Create portals from the employee list or an employee's file">
+                    <i class="bi bi-phone"></i> Self-service portals
                 </a>
             </div>
         </div>

@@ -128,6 +128,7 @@ class InvitationController extends Controller
             if ($existingUser) {
                 // Existing account: link it to the inviting company with the confirmed role/position.
                 $existingUser->update([
+                    'email_verified_at' => $existingUser->email_verified_at ?? now(),
                     'company_id' => $invitation->company_id,
                     'role'       => $request->input('role'),
                     'position'   => $request->input('position'),
@@ -142,6 +143,8 @@ class InvitationController extends Controller
                     'password'   => Hash::make($request->input('password')),
                     'role'       => $request->input('role'),
                     'position'   => $request->input('position'),
+                    // The invite link was delivered to this mailbox, so the address is confirmed.
+                    'email_verified_at' => now(),
                 ]);
             }
 

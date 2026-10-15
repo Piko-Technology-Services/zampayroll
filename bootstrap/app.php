@@ -11,9 +11,22 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Multi-tenancy: pick the database from the sub-domain BEFORE the
+        // session starts, then verify the signed-in user belongs to this host.
+        $middleware->web(
+            prepend: [\App\Http\Middleware\IdentifyTenant::class],
+            append: [\App\Http\Middleware\VerifyTenantSession::class],
+        );
+
         $middleware->alias([
-            'company_admin' => \App\Http\Middleware\EnsureCompanyAdmin::class,
+            'company_admin'  => \App\Http\Middleware\EnsureCompanyAdmin::class,
+            'staff'          => \App\Http\Middleware\EnsureStaff::class,
+            'employee'       => \App\Http\Middleware\EnsureEmployee::class,
+            'force.password' => \App\Http\Middleware\ForcePasswordChange::class,
         ]);
+
+        $middleware->redirectGuestsTo(fn () => route('login'));
+        $middleware->redirectUsersTo(fn ($request) => route($request->user()?->homeRoute() ?? 'dashboard'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

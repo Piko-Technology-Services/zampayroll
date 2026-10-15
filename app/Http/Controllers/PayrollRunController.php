@@ -221,7 +221,7 @@ class PayrollRunController extends Controller
         $run = PayrollRun::with(['payrolls.employee', 'payrolls.items'])
             ->findOrFail($runId);
 
-        $companyName = 'ZAMPAYROLL';
+        $companyName = (\App\Support\Tenancy::company()?->name ?? 'ZAMPAYROLL');
         $companyLogo = 'http://misc.zampayroll.com/logo.png';
         
 
@@ -306,7 +306,7 @@ class PayrollRunController extends Controller
                 ],
                 [
                     'pay_period'   => $run->period,
-                    'company'      => 'ZAMPAYROLL',
+                    'company'      => (\App\Support\Tenancy::company()?->name ?? 'ZAMPAYROLL'),
                     'branch'       => $employee->branch,
                     'cost_centre'  => $employee->department,
                     'date_engaged' => $employee->contract_start,
@@ -354,7 +354,7 @@ class PayrollRunController extends Controller
         }
 
         $request->validate([
-            'employee_id'  => 'required|exists:employees,id',
+            'employee_id'  => 'required|exists:employees,id,company_id,' . (int) auth()->user()->company_id,
             'name'         => 'required|string|max:255',
             'type'         => 'required|in:earning,deduction,system',
             'formula_type' => 'required|in:fixed,percentage',
@@ -435,7 +435,7 @@ class PayrollRunController extends Controller
         PayrollRun $run
     ) {
         $request->validate([
-            'rule_id' => 'required|exists:payroll_rules,id',
+            'rule_id' => 'required|exists:payroll_rules,id,company_id,' . (int) auth()->user()->company_id,
             'file' => 'required|file|mimes:csv'
         ]);
 

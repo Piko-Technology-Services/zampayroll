@@ -1,0 +1,94 @@
+@extends('layouts.portal')
+@section('title', 'Overtime')
+
+@php
+    $items = $requests->map(fn ($r) => [
+        'title' => ($types[$r->type]['label'] ?? 'Overtime') . ' — K' . number_format((float) $r->amount, 2),
+        'detail' => $r->date->format('D d M Y') . ', ' . substr($r->start_time, 0, 5) . '–' . substr($r->end_time, 0, 5) . ' (' . rtrim(rtrim((string) $r->hours, '0'), '.') . ' hrs)',
+        'status' => $r->status,
+        'note' => $r->hr_comment,
+        'cancelUrl' => route('portal.overtime.cancel', $r),
+    ]);
+@endphp
+
+@section('content')
+<div class="pt-page-head">
+    <div>
+        <h1>Overtime</h1>
+        <p>Log extra hours. Approved overtime is added to your next payroll.</p>
+    </div>
+    <div class="pt-stat">Approved this month<b>K{{ number_format($approvedThisMonth, 2) }}</b></div>
+</div>
+
+<div class="pt-grid">
+    <div class="pt-card pt-span-5" id="apply">
+        <h3>Log overtime</h3>
+        <form method="POST" action="{{ route('portal.overtime.store') }}" novalidate>
+            @csrf
+            <div class="zp-field">
+                <label class="zp-label" for="date">Date worked</label>
+                <input class="zp-input @error('date') is-invalid @enderror" type="date" name="date" id="date" value="{{ old('date', now()->toDateString()) }}" required>
+                @error('date')<div class="zp-error">{{ $message }}</div>@enderror
+            </div>
+            <div class="ob-grid">
+                <div class="zp-field">
+                    <label class="zp-label" for="start_time">From</label>
+                    <input class="zp-input" type="time" name="start_time" id="start_time" value="{{ old('start_time', '17:00') }}" required>
+                </div>
+                <div class="zp-field">
+                    <label class="zp-label" for="end_time">To</label>
+                    <input class="zp-input @error('end_time') is-invalid @enderror" type="time" name="end_time" id="end_time" value="{{ old('end_time', '19:00') }}" required>
+                    @error('end_time')<div class="zp-error">{{ $message }}</div>@enderror
+                </div>
+            </div>
+            <div class="zp-field">
+                <span class="zp-label">Rate</span>
+                <div class="ob-tiles" style="grid-template-columns:1fr 1fr">
+                    @foreach($types as $k => $t)
+                        <div class="ob-tile">
+                            <input type="radio" name="type" id="ot-{{ $k }}" value="{{ $k }}" data-mult="{{ $t['multiplier'] }}" @checked(old('type', 'normal') === $k)>
+                            <label for="ot-{{ $k }}"><span class="t">{{ $t['label'] }} ({{ $t['multiplier'] }}×)</span><span class="s">{{ $t['tooltip'] }}</span></label>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+
+            <div class="pt-estimate">
+                <span><span id="otHours">0</span> hrs × K{{ number_format($hourlyRate, 2) }}/hr × <span id="otMult">1.5</span></span>
+                <b>K<span id="otAmount">0.00</span></b>
+            </div>
+
+            <div class="zp-field">
+                <label class="zp-label" for="comment">What did you work on? <small>(optional)</small></label>
+                <textarea class="zp-textarea" name="comment" id="comment" rows="3">{{ old('comment') }}</textarea>
+            </div>
+            <button class="zp-btn zp-btn-primary zp-btn-block" type="submit"><i class="bi bi-send"></i> Send for approval</button>
+            <p class="zp-hint mt-2">The estimate uses your basic salary ÷ {{ $employee->working_days_per_month }} working days ÷ 8 hours. HR confirms the final amount.</p>
+        </form>
+    </div>
+
+    <div class="pt-card pt-span-7">
+        <h3>My overtime</h3>
+        @include('portal._request-list', ['items' => $items, 'icon' => 'bi-alarm', 'empty' => 'No overtime logged yet.'])
+    </div>
+</div>
+@endsection
+
+@push('scripts')
+<script>
+(function () {
+    const rate = {{ $hourlyRate }};
+    const st = document.getElementById('start_time'), et = document.getElementById('end_time');
+    function upd() {
+        const [a, b] = [st.value, et.value].map(v => { const [h, m] = (v || '0:0').split(':'); return +h * 60 + +m; });
+        const hrs = Math.max(0, (b - a) / 60);
+        const mult = +document.querySelector('input[name=type]:checked').dataset.mult;
+        document.getElementById('otHours').textContent = hrs.toFixed(2).replace(/\.?0+$/, '');
+        document.getElementById('otMult').textContent = mult;
+        document.getElementById('otAmount').textContent = (rate * mult * hrs).toLocaleString('en-ZM', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    document.querySelectorAll('#start_time,#end_time,input[name=type]').forEach(el => el.addEventListener('input', upd));
+    upd();
+})();
+</script>
+@endpush

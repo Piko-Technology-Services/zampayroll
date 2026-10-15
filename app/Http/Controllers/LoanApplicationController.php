@@ -41,6 +41,9 @@ class LoanApplicationController extends Controller
                 ->withErrors(['email' => 'This email address doesn\'t match any employee record. Please use your registered company email address.']);
         }
 
+        // Everything below (holidays, notifications...) is scoped to the employee's company.
+        \App\Support\Tenancy::setCompanyId((int) $employee->company_id);
+
         $documents = [];
         if ($request->hasFile('documents')) {
             foreach ($request->file('documents') as $file) {

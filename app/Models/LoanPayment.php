@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class LoanPayment extends Model
 {
+    use \App\Models\Concerns\BelongsToCompany;
+
     public const TYPES = [
         'deduction'      => 'Payroll Deduction',
         'manual_payment' => 'Manual Payment',

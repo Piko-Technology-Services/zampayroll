@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Loan extends Model
 {
+    use \App\Models\Concerns\BelongsToCompany;
+
     use HasInstallmentSchedule;
 
     public const STATUSES = [

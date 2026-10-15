@@ -33,6 +33,14 @@ use App\Http\Controllers\LoanApplicationController;
 use App\Http\Controllers\LoanDashboardController;
 use App\Http\Controllers\LoanLedgerController;
 
+use App\Http\Controllers\Auth\RegistrationController;
+use App\Http\Controllers\Auth\EmailVerificationController;
+use App\Http\Controllers\Auth\PasswordResetController;
+use App\Http\Controllers\Auth\WorkspaceHandoffController;
+use App\Http\Controllers\EmployeePortalAccessController;
+use App\Http\Controllers\Portal\PortalController;
+use App\Http\Controllers\Portal\PortalRequestController;
+
 /*
 |--------------------------------------------------------------------------
 | GUEST ROUTES (NOT LOGGED IN)
@@ -53,12 +61,41 @@ Route::post('/demo-request', [DemoRequestController::class, 'store'])->name('dem
 Route::middleware('guest')->group(function () {
 
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 
-    Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
-    Route::post('/register', [AuthController::class, 'register']);
+    // Interactive multi-step registration wizard
+    Route::get('/register', [RegistrationController::class, 'show'])->name('register');
+    Route::post('/register', [RegistrationController::class, 'store'])->middleware('throttle:10,1');
+    Route::get('/register/check-email', [RegistrationController::class, 'checkEmail'])->name('register.check-email')->middleware('throttle:60,1');
+    Route::get('/register/check-subdomain', [RegistrationController::class, 'checkSubdomain'])->name('register.check-subdomain')->middleware('throttle:60,1');
+
+    // Forgot / reset password (email link)
+    Route::get('/forgot-password', [PasswordResetController::class, 'request'])->name('password.request');
+    Route::post('/forgot-password', [PasswordResetController::class, 'email'])->name('password.email')->middleware('throttle:6,1');
+    Route::get('/reset-password/{token}', [PasswordResetController::class, 'edit'])->name('password.reset');
+    Route::post('/reset-password', [PasswordResetController::class, 'update'])->name('password.store');
 });
 
+// Email confirmation — reachable without being signed in (the link is signed).
+Route::get('/email/verify', [EmailVerificationController::class, 'notice'])->name('verification.notice');
+Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
+    ->middleware(['signed', 'throttle:12,1'])->name('verification.verify');
+Route::post('/email/verification-notification', [EmailVerificationController::class, 'resend'])
+    ->middleware('throttle:4,1')->name('verification.send');
+
+// One-time signed hop from the main domain into a dedicated workspace.
+Route::get('/auth/handoff/{user}', WorkspaceHandoffController::class)
+    ->middleware(['signed'])->name('workspace.handoff');
+
+Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
+
+
+/*
+|--------------------------------------------------------------------------
+| HR / ADMIN AREA — signed-in staff only (employees use /portal)
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'staff'])->group(function () {
 
 Route::prefix('payroll/reports')->name('payroll.reports.')->group(function () {
  
@@ -133,7 +170,7 @@ Route::prefix('payroll/runs')->name('payroll.runs.')->group(function () {
 | AUTHENTICATED ROUTES (LOGGED IN USERS ONLY)
 |--------------------------------------------------------------------------
 */
-Route::middleware('auth')->group(function () {
+Route::group([], function () { // (inside staff area)
 
     // ✅ STATIC ROUTES FIRST
     Route::get('/employees/sample-csv', [EmployeeController::class, 'downloadSampleCsv'])
@@ -159,12 +196,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
     Route::view('/settings', 'dashboard.settings')->name('settings.index');
 
-    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });
 
 
 
-Route::middleware('auth')->group(function () {
+Route::group([], function () { // (inside staff area)
 
     // My Profile / Password & Security (any authenticated user)
     Route::get('/profile-edit', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -198,12 +234,8 @@ Route::middleware('auth')->group(function () {
     });
 });
 
-// Public invitation acceptance flow (token-protected, not auth-gated —
-// a not-yet-registered invitee has no account to authenticate with).
-Route::get('/invitations/{token}/accept', [InvitationController::class, 'accept'])->name('invitations.accept');
-Route::post('/invitations/{token}/complete', [InvitationController::class, 'complete'])->name('invitations.complete');
 
-Route::middleware(['auth'])->prefix('attendance')->name('attendance.')->group(function () {
+Route::middleware(['auth', 'staff'])->prefix('attendance')->name('attendance.')->group(function () {
  
     Route::get('/', [AttendanceController::class, 'calendar'])->name('calendar');
  
@@ -233,6 +265,13 @@ Route::middleware(['auth'])->prefix('attendance')->name('attendance.')->group(fu
 });
 
 
+}); // end staff area (part 1)
+
+// Public invitation acceptance flow (token-protected, not auth-gated —
+// a not-yet-registered invitee has no account to authenticate with).
+Route::get('/invitations/{token}/accept', [InvitationController::class, 'accept'])->name('invitations.accept');
+Route::post('/invitations/{token}/complete', [InvitationController::class, 'complete'])->name('invitations.complete');
+
 /*
 |--------------------------------------------------------------------------
 | Public Leave Form
@@ -248,7 +287,7 @@ Route::post('/leave/apply', [LeaveApplicationController::class, 'store'])->name(
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth'])->prefix('leave')->name('leave.')->group(function () {
+Route::middleware(['auth', 'staff'])->prefix('leave')->name('leave.')->group(function () {
  
     Route::get('/', [LeaveController::class, 'years'])->name('years');
  
@@ -275,7 +314,7 @@ Route::get('/overtime/apply', [OvertimeApplicationController::class, 'form'])->n
 Route::post('/overtime/apply', [OvertimeApplicationController::class, 'store'])->name('overtime.apply.store');
  
 // AUTHENTICATED — inside your auth group, alongside leave.* / attendance.*
-Route::middleware(['auth'])->prefix('overtime')->name('overtime.')->group(function () {
+Route::middleware(['auth', 'staff'])->prefix('overtime')->name('overtime.')->group(function () {
     Route::get('/dashboard/requests', [OvertimeDashboardController::class, 'index'])->name('dashboard');
     Route::post('/dashboard/requests/{overtimeRequest}/approve', [OvertimeDashboardController::class, 'approve'])->name('approve');
     Route::post('/dashboard/requests/{overtimeRequest}/reject', [OvertimeDashboardController::class, 'reject'])->name('reject');
@@ -290,12 +329,12 @@ Route::get('/loan/apply', [LoanApplicationController::class, 'form'])->name('loa
 Route::post('/loan/apply', [LoanApplicationController::class, 'store'])->name('loan.apply.store');
  
 // AUTHENTICATED — inside your auth group
-Route::middleware(['auth'])->prefix('loan')->name('loan.')->group(function () {
+Route::middleware(['auth', 'staff'])->prefix('loan')->name('loan.')->group(function () {
     Route::get('/dashboard/requests', [LoanDashboardController::class, 'index'])->name('dashboard');
     Route::post('/dashboard/requests/{loanRequest}/approve', [LoanDashboardController::class, 'approve'])->name('approve');
     Route::post('/dashboard/requests/{loanRequest}/reject', [LoanDashboardController::class, 'reject'])->name('reject');
 });
-Route::middleware(['auth'])->prefix('loan/ledger')->name('loan.ledger.')->group(function () {
+Route::middleware(['auth', 'staff'])->prefix('loan/ledger')->name('loan.ledger.')->group(function () {
     Route::get('/', [LoanLedgerController::class, 'index'])->name('index');
     Route::get('/create', [LoanLedgerController::class, 'create'])->name('create');
     Route::post('/', [LoanLedgerController::class, 'store'])->name('store');
@@ -304,11 +343,8 @@ Route::middleware(['auth'])->prefix('loan/ledger')->name('loan.ledger.')->group(
     Route::post('/{loan}/payments', [LoanLedgerController::class, 'recordPayment'])->name('payments.store');
 });
 
-Route::get('/payroll/rules', function () {
-    return "RULES WORKING";
-});
 
-Route::middleware('auth')->prefix('payroll')->name('payroll.')->group(function () {
+Route::middleware(['auth', 'staff'])->prefix('payroll')->name('payroll.')->group(function () {
 
     // -------------------------
     // PAYROLL (EMPLOYEE LEVEL)
@@ -389,3 +425,54 @@ Route::middleware('auth')->prefix('payroll')->name('payroll.')->group(function (
 
 
 
+
+/*
+|--------------------------------------------------------------------------
+| EMPLOYEE SELF-SERVICE — HR creates / resends / revokes portal access
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'staff'])->group(function () {
+    Route::post('/employees/portal/bulk', [EmployeePortalAccessController::class, 'bulk'])->name('employees.portal.bulk');
+    Route::post('/employees/{employee}/portal', [EmployeePortalAccessController::class, 'store'])->name('employees.portal.store');
+    Route::post('/employees/{employee}/portal/resend', [EmployeePortalAccessController::class, 'resend'])->name('employees.portal.resend');
+    Route::delete('/employees/{employee}/portal', [EmployeePortalAccessController::class, 'destroy'])->name('employees.portal.destroy');
+});
+
+/*
+|--------------------------------------------------------------------------
+| EMPLOYEE SELF-SERVICE PORTAL
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'employee', 'force.password'])->prefix('portal')->name('portal.')->group(function () {
+
+    Route::get('/', [PortalController::class, 'dashboard'])->name('dashboard');
+
+    // First-login / any-time password change
+    Route::get('/password', [PortalController::class, 'editPassword'])->name('password.edit');
+    Route::put('/password', [PortalController::class, 'updatePassword'])->name('password.update');
+
+    // Profile
+    Route::get('/profile', [PortalController::class, 'profile'])->name('profile');
+    Route::put('/profile', [PortalController::class, 'updateProfile'])->name('profile.update');
+
+    // Payslips
+    Route::get('/payslips', [PortalController::class, 'payslips'])->name('payslips');
+    Route::get('/payslips/{payroll}', [PortalController::class, 'showPayslip'])->name('payslips.show');
+    Route::get('/payslips/{payroll}/download', [PortalController::class, 'downloadPayslip'])->name('payslips.download');
+
+    // Leave
+    Route::get('/leave', [PortalRequestController::class, 'leave'])->name('leave');
+    Route::get('/leave/calculate', [PortalRequestController::class, 'calculateLeave'])->name('leave.calculate');
+    Route::post('/leave', [PortalRequestController::class, 'storeLeave'])->name('leave.store');
+    Route::delete('/leave/{leaveRequest}', [PortalRequestController::class, 'cancelLeave'])->name('leave.cancel');
+
+    // Overtime
+    Route::get('/overtime', [PortalRequestController::class, 'overtime'])->name('overtime');
+    Route::post('/overtime', [PortalRequestController::class, 'storeOvertime'])->name('overtime.store');
+    Route::delete('/overtime/{overtimeRequest}', [PortalRequestController::class, 'cancelOvertime'])->name('overtime.cancel');
+
+    // Loans
+    Route::get('/loans', [PortalRequestController::class, 'loans'])->name('loans');
+    Route::post('/loans', [PortalRequestController::class, 'storeLoan'])->name('loans.store');
+    Route::delete('/loans/{loanRequest}', [PortalRequestController::class, 'cancelLoan'])->name('loans.cancel');
+});

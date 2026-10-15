@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Attendance extends Model
 {
+    use \App\Models\Concerns\BelongsToCompany;
+
     public const STATUSES = [
         'present'     => 'Present',
         'absent'      => 'Absent',

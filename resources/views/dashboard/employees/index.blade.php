@@ -27,6 +27,16 @@
                 <i class="bi bi-upload"></i> Import Employees
             </button>
 
+            @php $withoutPortal = $employees->filter(fn ($e) => ! $e->user && $e->portal_email && strcasecmp((string) $e->employment_status, 'Active') === 0)->count(); @endphp
+            <form method="POST" action="{{ route('employees.portal.bulk') }}"
+                  onsubmit="return confirm('Create self-service portals for {{ $withoutPortal }} employee(s)? Each will receive an email with login details.')">
+                @csrf
+                <button class="emp-rail-secondary" type="submit" @disabled($withoutPortal === 0)
+                        title="Active employees with an email address and no portal yet">
+                    <i class="bi bi-phone"></i> Create portals ({{ $withoutPortal }})
+                </button>
+            </form>
+
             <div class="emp-rail-divider"></div>
 
             <div class="emp-rail-section">
@@ -127,6 +137,7 @@
                             <th>Branch</th>
                             <th>Phone</th>
                             <th>Status</th>
+                            <th>Portal</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -186,6 +197,14 @@
                                 <span class="emp-status-badge emp-status-{{ strtolower($employee->employment_status) }}">
                                     {{ $employee->employment_status }}
                                 </span>
+                            </td>
+
+                            <td>
+                                @if($employee->user)
+                                    <span class="zp-portal-pill" title="Last seen {{ optional($employee->user->last_login_at)->diffForHumans() ?? 'never' }}"><i class="bi bi-check2"></i> Active</span>
+                                @else
+                                    <span class="zp-portal-pill off">None</span>
+                                @endif
                             </td>
 
                             <td onclick="event.stopPropagation()" class="emp-actions-cell">

@@ -8,6 +8,8 @@ use App\Models\Company;
 
 class Employee extends Model
 {
+    use \App\Models\Concerns\BelongsToCompany;
+
     protected $fillable = [
 
         /*
@@ -183,6 +185,60 @@ class Employee extends Model
     public function company()
     {
         return $this->belongsTo(Company::class);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | SELF-SERVICE PORTAL
+    |--------------------------------------------------------------------------
+    */
+    public function user()
+    {
+        return $this->hasOne(User::class, 'employee_id');
+    }
+
+    public function hasPortalAccess(): bool
+    {
+        return $this->relationLoaded('user') ? $this->user !== null : $this->user()->exists();
+    }
+
+    /**
+     * The address portal credentials are sent to: company email first, personal as fallback.
+     */
+    public function getPortalEmailAttribute(): ?string
+    {
+        return $this->company_email ?: $this->personal_email ?: null;
+    }
+
+    public function payrolls()
+    {
+        return $this->hasMany(Payroll::class);
+    }
+
+    public function leaveRequests()
+    {
+        return $this->hasMany(LeaveRequest::class);
+    }
+
+    public function overtimeRequests()
+    {
+        return $this->hasMany(OvertimeRequest::class);
+    }
+
+    public function loanRequests()
+    {
+        return $this->hasMany(LoanRequest::class);
+    }
+
+    public function loans()
+    {
+        return $this->hasMany(Loan::class);
+    }
+
+    // `employee_id` on this table is the human EIN, not a parent key.
+    protected function inferCompanyIdFromParent(): ?int
+    {
+        return null;
     }
 
     public function getWorkingDaysPerMonthAttribute(): int

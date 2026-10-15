@@ -3,262 +3,103 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Support\Tenancy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\DB;
-use App\Models\Company;
+use Illuminate\Support\Facades\URL;
 
 class AuthController extends Controller
 {
     /**
      * Show login page
      */
-    public function showLogin()
+    public function showLogin(Request $request)
     {
-        return view('auth.login');
+        return view('auth.login', [
+            'workspace' => Tenancy::dedicatedCompany(),
+            'prefillEmail' => $request->query('email'),
+        ]);
     }
 
     /**
-     * Handle login request
+     * Handle login request.
+     *
+     * 1. Normal sign-in against the current database (main domain = shared
+     *    tenants, sub-domain = that company's own database).
+     * 2. Unconfirmed emails are refused with a "resend confirmation" option.
+     * 3. On the main domain, people who belong to a dedicated workspace are
+     *    checked against THEIR database and handed over to their sub-domain.
      */
     public function login(Request $request)
     {
-        $request->validate([
+        $credentials = $request->validate([
             'email' => 'required|email',
-            'password' => 'required'
+            'password' => 'required',
         ]);
 
-        $credentials = $request->only('email', 'password');
+        $remember = $request->boolean('remember');
 
-        if (Auth::attempt($credentials, $request->remember)) {
+        if (Auth::validate($credentials)) {
+            $user = Auth::getProvider()->retrieveByCredentials(['email' => $credentials['email']]);
+
+            if (! $user->hasVerifiedEmail()) {
+                return back()->withInput($request->only('email'))
+                    ->with('unverified_email', $user->email)
+                    ->withErrors(['email' => 'Please confirm your email address first — check your inbox for the link we sent you.']);
+            }
+
+            $company = $user->company;
+
+            if (! Tenancy::isDedicated() && $company && $company->isDedicated()) {
+                // Shouldn't happen (users move to the tenant DB), but never sign a
+                // dedicated company's user into the shared database.
+                return redirect()->away($company->workspaceUrl('/login?email=' . urlencode($user->email)));
+            }
+
+            Auth::login($user, $remember);
             $request->session()->regenerate();
+            $user->forceFill(['last_login_at' => now()])->saveQuietly();
 
-            return redirect()->route('dashboard')
-                ->with('success', 'Welcome back!');
+            return redirect()->intended(route($user->homeRoute()))
+                ->with('success', 'Welcome back, ' . strtok($user->name, ' ') . '!');
+        }
+
+        // Main domain: maybe this person works for a dedicated workspace.
+        if (! Tenancy::isDedicated() && ($company = Tenancy::directoryCompanyFor($credentials['email']))
+            && $company->isActive() && $company->database_name) {
+
+            $handoff = Tenancy::runInDedicated($company, function () use ($credentials, $remember) {
+                if (! Auth::validate($credentials)) {
+                    return null;
+                }
+
+                $user = Auth::getProvider()->retrieveByCredentials(['email' => $credentials['email']]);
+
+                if (! $user->hasVerifiedEmail()) {
+                    return 'unverified';
+                }
+
+                return URL::temporarySignedRoute('workspace.handoff', now()->addMinutes(2), [
+                    'user' => $user->id,
+                    'remember' => $remember ? 1 : 0,
+                ]);
+            });
+
+            if ($handoff === 'unverified') {
+                return back()->withInput($request->only('email'))
+                    ->withErrors(['email' => 'Please confirm your email address first — check your inbox for the link we sent you.']);
+            }
+
+            if ($handoff) {
+                return redirect()->away($handoff);
+            }
         }
 
         return back()->withErrors([
-            'email' => 'Invalid credentials provided.'
-        ])->withInput();
+            'email' => 'Those details don\'t match our records. Double-check your email and password.',
+        ])->withInput($request->only('email', 'remember'));
     }
-
-    /**
-     * Show register page
-     */
-    public function showRegister()
-    {
-        return view('auth.register');
-    }
-
-    /**
-     * Handle register request
-     */
-    // public function register(Request $request)
-    // {
-    //     $request->validate([
-    //         'name' => 'required|string|max:255',
-    //         'company_name' => 'nullable|string|max:255',
-    //         'email' => 'required|email|unique:users,email',
-    //         'password' => 'required|min:6|confirmed',
-    //         'role' => 'required|string|max:255'
-    //     ]);
-
-    //     $user = User::create([
-    //         'name' => $request->name,
-    //         'company_name' => $request->company_name,
-    //         'email' => $request->email,
-    //         'password' => Hash::make($request->password),
-    //         'role' => $request->role
-    //     ]);
-
-    //     Auth::login($user);
-
-    //     return redirect()->route('dashboard')
-    //         ->with('success', 'Account created successfully!');
-    // }
-
-  public function register(Request $request)
-{
-$validated = $request->validate([
-/*
-|--------------------------------------------------------------------------
-| Company Information
-|--------------------------------------------------------------------------
-*/
-
-    'company_name' => [
-        'required',
-        'string',
-        'max:255',
-    ],
-
-    'company_email' => [
-        'nullable',
-        'email',
-        'max:255',
-    ],
-
-    'company_phone' => [
-        'nullable',
-        'string',
-        'max:50',
-    ],
-
-    'company_address' => [
-        'nullable',
-        'string',
-        'max:1000',
-    ],
-
-    'company_tpin' => [
-        'nullable',
-        'string',
-        'max:100',
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Main Administrator Information
-    |--------------------------------------------------------------------------
-    */
-
-    'name' => [
-        'required',
-        'string',
-        'max:255',
-    ],
-
-    'position' => [
-        'nullable',
-        'string',
-        'max:255',
-    ],
-
-    'email' => [
-        'required',
-        'email',
-        'max:255',
-        'unique:users,email',
-    ],
-
-    'password' => [
-        'required',
-        'string',
-        'min:8',
-        'confirmed',
-    ],
-
-    'terms' => [
-        'accepted',
-    ],
-]);
-
-/*
-|--------------------------------------------------------------------------
-| Create Company and Administrator
-|--------------------------------------------------------------------------
-|
-| The transaction ensures that both records are created together.
-| If one operation fails, Laravel rolls back the other operation.
-|
-*/
-
-$user = DB::transaction(
-    function () use ($validated) {
-
-        /*
-        |--------------------------------------------------------------------------
-        | Create the Company
-        |--------------------------------------------------------------------------
-        */
-
-        $company = Company::create([
-            'name' => $validated[
-                'company_name'
-            ],
-
-            'email' => $validated[
-                'company_email'
-            ] ?? null,
-
-            'phone' => $validated[
-                'company_phone'
-            ] ?? null,
-
-            'address' => $validated[
-                'company_address'
-            ] ?? null,
-
-            'tpin' => $validated[
-                'company_tpin'
-            ] ?? null,
-        ]);
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Create the First Company User
-        |--------------------------------------------------------------------------
-        |
-        | The first user is automatically the company administrator.
-        |
-        */
-
-        $user = User::create([
-            'company_id' => $company->id,
-
-            'name' => $validated[
-                'name'
-            ],
-
-            'position' => $validated[
-                'position'
-            ] ?? null,
-
-            'email' => $validated[
-                'email'
-            ],
-
-            'password' => Hash::make(
-                $validated['password']
-            ),
-
-            'role' => 'company_admin',
-        ]);
-
-        return $user;
-    }
-);
-
-
-/*
-|--------------------------------------------------------------------------
-| Log in the New Administrator
-|--------------------------------------------------------------------------
-*/
-
-Auth::login($user);
-
-$request->session()->regenerate();
-
-
-/*
-|--------------------------------------------------------------------------
-| Redirect to Dashboard
-|--------------------------------------------------------------------------
-*/
-
-return redirect()
-    ->route('dashboard')
-    ->with(
-        'success',
-        'Your company account has been created successfully.'
-    );
-
-
-}
-  
 
     /**
      * Logout user
@@ -270,6 +111,6 @@ return redirect()
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('login');
+        return redirect()->route('login')->with('success', 'You have been signed out. See you soon! 👋');
     }
 }

@@ -136,7 +136,7 @@ class PayrollReportController extends Controller
             abort(404, 'Unknown report type.');
         }
 
-        $companyName = 'ZAMPAYROLL';
+        $companyName = (\App\Support\Tenancy::company()?->name ?? 'ZAMPAYROLL');
 
         $pdf = Pdf::loadView('dashboard.payroll.reports.pdf.management', [
             'run'         => $run,

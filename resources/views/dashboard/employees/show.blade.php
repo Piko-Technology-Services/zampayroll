@@ -20,6 +20,8 @@
         </div>
     </div>
 
+    @include('partials.employee-portal-card', ['employee' => $employee])
+
     {{-- ===== DOSSIER ===== --}}
     <div class="hrf-file">
 

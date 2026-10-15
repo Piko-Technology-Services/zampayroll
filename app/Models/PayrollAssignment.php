@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class PayrollAssignment extends Model
 {
+    use \App\Models\Concerns\BelongsToCompany;
+
     protected $fillable = [
         'employee_id',
         'name',

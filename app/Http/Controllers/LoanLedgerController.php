@@ -62,8 +62,8 @@ class LoanLedgerController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'loan_request_id'     => 'nullable|exists:loan_requests,id',
-            'employee_id'         => 'required|exists:employees,id',
+            'loan_request_id'     => 'nullable|exists:loan_requests,id,company_id,' . (int) auth()->user()->company_id,
+            'employee_id'         => 'required|exists:employees,id,company_id,' . (int) auth()->user()->company_id,
             'principal_amount'    => 'required|numeric|min:0.01',
             'balance'             => 'nullable|numeric|min:0',
             'payment_plan'        => 'required|in:' . implode(',', array_keys(LoanRequest::PAYMENT_PLANS)),

@@ -79,7 +79,7 @@ class LeaveController extends Controller
     public function updateCell(Request $request, int $year): JsonResponse
     {
         $validated = $request->validate([
-            'employee_id' => 'required|integer|exists:employees,id',
+            'employee_id' => 'required|integer|exists:employees,id,company_id,' . (int) auth()->user()->company_id,
             'month'       => 'required|integer|between:1,12',
             'days_taken'  => 'nullable|numeric|min:0|max:31',
         ]);

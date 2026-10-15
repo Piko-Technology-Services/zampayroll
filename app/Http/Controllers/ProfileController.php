@@ -21,6 +21,7 @@ class ProfileController extends Controller
 
         if ($company && $user->isCompanyAdmin()) {
             $teamMembers = User::where('company_id', $company->id)
+                ->whereNull('employee_id') // portal accounts are managed from the employee file
                 ->orderBy('name')
                 ->get();
 
@@ -53,6 +54,7 @@ class ProfileController extends Controller
 
         if ($company && $user->isCompanyAdmin()) {
             $teamMembers = User::where('company_id', $company->id)
+                ->whereNull('employee_id') // portal accounts are managed from the employee file
                 ->orderBy('name')
                 ->get();
 

@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class OvertimeRequest extends Model
 {
+    use \App\Models\Concerns\BelongsToCompany;
+
     public const STATUSES = [
         'pending'  => 'Pending',
         'approved' => 'Approved',

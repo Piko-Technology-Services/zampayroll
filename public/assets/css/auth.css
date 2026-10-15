@@ -5,7 +5,10 @@
 ========================================================================== */
 
 .auth-body {
-    background: #00742D;
+    background:
+        repeating-radial-gradient(circle at 85% 15%, rgba(255,255,255,.045) 0 1px, transparent 1px 30px),
+        linear-gradient(150deg, #0A3B22 0%, #00742D 100%);
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
 }
 
 .auth-page {
@@ -250,3 +253,32 @@
         transition: none;
     }
 }
+
+/* ---- ZamPayroll brand refresh ----------------------------------------- */
+.auth-brand-row { display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; }
+.auth-workspace {
+    display: inline-flex; align-items: center; gap: .4rem; font-size: .78rem; font-weight: 700;
+    padding: .35rem .7rem; border-radius: 999px; background: #FBF0E5; color: #9A5418;
+}
+.auth-form-side { padding: 2rem 2.25rem; }
+.auth-form-content h1 { font-family: 'Fraunces', Georgia, serif; font-size: 1.9rem; font-weight: 700; letter-spacing: -.01em; }
+.auth-form-content .form-control { border-radius: 0 12px 12px 0; }
+.auth-form-content .input-group-text { border-radius: 12px 0 0 12px; }
+.auth-form-content .form-control:focus { border-color: #00742D; box-shadow: 0 0 0 4px rgba(0,116,45,.12); }
+.auth-form-content .btn-success { background: #00742D; border-color: #00742D; border-radius: 12px; font-weight: 600; }
+.auth-form-content .btn-success:hover { background: #00602A; border-color: #00602A; }
+.auth-form-content a.text-success, .auth-form-content .text-success { color: #00742D !important; }
+.auth-divider { display: flex; align-items: center; gap: .75rem; color: #7B877F; font-size: .8rem; margin: 1.5rem 0; }
+.auth-divider::before, .auth-divider::after { content: ""; flex: 1; height: 1px; background: #DCE5DE; }
+.auth-cta-card {
+    display: flex; gap: .85rem; align-items: center; padding: .9rem 1rem; border-radius: 14px;
+    border: 1.5px dashed #CFE6D7; background: #F6FAF7; text-decoration: none; color: #15201A;
+}
+.auth-cta-card:hover { border-color: #00742D; color: #15201A; }
+.auth-cta-card .ic { width: 40px; height: 40px; border-radius: 12px; background: #E8F3EC; color: #00742D; display: grid; place-items: center; font-size: 1.15rem; flex: none; }
+.auth-cta-card b { display: block; font-size: .92rem; }
+.auth-cta-card span { font-size: .8rem; color: #7B877F; }
+.pw-rules { list-style: none; padding: 0; margin: .5rem 0 0; font-size: .8rem; color: #7B877F; display: flex; flex-wrap: wrap; gap: .35rem .9rem; }
+.pw-rules li::before { content: "○ "; }
+.pw-rules li.ok { color: #00742D; }
+.pw-rules li.ok::before { content: "● "; }

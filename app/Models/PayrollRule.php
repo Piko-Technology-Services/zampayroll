@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class PayrollRule extends Model
 {
+    use \App\Models\Concerns\BelongsToCompany;
+
     protected $fillable = [
 
     'name',

@@ -10,6 +10,17 @@
 
         
 
+        @php $navCompany = auth()->user()?->company; @endphp
+        @if($navCompany)
+            <span class="d-none d-md-inline-flex align-items-center gap-2 ms-3 small fw-semibold" style="color:var(--zp-ink-2)">
+                <i class="bi {{ $navCompany->isDedicated() ? 'bi-buildings' : 'bi-cloud-check' }}" style="color:var(--zp-green)"></i>
+                {{ $navCompany->name }}
+                <span class="zp-portal-pill {{ $navCompany->isDedicated() ? '' : 'off' }}" title="{{ $navCompany->isDedicated() ? 'Dedicated workspace with its own database' : 'Shared workspace' }}">
+                    {{ $navCompany->isDedicated() ? $navCompany->workspaceHost() : 'Shared' }}
+                </span>
+            </span>
+        @endif
+
         <div class="navbar-actions ms-auto">
 
         {{-- Theme Toggle --}}
@@ -35,7 +46,7 @@
                         style="
                             width:36px;
                             height:36px;
-                            background:linear-gradient(135deg,#0d6efd,#4f8cff);
+                            background:linear-gradient(135deg,#00742D,#0A3B22);
                             color:#fff;
                             font-size:12px;
                             flex-shrink:0;
@@ -56,7 +67,7 @@
                     </li>
 
                     <li>
-                        <a class="dropdown-item" href="{{ route('attendance.settings') }}">
+                        <a class="dropdown-item" href="{{ auth()->user()?->isCompanyAdmin() ? route('company.settings') : route('attendance.settings') }}">
                             Company Settings
                         </a>
                     </li>

@@ -16,7 +16,7 @@ class EmployeeController extends Controller
     */
     public function index()
     {
-        $employees = Employee::latest()->get();
+        $employees = Employee::with('user')->latest()->get();
 
         return view('dashboard.employees.index', compact('employees'));
     }
@@ -138,8 +138,8 @@ class EmployeeController extends Controller
         // never block employee creation.
         $this->primeDerivedSalaryValues($employee);
 
-        return redirect()->route('employees.index')
-            ->with('success', 'Employee created successfully');
+        return redirect()->route('employees.show', $employee)
+            ->with('success', 'Employee created successfully. You can now create their self-service portal below.');
     }
 
     /*

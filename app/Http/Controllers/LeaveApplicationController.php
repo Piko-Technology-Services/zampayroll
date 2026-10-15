@@ -35,6 +35,9 @@ class LeaveApplicationController extends Controller
             return response()->json(['matched' => false]);
         }
 
+        // Everything below (holidays, notifications...) is scoped to the employee's company.
+        \App\Support\Tenancy::setCompanyId((int) $employee->company_id);
+
         $workDays = array_map('intval', $employee->company?->work_days ?: [1, 2, 3, 4, 5]);
 
         $holidays = Holiday::all()->map(fn ($h) => [
@@ -75,6 +78,9 @@ class LeaveApplicationController extends Controller
                 ->withInput()
                 ->withErrors(['email' => 'This email address doesn\'t match any employee record. Please use your registered company email address.']);
         }
+
+        // Everything below (holidays, notifications...) is scoped to the employee's company.
+        \App\Support\Tenancy::setCompanyId((int) $employee->company_id);
 
         $start = Carbon::parse($validated['start_date']);
         $end = Carbon::parse($validated['end_date']);

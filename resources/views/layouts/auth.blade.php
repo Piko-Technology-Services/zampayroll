@@ -11,6 +11,9 @@
     <link rel="stylesheet" href="{{ asset('assets/vendors/bootstrap-icons/bootstrap-icons.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/auth.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('assets/css/zp-brand.css') }}">
     
 </head>
 
@@ -29,15 +32,24 @@
             ====================================================== --}}
             <div class="auth-form-side">
 
-                <a class="auth-brand" href="#">
-                    <img src="http://misc.zampayroll.com/logo.png" width="36" height="36" alt="ZamPayroll Logo"
-                        class="brand-logo">
+                <div class="auth-brand-row">
+                    <a class="auth-brand" href="{{ route('login') }}">
+                        <img src="{{ asset('assets/images/logo.png') }}" width="36" height="36" alt="ZamPayroll Logo"
+                            class="brand-logo">
 
-                    <span>
-                        <strong>ZamPayroll</strong>
-                        <small>@yield('subtitle', 'Payroll Management System')</small>
-                    </span>
-                </a>
+                        <span>
+                            <strong><span style="color:var(--zp-green)">Zam</span>Payroll</strong>
+                            <small>@yield('subtitle', 'Payroll Management System')</small>
+                        </span>
+                    </a>
+
+                    @if($ws = \App\Support\Tenancy::dedicatedCompany())
+                        <span class="auth-workspace" title="Dedicated workspace">
+                            <i class="bi bi-buildings"></i> {{ $ws->name }}
+                        </span>
+                    @endif
+                </div>
+                <div class="zp-flag mt-3" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
 
                 <div class="auth-form-content">
                     @yield('content')

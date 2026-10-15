@@ -45,7 +45,7 @@ class PayrollController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'employee_id' => 'required|exists:employees,id',
+            'employee_id' => 'required|exists:employees,id,company_id,' . (int) auth()->user()->company_id,
             'pay_period'  => 'required'
         ]);
 
@@ -54,7 +54,7 @@ class PayrollController extends Controller
         $payroll = Payroll::create([
             'employee_id'   => $employee->id,
             'pay_period'    => $request->pay_period,
-            'company'       => 'ZAMPAYROLL',
+            'company'       => (\App\Support\Tenancy::company()?->name ?? 'ZAMPAYROLL'),
             'branch'        => $employee->branch,
             'cost_centre'   => $employee->department,
             'date_engaged'  => $employee->contract_start,
@@ -86,7 +86,7 @@ class PayrollController extends Controller
         $run = $payroll->run;
         $run->setRelation('payrolls', collect([$payroll]));
 
-        $companyName = 'ZAMPAYROLL';
+        $companyName = (\App\Support\Tenancy::company()?->name ?? 'ZAMPAYROLL');
         $companyLogo = 'http://misc.zampayroll.com/logo.png';
 
         return view('dashboard.payroll.runs.payslip_single', compact('run', 'companyName', 'companyLogo', 'payroll'));
@@ -100,7 +100,7 @@ class PayrollController extends Controller
  
         $pdf = Pdf::loadView('dashboard.payroll.runs.payslip_pdf', [
             'run'         => $run,
-            'companyName' => 'ZAMPAYROLL',
+            'companyName' => (\App\Support\Tenancy::company()?->name ?? 'ZAMPAYROLL'),
             'companyLogo' => 'http://misc.zampayroll.com/logo.png',
             'payroll' => $payroll
         ])->setPaper('a4', 'portrait');
@@ -147,7 +147,7 @@ class PayrollController extends Controller
     public function update(Request $request, Payroll $payroll)
     {
         $request->validate([
-            'employee_id' => 'required|exists:employees,id',
+            'employee_id' => 'required|exists:employees,id,company_id,' . (int) auth()->user()->company_id,
             'pay_period'  => 'required',
         ]);
 

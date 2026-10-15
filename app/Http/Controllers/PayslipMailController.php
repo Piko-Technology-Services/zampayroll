@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 
 class PayslipMailController extends Controller
 {
-    private const COMPANY_NAME = 'ZAMPAYROLL';
+    private const COMPANY_NAME = 'ZAMPAYROLL'; // fallback when the tenant has no name
     private const COMPANY_LOGO = 'http://misc.zampayroll.com/logo.png';
 
     /*
@@ -39,7 +39,7 @@ class PayslipMailController extends Controller
         \Log::info('sendSingle: Dispatching payslip email to ' . $payroll->employee->personal_email);
         SendPayslipEmail::dispatch(
             $payroll->id,
-            self::COMPANY_NAME,
+            (\App\Support\Tenancy::company()?->name ?? self::COMPANY_NAME),
             self::COMPANY_LOGO
         );
 
@@ -91,7 +91,7 @@ class PayslipMailController extends Controller
             \Log::info('sendBulk: Dispatching payslip email to ' . $payroll->employee->personal_email . ' for payroll ID: ' . $payroll->id);
             SendPayslipEmail::dispatch(
                 $payroll->id,
-                self::COMPANY_NAME,
+                (\App\Support\Tenancy::company()?->name ?? self::COMPANY_NAME),
                 self::COMPANY_LOGO
             );
 

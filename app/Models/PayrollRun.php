@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class PayrollRun extends Model
 {
+    use \App\Models\Concerns\BelongsToCompany;
+
     use SoftDeletes;
 
     protected $fillable = [

@@ -8,6 +8,8 @@ use Illuminate\Support\Str;
 
 class Invitation extends Model
 {
+    use \App\Models\Concerns\BelongsToCompany;
+
     protected $fillable = [
         'company_id',
         'invited_by',

@@ -30,6 +30,10 @@
 
                 @include('partials.alerts')
 
+                @if(request()->routeIs('dashboard'))
+                    @include('partials.profile-completion')
+                @endif
+
                 @yield('content')
 
             </div>
@@ -126,6 +130,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const selector = document.getElementById('employeeSelector');
     const container = document.getElementById('employeePayrollSummary');
+
+    if (!selector || !container) return; // only present on the payroll run page
 
     selector.addEventListener('change', function () {
 
@@ -230,6 +236,11 @@ document.addEventListener('DOMContentLoaded', function () {
 </div>
 
 @stack('modals')
+
+<script src="{{ asset('assets/js/zp-confetti.js') }}"></script>
+@if(session('celebrate'))
+    <script>window.addEventListener('load', () => ZPConfetti.burst());</script>
+@endif
 
 
 
