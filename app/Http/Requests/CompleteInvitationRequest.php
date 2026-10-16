@@ -16,7 +16,7 @@ class CompleteInvitationRequest extends FormRequest
     public function rules(): array
     {
         $rules = [
-            'role'     => ['required', Rule::in(array_keys(User::INVITABLE_ROLES))],
+            'role'     => ['nullable', Rule::in(\App\Models\CompanyRole::withoutGlobalScope('company')->pluck('key')->unique()->all())],
             'position' => ['nullable', 'string', 'max:255'],
         ];
 

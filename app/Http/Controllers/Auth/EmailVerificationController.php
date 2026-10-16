@@ -63,7 +63,8 @@ class EmailVerificationController extends Controller
 
             return redirect()->route($user->homeRoute())
                 ->with('celebrate', true)
-                ->with('success', '🎉 Email confirmed — your ZamPayroll workspace is ready!');
+                ->with('success', '🎉 Email confirmed — your ZamPayroll workspace is ready! Your company code is '
+                    . ($company?->company_code ?? '—') . ' — share it with your team so they can sign in.');
         }
 
         // ------------------------------------------------------- dedicated

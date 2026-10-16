@@ -17,6 +17,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="robots" content="noindex, nofollow">
     <title>@yield('title', 'My portal') | {{ $portalCompany?->name ?? 'ZamPayroll' }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -43,7 +44,9 @@
             @endforeach
         </nav>
 
-        <div class="pt-user dropdown">
+        <div style="margin-left:auto">@include('partials.translate', ['variant' => 'dark'])</div>
+
+        <div class="pt-user dropdown" style="margin-left:.6rem">
             <button class="pt-avatar" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Account menu">{{ $initials }}</button>
             <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="border-radius:14px;min-width:220px">
                 <li class="px-3 py-2">

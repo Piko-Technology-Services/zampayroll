@@ -111,6 +111,7 @@ class RegistrationController extends Controller
         $user = DB::transaction(function () use ($validated, $dedicated, $finishLater) {
             $company = Company::create([
                 'name'                      => $validated['company_name'],
+                'company_code'              => Company::makeCompanyCode($validated['company_name']),
                 'tenancy_mode'              => $dedicated ? Company::MODE_DEDICATED : Company::MODE_SHARED,
                 'subdomain'                 => $dedicated ? $validated['subdomain'] : null,
                 'status'                    => Company::STATUS_PENDING_VERIFICATION,
@@ -138,6 +139,8 @@ class RegistrationController extends Controller
                 'heard_about_us'            => $validated['heard_about_us'] ?? null,
                 'onboarding_completed_at'   => $finishLater ? null : now(),
             ]);
+
+            \App\Support\Permissions::seedDefaultRoles((int) $company->id);
 
             return User::create([
                 'company_id' => $company->id,

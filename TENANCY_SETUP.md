@@ -53,3 +53,32 @@ HR: Employees → open a file → **Create portal access** (or **Create portals 
 everyone with an email). The employee gets a branded email with a temporary password and how-to
 guide; they must choose their own password on first sign-in, then land on `/portal`.
 Requests made there appear in the existing Leave / Overtime / Loan request dashboards.
+
+## 7. AI mode (floating assistant)
+AI mode runs in **basic mode** by default: built-in rules on your own server, no external API calls and no cost.
+To switch to Claude later (paid per message), add to `.env`:
+```
+AI_PROVIDER=anthropic
+ANTHROPIC_API_KEY=your-key
+```
+Nothing the assistant proposes (adding employees, approving requests, preparing payroll, creating portals) happens until the user presses **Confirm** on the card.
+
+## 8. Company codes, roles, languages and the website (Oct 2026)
+- `php artisan migrate` creates company codes for every existing company and the default roles
+  (Administrator, HR Officer, Payroll Officer, Manager, Viewer). See the code in **Settings → Team & roles**
+  and share it with your staff — sign-in on the main domain is now *company code + email + password*.
+  Dedicated sub-domains don't need the code.
+- Administrators edit what each role can do (and create custom roles) on the same page.
+- Language switcher (Google Translate) is on every page. Text is only sent to Google after someone picks a language other than English.
+- Public website: `/`, `/features`, `/ai-assistant`, `/pricing`, `/terms`, `/privacy`, `/sitemap.xml`.
+  Submit `https://zampayroll.com/sitemap.xml` in Google Search Console.
+- Optional `.env` for the website:
+```
+SITE_URL=https://zampayroll.com
+SOCIAL_FACEBOOK=https://www.facebook.com/yourpage
+SOCIAL_INSTAGRAM=https://www.instagram.com/yourhandle
+SOCIAL_TIKTOK=https://www.tiktok.com/@yourhandle
+SOCIAL_LINKEDIN=https://www.linkedin.com/company/yourpage
+SITE_WHATSAPP=260776136965
+SITE_DEMO_VIDEO=https://www.youtube.com/embed/VIDEO_ID
+```

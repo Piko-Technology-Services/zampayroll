@@ -1,566 +1,331 @@
 @extends('layouts.app')
 
+@section('title', $employee->full_name . ' · ZamPayroll')
+
+@push('styles')
+<link rel="stylesheet" href="{{ asset('assets/css/zp-people.css') }}">
+@endpush
+
+@php
+    $u = auth()->user();
+    $canManage = $u->hasPermission('employees.manage');
+    $canPay = $canManage || $u->hasPermission('payroll.view');
+    $canLoans = $canPay || $u->hasPermission('loans.view');
+    $k = fn ($n) => 'K ' . number_format((float) $n, 2);
+    $status = $employee->employment_status ?: 'Active';
+    $statusTone = match (strtolower($status)) { 'active' => 'green', 'suspended' => 'copper', default => 'red' };
+    $nature = \App\Http\Controllers\EmployeeController::NATURES[$employee->employment_nature] ?? null;
+    $tenure = $employee->contract_start ? $employee->contract_start->diffForHumans(now(), ['parts' => 2, 'syntax' => \Carbon\CarbonInterface::DIFF_ABSOLUTE]) : null;
+    $contractSoon = $employee->contract_end && $employee->contract_end->isFuture() && now()->diffInDays($employee->contract_end) <= 60;
+    $probationOn = $employee->probation_end && $employee->probation_end->isFuture();
+    $docs = collect($employee->uploads ?? []);
+    $fact = function ($label, $value, $mono = false) {
+        $empty = $value === null || $value === '';
+        $copy = (! $empty && $mono) ? '<button type="button" class="pf-copy" data-copy="' . e($value) . '" title="Copy"><i class="bi bi-copy"></i></button>' : '';
+        return '<div class="pf-fact' . ($mono ? ' mono' : '') . '"><span>' . e($label) . '</span><b class="' . ($empty ? 'empty' : '') . '">' . ($empty ? 'Not added' : e($value)) . $copy . '</b></div>';
+    };
+    $chart = $payslips->take(6)->reverse()->values();
+    $chartMax = max(1, (float) $chart->max('net_pay'));
+@endphp
+
 @section('content')
+<div class="pp">
 
-<div class="hrf-wrap p-5">
+    {{-- ===== HEADER ===== --}}
+    <section class="pf-head">
+        <div class="pf-cover"></div>
+        <div class="pf-body">
+            <div class="pf-avatar">
+                @if($employee->photo_url)<img src="{{ $employee->photo_url }}" alt="{{ $employee->full_name }}">@else{{ $employee->initials }}@endif
+            </div>
+            <div class="pf-id">
+                <h1>{{ $employee->full_name }}</h1>
+                <div class="pf-role">{{ $employee->position ?: 'No job title yet' }}@if($employee->department) · {{ $employee->department }}@endif @if($employee->branch) · {{ $employee->branch }}@endif</div>
+                <div class="pf-tags">
+                    <span class="pf-tag {{ $statusTone }}"><span class="dot"></span>{{ $status }}</span>
+                    <span class="pf-tag"><i class="bi bi-hash"></i>{{ $employee->employee_id }} <button type="button" class="pf-copy" data-copy="{{ $employee->employee_id }}" title="Copy"><i class="bi bi-copy"></i></button></span>
+                    @if($nature)<span class="pf-tag"><i class="bi bi-briefcase"></i>{{ $nature }}</span>@endif
+                    @if($tenure)<span class="pf-tag"><i class="bi bi-calendar-heart"></i>{{ $tenure }} with you</span>@endif
+                    @if($employee->user)<span class="pf-tag green"><i class="bi bi-phone"></i>Portal active</span>@endif
+                    @if($probationOn)<span class="pf-tag copper"><i class="bi bi-hourglass-split"></i>Probation until {{ $employee->probation_end->format('j M Y') }}</span>@endif
+                    @if($contractSoon)<span class="pf-tag red"><i class="bi bi-exclamation-triangle"></i>Contract ends {{ $employee->contract_end->format('j M Y') }}</span>@endif
+                </div>
+            </div>
+            <div class="pf-actions">
+                <a class="pp-btn pp-btn-ghost pp-btn-sm" href="{{ route('employees.index') }}"><i class="bi bi-arrow-left"></i> All</a>
+                @if($canManage)
+                    <a class="pp-btn pp-btn-primary pp-btn-sm" href="{{ route('employees.edit', $employee) }}"><i class="bi bi-pencil"></i> Edit profile</a>
+                @endif
+                <button type="button" class="pp-btn pp-btn-dark pp-btn-sm" data-ai-prompt="Tell me about {{ $employee->full_name }} ({{ $employee->employee_id }})"><i class="bi bi-stars"></i> Ask AI</button>
+            </div>
+        </div>
+    </section>
 
-    {{-- ===== TOP BAR ===== --}}
-    <div class="hrf-topbar">
-        <div>
-            <div class="hrf-eyebrow">Personnel File</div>
-            <h1 class="hrf-pagetitle">{{ $employee->first_name }} {{ $employee->last_name }}</h1>
-        </div>
-        <div class="hrf-topactions">
-            <a class="hrf-btn hrf-btn-ghost" href="{{ route('employees.index') }}">
-                <i class="bi bi-arrow-left"></i> Back
-            </a>
-            <a class="hrf-btn hrf-btn-solid" href="{{ route('employees.edit', $employee) }}">
-                <i class="bi bi-pencil-square"></i> Edit File
-            </a>
-        </div>
+    {{-- ===== STATS ===== --}}
+    <div class="pf-stats">
+        <div class="pf-stat"><i class="bi bi-wallet2 ic"></i><span>Take-home pay</span>
+            <b>{{ $canPay ? ($employee->net_salary ? $k($employee->net_salary) : '—') : '••••' }}</b>
+            <small>{{ $canPay ? 'per month' : 'Hidden for your role' }}</small></div>
+        <div class="pf-stat"><i class="bi bi-sun ic"></i><span>Leave days left</span>
+            <b>{{ $employee->leave_days_balance !== null ? rtrim(rtrim(number_format((float) $employee->leave_days_balance, 1), '0'), '.') : '—' }}</b>
+            <small>of {{ (float) ($employee->leave_days_entitled ?? 24) }} a year · {{ rtrim(rtrim(number_format($leaveTaken, 1), '0'), '.') }} taken this year</small></div>
+        <div class="pf-stat"><i class="bi bi-piggy-bank ic"></i><span>Loan balance</span>
+            <b>{{ $canLoans ? ($activeLoanBalance > 0 ? $k($activeLoanBalance) : 'None') : '••••' }}</b>
+            <small>{{ $loans->where('status', 'active')->count() }} active loan(s)</small></div>
+        <div class="pf-stat"><i class="bi bi-receipt ic"></i><span>Last payslip</span>
+            <b>{{ $lastPayslip && $canPay ? $k($lastPayslip->net_pay) : '—' }}</b>
+            <small>{{ $lastPayslip ? ($lastPayslip->run?->period ?? $lastPayslip->pay_period) : 'Not paid through ZamPayroll yet' }}</small></div>
     </div>
 
-    @include('partials.employee-portal-card', ['employee' => $employee])
+    <div class="pf-layout">
+        <div class="pp-card" id="pfTabsCard">
+            <div class="pf-tabs" role="tablist">
+                <button class="pf-tab active" data-tab="overview"><i class="bi bi-person-vcard"></i> Overview</button>
+                @if($canPay)<button class="pf-tab" data-tab="pay"><i class="bi bi-cash-stack"></i> Pay &amp; payslips <span class="count">{{ $payslips->count() }}</span></button>@endif
+                <button class="pf-tab" data-tab="time"><i class="bi bi-calendar-check"></i> Leave &amp; time <span class="count">{{ $leave->count() + $overtime->count() }}</span></button>
+                @if($canLoans)<button class="pf-tab" data-tab="loans"><i class="bi bi-piggy-bank"></i> Loans <span class="count">{{ $loans->count() }}</span></button>@endif
+                <button class="pf-tab" data-tab="docs"><i class="bi bi-folder2-open"></i> Documents <span class="count">{{ $docs->count() }}</span></button>
+            </div>
 
-    {{-- ===== DOSSIER ===== --}}
-    <div class="hrf-file">
+            {{-- OVERVIEW --}}
+            <div class="pf-pane" data-pane="overview">
+                <div class="pf-section">
+                    <h3>Personal @if($canManage)<a class="pp-link" href="{{ route('employees.edit', [$employee, 'step' => 'who']) }}">Edit</a>@endif</h3>
+                    <div class="pf-facts">
+                        {!! $fact('Gender', $employee->gender) !!}
+                        {!! $fact('Date of birth', $employee->date_of_birth ? $employee->date_of_birth->format('j M Y') . ' (' . $employee->age . ')' : null) !!}
+                        {!! $fact('Nationality', $employee->nationality) !!}
+                        {!! $fact('NRC', $employee->nrc_no, true) !!}
+                        @if($employee->passport_number || strcasecmp((string) $employee->nationality, 'Zambian') !== 0){!! $fact('Passport', $employee->passport_number, true) !!}@endif
+                    </div>
+                </div>
+                <div class="pf-section">
+                    <h3>Job @if($canManage)<a class="pp-link" href="{{ route('employees.edit', [$employee, 'step' => 'job']) }}">Edit</a>@endif</h3>
+                    <div class="pf-facts">
+                        {!! $fact('Job title', $employee->position) !!}
+                        {!! $fact('Department', $employee->department) !!}
+                        {!! $fact('Branch', $employee->branch) !!}
+                        {!! $fact('Reports to', $employee->supervisor) !!}
+                        {!! $fact('Started', optional($employee->contract_start)->format('j M Y')) !!}
+                        {!! $fact($employee->contract_end ? 'Contract ends' : 'Probation ends', optional($employee->contract_end ?? $employee->probation_end)->format('j M Y')) !!}
+                    </div>
+                </div>
+                <div class="pf-section">
+                    <h3>ZRA · NAPSA · NHIMA @if($canManage)<a class="pp-link" href="{{ route('employees.edit', [$employee, 'step' => 'statutory']) }}">Edit</a>@endif</h3>
+                    <div class="pf-facts">
+                        {!! $fact('TPIN', $employee->tpin, true) !!}
+                        {!! $fact('NAPSA number', $employee->ssn, true) !!}
+                        {!! $fact('NHIMA number', $employee->nhima_no, true) !!}
+                    </div>
+                </div>
+                @if($canPay)
+                <div class="pf-section">
+                    <h3>Bank @if($canManage)<a class="pp-link" href="{{ route('employees.edit', [$employee, 'step' => 'pay']) }}">Edit</a>@endif</h3>
+                    <div class="pf-facts">
+                        {!! $fact('Bank', $employee->bank_name) !!}
+                        {!! $fact('Branch', $employee->bank_branch) !!}
+                        {!! $fact('Account number', $employee->bank_account_no, true) !!}
+                    </div>
+                </div>
+                @endif
+                <div class="pf-section">
+                    <h3>Contact &amp; emergency @if($canManage)<a class="pp-link" href="{{ route('employees.edit', [$employee, 'step' => 'contact']) }}">Edit</a>@endif</h3>
+                    <div class="pf-facts">
+                        {!! $fact('Mobile', $employee->primary_phone) !!}
+                        {!! $fact('Work email', $employee->company_email) !!}
+                        {!! $fact('Personal email', $employee->personal_email) !!}
+                        {!! $fact('Emergency contact', trim($employee->emergency_name . ($employee->emergency_relationship ? ' (' . $employee->emergency_relationship . ')' : '')) ?: null) !!}
+                        {!! $fact('Emergency phone', $employee->emergency_phone) !!}
+                        {!! $fact('Next of kin', trim($employee->next_of_kin_name . ($employee->next_of_kin_phone ? ' · ' . $employee->next_of_kin_phone : '')) ?: null) !!}
+                    </div>
+                </div>
+            </div>
 
-        {{-- vertical index strip --}}
-        <div class="hrf-tabstrip" aria-hidden="true">
-            <span>ID</span>
-            <span>PERSONAL</span>
-            <span>EMPLOYMENT</span>
-            <span>PAYROLL</span>
-            <span>FINANCE</span>
-            <span>DOCS</span>
-        </div>
+            {{-- PAY --}}
+            @if($canPay)
+            <div class="pf-pane" data-pane="pay" hidden>
+                @if($payslips->isEmpty())
+                    <div class="pf-empty"><i class="bi bi-receipt"></i>No payslips yet. They'll appear here after {{ $employee->first_name }}'s first payroll run.</div>
+                @else
+                    <div class="pf-section">
+                        <h3>Take-home over the last {{ $chart->count() }} runs</h3>
+                        <div class="pf-chart">
+                            @foreach($chart as $i => $p)
+                                <div title="{{ $k($p->net_pay) }}"><i style="height:{{ max(6, round((float) $p->net_pay / $chartMax * 100)) }}%;animation-delay:{{ $i * 70 }}ms"></i><small>{{ \Illuminate\Support\Str::limit($p->run?->period ?? $p->pay_period, 8, '') }}</small></div>
+                            @endforeach
+                        </div>
+                    </div>
+                    <div class="pf-section">
+                        <h3>Payslips</h3>
+                        <div class="pf-list">
+                            @foreach($payslips as $p)
+                                <div class="pf-item">
+                                    <span class="ic"><i class="bi bi-receipt"></i></span>
+                                    <div class="main"><b>{{ $p->run?->alias ?: ($p->run?->period ?? $p->pay_period) }}</b><small>Gross {{ $k($p->total_income) }} · Deductions {{ $k($p->total_deductions) }}</small></div>
+                                    <span class="pf-status {{ strtolower($p->run?->status ?? $p->status) }}">{{ $p->run?->status ?? $p->status }}</span>
+                                    <span class="amt">{{ $k($p->net_pay) }}</span>
+                                    @if($p->run)
+                                        <a class="pp-btn pp-btn-ghost pp-btn-sm" href="{{ route('payroll.runs.employee.summary', [$p->run, $p]) }}" title="View payslip"><i class="bi bi-eye"></i></a>
+                                    @endif
+                                    @if($employee->portal_email)
+                                        <form method="POST" action="{{ route('payroll.email.single', $p) }}">@csrf
+                                            <button class="pp-btn pp-btn-ghost pp-btn-sm" title="Email payslip to {{ $employee->portal_email }}"><i class="bi bi-envelope"></i></button>
+                                        </form>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+            </div>
+            @endif
 
-        {{-- ===== IDENTITY PANEL ===== --}}
-        <div class="hrf-id-panel">
-
-            <div class="hrf-badge-card">
-                <div class="hrf-photo-frame">
-                    @if($employee->passport_photo)
-                        <img src="{{ asset('storage/' . $employee->passport_photo) }}"
-                             alt="{{ $employee->first_name }} {{ $employee->last_name }}">
+            {{-- LEAVE & TIME --}}
+            <div class="pf-pane" data-pane="time" hidden>
+                <div class="pf-section">
+                    <h3>Last 30 days</h3>
+                    @if($attendance->isEmpty())
+                        <div class="pp-muted">No attendance marked in the last 30 days.</div>
                     @else
-                        <span class="hrf-photo-initials">
-                            {{ strtoupper(substr($employee->first_name, 0, 1)) }}{{ strtoupper(substr($employee->last_name, 0, 1)) }}
-                        </span>
-                    @endif
-                </div>
-                <div class="hrf-badge-id">{{ $employee->employee_id }}</div>
-                <div class="hrf-status-pill hrf-status-{{ $employee->employment_status == 'Active' ? 'active' : 'inactive' }}">
-                    <span class="hrf-status-dot"></span>{{ $employee->employment_status }}
-                </div>
-            </div>
-
-            <div class="hrf-panel-block">
-                <div class="hrf-panel-label">Contacts</div>
-                @if($employee->personal_email)
-                <div class="hrf-line"><i class="bi bi-envelope"></i><span>{{ $employee->personal_email }}</span></div>
-                @endif
-                @if($employee->company_email)
-                <div class="hrf-line"><i class="bi bi-building"></i><span>{{ $employee->company_email }}</span></div>
-                @endif
-                @if($employee->primary_phone)
-                <div class="hrf-line"><i class="bi bi-telephone"></i><span>{{ $employee->primary_phone }}</span></div>
-                @endif
-                @if($employee->secondary_phone)
-                <div class="hrf-line"><i class="bi bi-telephone"></i><span>{{ $employee->secondary_phone }}</span></div>
-                @endif
-            </div>
-
-            @if($employee->emergency_name || $employee->emergency_phone)
-            <div class="hrf-panel-block">
-                <div class="hrf-panel-label">Emergency Contact</div>
-                @if($employee->emergency_name)
-                <div class="hrf-line"><i class="bi bi-person"></i><span>{{ $employee->emergency_name }}</span></div>
-                @endif
-                @if($employee->emergency_relationship)
-                <div class="hrf-line"><i class="bi bi-heart"></i><span>{{ $employee->emergency_relationship }}</span></div>
-                @endif
-                @if($employee->emergency_phone)
-                <div class="hrf-line"><i class="bi bi-telephone"></i><span>{{ $employee->emergency_phone }}</span></div>
-                @endif
-            </div>
-            @endif
-
-            @if($employee->next_of_kin_name || $employee->next_of_kin_phone)
-            <div class="hrf-panel-block">
-                <div class="hrf-panel-label">Next of Kin</div>
-                @if($employee->next_of_kin_name)
-                <div class="hrf-line"><i class="bi bi-person"></i><span>{{ $employee->next_of_kin_name }}</span></div>
-                @endif
-                @if($employee->next_of_kin_phone)
-                <div class="hrf-line"><i class="bi bi-telephone"></i><span>{{ $employee->next_of_kin_phone }}</span></div>
-                @endif
-                @if($employee->next_of_kin_address)
-                <div class="hrf-line"><i class="bi bi-geo-alt"></i><span>{{ $employee->next_of_kin_address }}</span></div>
-                @endif
-            </div>
-            @endif
-
-            <div class="hrf-panel-block">
-                <div class="hrf-panel-label">Finance</div>
-                @if($employee->bank_name)
-                <div class="hrf-line"><i class="bi bi-bank"></i><span>{{ $employee->bank_name }}</span></div>
-                @endif
-                @if($employee->bank_account_no)
-                <div class="hrf-line hrf-mono"><i class="bi bi-credit-card"></i><span>{{ $employee->bank_account_no }}</span></div>
-                @endif
-                @if($employee->ssn)
-                <div class="hrf-line hrf-mono"><i class="bi bi-shield-check"></i><span>SSN {{ $employee->ssn }}</span></div>
-                @endif
-                @if($employee->nhima_no)
-                <div class="hrf-line hrf-mono"><i class="bi bi-heart"></i><span>NHIMA {{ $employee->nhima_no }}</span></div>
-                @endif
-                @if($employee->tpin)
-                <div class="hrf-line hrf-mono"><i class="bi bi-receipt"></i><span>TPIN {{ $employee->tpin }}</span></div>
-                @endif
-            </div>
-
-            @if($employee->net_salary)
-            <div class="hrf-salary-stamp">
-                <div class="hrf-salary-label">Monthly Net Salary</div>
-                <div class="hrf-salary-amount">K {{ number_format($employee->net_salary, 2) }}</div>
-            </div>
-            @endif
-
-        </div>{{-- end identity panel --}}
-
-        {{-- ===== RECORD SHEET ===== --}}
-        <div class="hrf-record">
-
-            <div class="hrf-record-head">
-                <div class="hrf-name">
-                    {{ strtoupper($employee->first_name) }}
-                    @if($employee->middle_name) {{ strtoupper($employee->middle_name) }} @endif
-                    {{ strtoupper($employee->last_name) }}
-                </div>
-                <div class="hrf-role">
-                    {{ $employee->position }}
-                    @if($employee->department) <span class="hrf-role-sep">/</span> {{ $employee->department }} @endif
-                    @if($employee->branch) <span class="hrf-role-sep">/</span> {{ $employee->branch }} @endif
-                </div>
-            </div>
-
-            <section class="hrf-section">
-                <div class="hrf-section-head"><span class="hrf-section-no">01</span>Personal</div>
-                <div class="hrf-grid">
-                    @if($employee->date_of_birth)
-                    <div class="hrf-field"><div class="hrf-field-label">Date of birth</div><div class="hrf-field-value">{{ $employee->date_of_birth->format('Y-m-d') }}</div></div>
-                    @endif
-                    @if($employee->age)
-                    <div class="hrf-field"><div class="hrf-field-label">Age</div><div class="hrf-field-value">{{ $employee->age }}</div></div>
-                    @endif
-                    @if($employee->gender)
-                    <div class="hrf-field"><div class="hrf-field-label">Gender</div><div class="hrf-field-value">{{ $employee->gender }}</div></div>
-                    @endif
-                    @if($employee->nationality)
-                    <div class="hrf-field"><div class="hrf-field-label">Nationality</div><div class="hrf-field-value">{{ $employee->nationality }}</div></div>
-                    @endif
-                    @if($employee->nrc_no)
-                    <div class="hrf-field"><div class="hrf-field-label">NRC Number</div><div class="hrf-field-value hrf-mono">{{ $employee->nrc_no }}</div></div>
-                    @endif
-                    @if($employee->passport_number)
-                    <div class="hrf-field"><div class="hrf-field-label">Passport</div><div class="hrf-field-value hrf-mono">{{ $employee->passport_number }}</div></div>
-                    @endif
-                </div>
-            </section>
-
-            <section class="hrf-section">
-                <div class="hrf-section-head"><span class="hrf-section-no">02</span>Employment</div>
-                <div class="hrf-grid">
-                    @if($employee->department)
-                    <div class="hrf-field"><div class="hrf-field-label">Department</div><div class="hrf-field-value">{{ $employee->department }}</div></div>
-                    @endif
-                    @if($employee->branch)
-                    <div class="hrf-field"><div class="hrf-field-label">Branch</div><div class="hrf-field-value">{{ $employee->branch }}</div></div>
-                    @endif
-                    @if($employee->position)
-                    <div class="hrf-field"><div class="hrf-field-label">Position</div><div class="hrf-field-value">{{ $employee->position }}</div></div>
-                    @endif
-                    @if($employee->supervisor)
-                    <div class="hrf-field"><div class="hrf-field-label">Supervisor</div><div class="hrf-field-value">{{ $employee->supervisor }}</div></div>
-                    @endif
-                </div>
-            </section>
-
-
-            @if($employee->probation_start || $employee->probation_end || $employee->contract_start || $employee->contract_end)
-            <section class="hrf-section">
-                <div class="hrf-section-head"><span class="hrf-section-no">03</span>Employment Dates</div>
-                <div class="hrf-timeline">
-                    @if($employee->probation_start || $employee->probation_end)
-                    <div class="hrf-timeline-row">
-                        <div class="hrf-timeline-label">Probation</div>
-                        <div class="hrf-timeline-track">
-                            <span class="hrf-timeline-date">{{ $employee->probation_start?->format('Y-m-d') ?? '—' }}</span>
-                            <span class="hrf-timeline-bar"></span>
-                            <span class="hrf-timeline-date">{{ $employee->probation_end?->format('Y-m-d') ?? '—' }}</span>
+                        <div class="pf-tags">
+                            @foreach(\App\Models\Attendance::STATUSES as $key => $label)
+                                @if($attendanceSummary[$key] ?? 0)
+                                    <span class="pf-tag {{ $key === 'present' ? 'green' : ($key === 'absent' ? 'red' : ($key === 'sick' || $key === 'leave' ? 'copper' : '')) }}">{{ $label }} · {{ $attendanceSummary[$key] }}</span>
+                                @endif
+                            @endforeach
                         </div>
-                    </div>
-                    @endif
-                    @if($employee->contract_start || $employee->contract_end)
-                    <div class="hrf-timeline-row">
-                        <div class="hrf-timeline-label">Contract</div>
-                        <div class="hrf-timeline-track">
-                            <span class="hrf-timeline-date">{{ $employee->contract_start?->format('Y-m-d') ?? '—' }}</span>
-                            <span class="hrf-timeline-bar"></span>
-                            <span class="hrf-timeline-date">{{ $employee->contract_end?->format('Y-m-d') ?? '—' }}</span>
-                        </div>
-                    </div>
                     @endif
                 </div>
-            </section>
+                <div class="pf-section">
+                    <h3>Leave requests</h3>
+                    @forelse($leave as $l)
+                        <div class="pf-item" style="margin-bottom:.5rem">
+                            <span class="ic" style="background:var(--zp-copper-50);color:var(--zp-copper)"><i class="bi bi-sun"></i></span>
+                            <div class="main"><b>{{ $l->leave_type ?: 'Leave' }} · {{ rtrim(rtrim(number_format((float) $l->days, 1), '0'), '.') }} day(s)</b>
+                                <small>{{ optional($l->start_date)->format('j M') }} – {{ optional($l->end_date)->format('j M Y') }}@if($l->reason) · {{ \Illuminate\Support\Str::limit($l->reason, 50) }}@endif</small></div>
+                            <span class="pf-status {{ strtolower($l->status) }}">{{ $l->status }}</span>
+                        </div>
+                    @empty
+                        <div class="pp-muted">No leave requests yet.</div>
+                    @endforelse
+                </div>
+                <div class="pf-section">
+                    <h3>Overtime</h3>
+                    @forelse($overtime as $o)
+                        <div class="pf-item" style="margin-bottom:.5rem">
+                            <span class="ic" style="background:#EEF0EF;color:var(--zp-black)"><i class="bi bi-clock-history"></i></span>
+                            <div class="main"><b>{{ rtrim(rtrim(number_format((float) $o->hours, 1), '0'), '.') }} hours</b><small>{{ optional($o->date)->format('j M Y') ?? $o->date }} @if($o->type)· {{ $o->type }}@endif</small></div>
+                            <span class="pf-status {{ strtolower($o->status) }}">{{ $o->status }}</span>
+                            @if($canPay && $o->amount)<span class="amt">{{ $k($o->amount) }}</span>@endif
+                        </div>
+                    @empty
+                        <div class="pp-muted">No overtime claimed.</div>
+                    @endforelse
+                </div>
+            </div>
+
+            {{-- LOANS --}}
+            @if($canLoans)
+            <div class="pf-pane" data-pane="loans" hidden>
+                @forelse($loans as $loan)
+                    @php $paid = (float) $loan->principal_amount > 0 ? max(0, min(100, round((1 - (float) $loan->balance / (float) $loan->principal_amount) * 100))) : 0; @endphp
+                    <div class="pf-item" style="margin-bottom:.6rem;flex-wrap:wrap">
+                        <span class="ic" style="background:#FBEAEA;color:var(--zp-red)"><i class="bi bi-piggy-bank"></i></span>
+                        <div class="main"><b>{{ $k($loan->principal_amount) }} loan</b>
+                            <small>{{ $k($loan->installment_amount) }} a month @if($loan->next_deduction_date)· next deduction {{ $loan->next_deduction_date->format('M Y') }}@endif</small>
+                            <div class="pp-bar" style="margin:.45rem 0 0;max-width:260px"><i style="width:{{ $paid }}%"></i></div>
+                            <small>{{ $paid }}% repaid · {{ $k($loan->balance) }} left</small>
+                        </div>
+                        <span class="pf-status {{ strtolower($loan->status) }}">{{ $loan->status }}</span>
+                        @if(\Illuminate\Support\Facades\Route::has('loan.ledger.show'))
+                            <a class="pp-btn pp-btn-ghost pp-btn-sm" href="{{ route('loan.ledger.show', $loan) }}">Ledger</a>
+                        @endif
+                    </div>
+                @empty
+                    <div class="pf-empty"><i class="bi bi-piggy-bank"></i>No loans or salary advances.</div>
+                @endforelse
+            </div>
             @endif
 
-            <section class="hrf-section">
-                <div class="hrf-section-head"><span class="hrf-section-no">04</span>Payroll &amp; Leave</div>
-                <div class="hrf-grid">
-                    @if($employee->net_salary)
-                    <div class="hrf-field"><div class="hrf-field-label">Net Salary</div><div class="hrf-field-value">K {{ number_format($employee->net_salary, 2) }}</div></div>
-                    @endif
-                    
-                    @if(!is_null($employee->leave_days_entitled))
-                    <div class="hrf-field"><div class="hrf-field-label">Leave Days Entitled</div><div class="hrf-field-value">{{ $employee->leave_days_entitled }}</div></div>
-                    @endif
-                    @if(!is_null($employee->leave_days_balance))
-                    <div class="hrf-field"><div class="hrf-field-label">Leave Days Balance</div><div class="hrf-field-value">{{ $employee->leave_days_balance }}</div></div>
-                    @endif
-                    
-                </div>
-            </section>
-
-            <section class="hrf-section">
-                <div class="hrf-section-head"><span class="hrf-section-no">05</span>Documents</div>
-                <div class="hrf-docs">
-                    @if(!empty($employee->uploads))
-                        @foreach($employee->uploads as $doc)
-                            <a href="{{ asset('storage/' . $doc['path']) }}" target="_blank" class="hrf-doc-tab">
-                                <i class="bi bi-file-earmark-text"></i> {{ $doc['name'] }}
+            {{-- DOCUMENTS --}}
+            <div class="pf-pane" data-pane="docs" hidden>
+                @if($docs->isEmpty())
+                    <div class="pf-empty"><i class="bi bi-folder2-open"></i>No documents yet.
+                        @if($canManage)<br><a class="pp-link" href="{{ route('employees.edit', [$employee, 'step' => 'contact']) }}">Upload a contract or NRC copy</a>@endif
+                    </div>
+                @else
+                    <div class="pf-docs">
+                        @foreach($docs as $doc)
+                            @php $ext = strtolower(pathinfo($doc['name'] ?? $doc['path'] ?? '', PATHINFO_EXTENSION)); @endphp
+                            <a class="pf-doc" href="{{ asset('storage/' . ($doc['path'] ?? '')) }}" target="_blank" rel="noopener">
+                                <i class="bi {{ in_array($ext, ['jpg','jpeg','png']) ? 'bi-file-earmark-image' : ($ext === 'pdf' ? 'bi-file-earmark-pdf' : 'bi-file-earmark-text') }}"></i>
+                                <b>{{ $doc['name'] ?? 'Document' }}</b>
+                                <small>{{ isset($doc['uploaded_at']) ? \Carbon\Carbon::parse($doc['uploaded_at'])->format('j M Y') : '' }}</small>
                             </a>
                         @endforeach
-                    @else
-                        <span class="hrf-no-docs">No documents uploaded</span>
-                    @endif
-                </div>
-            </section>
+                    </div>
+                @endif
+            </div>
+        </div>
 
-            <div class="hrf-record-actions">
-                <button onclick="window.print()" class="hrf-btn hrf-btn-ghost">
-                    <i class="bi bi-printer"></i> Print File
-                </button>
+        {{-- ===== SIDE ===== --}}
+        <aside class="pf-side">
+            <div class="pp-card" style="text-align:center">
+                <div class="pf-ring" style="--p: {{ $completeness['percent'] }}"><div>{{ $completeness['percent'] }}%</div></div>
+                <b>{{ $completeness['percent'] === 100 ? 'Profile complete 🎉' : 'Profile ' . $completeness['percent'] . '% complete' }}</b>
+                @if($completeness['missing'])
+                    <div class="pp-muted" style="margin-top:.2rem">Still missing:</div>
+                    <ul class="pf-missing" style="text-align:left">
+                        @foreach($completeness['missing'] as $step => $fields)
+                            <li><a href="{{ $canManage ? route('employees.edit', [$employee, 'step' => $step]) : '#' }}">
+                                <span>{{ implode(', ', $fields) }}</span><i class="bi bi-plus-circle"></i></a></li>
+                        @endforeach
+                    </ul>
+                @else
+                    <div class="pp-muted" style="margin-top:.2rem">Ready for payroll and statutory returns.</div>
+                @endif
             </div>
 
-        </div>{{-- end record sheet --}}
+            @if(auth()->user()?->hasPermission('portal.manage'))
+                @include('partials.employee-portal-card', ['employee' => $employee])
+            @endif
 
-    </div>{{-- end dossier --}}
-
+            <div class="pp-card">
+                <div class="pp-card-title" style="margin-bottom:.7rem"><h3>Quick actions</h3></div>
+                <div class="pf-quick">
+                    @if($canManage)<a href="{{ route('employees.edit', [$employee, 'step' => 'pay']) }}"><i class="bi bi-cash-coin"></i> Change pay or bank</a>@endif
+                    <button type="button" data-ai-prompt="How many leave days does {{ $employee->full_name }} have left?"><i class="bi bi-sun"></i> Check leave balance</button>
+                    @if($canPay)<button type="button" data-ai-prompt="Show {{ $employee->full_name }}'s latest payslip"><i class="bi bi-receipt"></i> Latest payslip</button>@endif
+                    @if($employee->primary_phone)<a href="tel:{{ preg_replace('/\s+/', '', $employee->primary_phone) }}"><i class="bi bi-telephone"></i> Call {{ $employee->first_name }}</a>@endif
+                    @if($employee->primary_phone)<a href="https://wa.me/{{ preg_replace('/^0/', '260', preg_replace('/\D/', '', $employee->primary_phone)) }}" target="_blank" rel="noopener"><i class="bi bi-whatsapp"></i> WhatsApp</a>@endif
+                    @if($employee->portal_email)<a href="mailto:{{ $employee->portal_email }}"><i class="bi bi-envelope"></i> Email</a>@endif
+                    @if($canManage)
+                        <form method="POST" action="{{ route('employees.destroy', $employee) }}" onsubmit="event.stopPropagation(); return confirm('Delete {{ addslashes($employee->full_name) }}? Their payroll history will be lost. Consider setting them to Inactive instead.')">
+                            @csrf @method('DELETE')
+                            <button type="submit" style="color:var(--zp-red)"><i class="bi bi-trash" style="color:var(--zp-red)"></i> Delete employee</button>
+                        </form>
+                    @endif
+                </div>
+            </div>
+        </aside>
+    </div>
 </div>
-
-
-{{-- ===== STYLES ===== --}}
-<style>
-/* @import url('https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap'); */
-
-body {
-    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-}
-
-.hrf-wrap * { box-sizing: border-box; }
-
-.hrf-wrap {
-    --paper: #ffffff;
-    --ink: #00742E;
-    --ink-soft: #58687D;
-    --ink-faint: #93A0B2;
-    --brass: #029508;
-    --brass-soft: #cdffcf;
-    --line: #f3f3f3;
-    --active: #2F6F4E;
-    --active-bg: #EAF3EC;
-    --inactive: #029508;
-    --inactive-bg: #F0EEE7;
-
-    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-    color: var(--ink);
-    background: var(--paper);
-    padding: 1.5rem 0 3rem;
-}
-
-/* ---- Top bar ---- */
-.hrf-topbar {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: .75rem;
-    margin-bottom: 1.1rem;
-    padding: 0 .1rem;
-}
-.hrf-eyebrow {
-        font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-
-    font-size: .68rem;
-    font-weight: 600;
-    letter-spacing: .14em;
-    text-transform: uppercase;
-    color: var(--brass);
-    margin-bottom: .25rem;
-}
-.hrf-pagetitle { font-size: 1.35rem; font-weight: 700; margin: 0; color: var(--ink); }
-.hrf-topactions { display: flex; gap: .55rem; }
-
-.hrf-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: .4rem;
-    font-size: .78rem;
-    font-weight: 600;
-    padding: .55rem 1.05rem;
-    border-radius: 6px;
-    text-decoration: none;
-    cursor: pointer;
-    transition: border-color .15s, color .15s, background .15s, box-shadow .15s;
-}
-.hrf-btn-ghost {
-    border: 1px solid #D6CFBB;
-    background: transparent;
-    color: var(--ink-soft);
-}
-.hrf-btn-ghost:hover { border-color: var(--brass); color: var(--brass); }
-.hrf-btn-solid {
-    border: 1px solid var(--ink);
-    background: var(--ink);
-    color: var(--paper);
-}
-.hrf-btn-solid:hover { background: #23374F; border-color: #23374F; color: var(--paper); }
-
-/* ---- Dossier shell ---- */
-.hrf-file {
-    display: flex;
-    background: #fff;
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    position: relative;
-    box-shadow: 0 1px 0 rgba(23,38,58,.03), 0 8px 24px -18px rgba(23,38,58,.35);
-    overflow: hidden;
-}
-.hrf-file::before {
-    /* folder-tab notch */
-    content: "";
-    position: absolute;
-    top: 0; left: 44px;
-    width: 96px; height: 8px;
-    background: var(--brass);
-    border-radius: 0 0 3px 3px;
-}
-
-/* ---- Vertical index tab strip ---- */
-.hrf-tabstrip {
-    width: 26px;
-    flex-shrink: 0;
-    background: var(--ink);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: space-evenly;
-    padding: 1.5rem 0;
-}
-.hrf-tabstrip span {
-    writing-mode: vertical-rl;
-    transform: rotate(180deg);
-        font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-
-    font-size: .58rem;
-    font-weight: 600;
-    letter-spacing: .12em;
-    color: #f9fbfe;
-}
-
-/* ---- Identity panel ---- */
-.hrf-id-panel {
-    width: 258px;
-    flex-shrink: 0;
-    background: #FCFBF8;
-    border-right: 1px solid var(--line);
-    padding: 1.85rem 1.4rem 1.5rem;
-}
-
-.hrf-badge-card {
-    border: 1px dashed #CBC2A8;
-    border-radius: 6px;
-    padding: 1.1rem 1rem 1rem;
-    text-align: center;
-    background: #fff;
-    margin-bottom: 1.4rem;
-}
-.hrf-photo-frame {
-    width: 84px; height: 84px;
-    margin: 0 auto .7rem;
-    border-radius: 8px;
-    border: 2px solid var(--ink);
-    background: var(--brass-soft);
-    display: flex; align-items: center; justify-content: center;
-    overflow: hidden;
-}
-.hrf-photo-frame img { width: 100%; height: 100%; object-fit: cover; }
-.hrf-photo-initials { font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 1.4rem; font-weight: 700; color: var(--brass); }
-
-.hrf-badge-id {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: .78rem;
-    font-weight: 600;
-    letter-spacing: .08em;
-    color: var(--ink);
-    margin-bottom: .55rem;
-}
-
-.hrf-status-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: .35rem;
-    font-size: .68rem;
-    font-weight: 700;
-    letter-spacing: .04em;
-    text-transform: uppercase;
-    padding: .28rem .7rem;
-    border-radius: 20px;
-}
-.hrf-status-dot { width: 6px; height: 6px; border-radius: 50%; }
-.hrf-status-active { background: var(--active-bg); color: var(--active); }
-.hrf-status-active .hrf-status-dot { background: var(--active); }
-.hrf-status-inactive { background: var(--inactive-bg); color: var(--inactive); }
-.hrf-status-inactive .hrf-status-dot { background: var(--inactive); }
-
-.hrf-panel-block { margin-bottom: 1.25rem; }
-.hrf-panel-label {
-    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-    font-size: .65rem;
-    font-weight: 600;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-    color: var(--brass);
-    border-bottom: 1px solid var(--brass-soft);
-    padding-bottom: .3rem;
-    margin-bottom: .6rem;
-}
-.hrf-line {
-    display: flex;
-    align-items: flex-start;
-    gap: .5rem;
-    margin-bottom: .4rem;
-    color: var(--ink-soft);
-    line-height: 1.4;
-    font-size: .8rem;
-}
-.hrf-line i { font-size: .8rem; color: var(--ink-faint); margin-top: .15rem; flex-shrink: 0; }
-.hrf-mono, .hrf-line.hrf-mono span { font-family: 'IBM Plex Mono', monospace; font-size: .76rem; letter-spacing: .01em; }
-
-.hrf-salary-stamp {
-    border: 2px solid var(--ink);
-    border-radius: 6px;
-    padding: .8rem .9rem;
-    text-align: center;
-    transform: rotate(-.6deg);
-}
-.hrf-salary-label {
-    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-    font-size: .6rem;
-    font-weight: 600;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-    color: var(--ink-soft);
-    margin-bottom: .2rem;
-}
-.hrf-salary-amount { font-family: 'IBM Plex Mono', monospace; font-size: 1.05rem; font-weight: 600; color: var(--ink); }
-
-/* ---- Record sheet ---- */
-.hrf-record { flex: 1; padding: 1.85rem 2.1rem 1.6rem; min-width: 0; }
-
-.hrf-record-head { margin-bottom: 1.4rem; padding-bottom: 1.3rem; border-bottom: 1px solid var(--line); }
-.hrf-name { font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 1.55rem; font-weight: 700; color: var(--ink); letter-spacing: .01em; margin-bottom: .3rem; }
-.hrf-role { font-size: .85rem; color: var(--ink-soft); }
-.hrf-role-sep { color: var(--ink-faint); margin: 0 .15rem; }
-
-.hrf-section { margin-bottom: 1.6rem; }
-.hrf-section:last-of-type { margin-bottom: 1.2rem; }
-.hrf-section-head {
-    display: flex;
-    align-items: baseline;
-    gap: .55rem;
-    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-    font-size: .82rem;
-    font-weight: 700;
-    color: var(--ink);
-    text-transform: uppercase;
-    letter-spacing: .04em;
-    margin-bottom: .85rem;
-}
-.hrf-section-no {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: .72rem;
-    font-weight: 600;
-    color: #fff;
-    background: var(--brass);
-    padding: .1rem .4rem;
-    border-radius: 3px;
-    letter-spacing: 0;
-}
-
-.hrf-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem 1.5rem; }
-.hrf-field-label { font-size: .68rem; color: var(--ink-faint); margin-bottom: .15rem; text-transform: uppercase; letter-spacing: .04em; }
-.hrf-field-value { font-size: .86rem; font-weight: 600; color: var(--ink); }
-
-.hrf-timeline { display: flex; flex-direction: column; gap: .75rem; }
-.hrf-timeline-row { display: flex; align-items: center; gap: 1rem; }
-.hrf-timeline-label { width: 78px; flex-shrink: 0; font-size: .78rem; font-weight: 600; color: var(--ink-soft); }
-.hrf-timeline-track { display: flex; align-items: center; gap: .6rem; flex: 1; }
-.hrf-timeline-date { font-family: 'IBM Plex Mono', monospace; font-size: .74rem; color: var(--ink); white-space: nowrap; }
-.hrf-timeline-bar { flex: 1; height: 2px; background: linear-gradient(90deg, var(--brass), var(--brass-soft)); border-radius: 2px; min-width: 24px; }
-
-.hrf-docs { display: flex; flex-wrap: wrap; gap: .5rem; }
-.hrf-doc-tab {
-    display: inline-flex;
-    align-items: center;
-    gap: .4rem;
-    font-size: .78rem;
-    font-weight: 500;
-    padding: .38rem .85rem;
-    border: 1px solid var(--line);
-    border-radius: 5px 5px 0 0;
-    border-bottom: 2px solid var(--brass);
-    color: var(--ink-soft);
-    text-decoration: none;
-    background: #FCFBF8;
-    transition: background .15s, color .15s;
-}
-.hrf-doc-tab:hover { background: var(--brass-soft); color: var(--ink); text-decoration: none; }
-.hrf-no-docs { font-size: .78rem; color: var(--ink-faint); font-style: italic; }
-
-.hrf-record-actions { display: flex; justify-content: flex-end; padding-top: .6rem; border-top: 1px solid var(--line); }
-
-/* ---- Print ---- */
-@media print {
-    .hrf-wrap { background: #fff; padding: 0; }
-    .hrf-file { border: none; box-shadow: none; }
-    .hrf-tabstrip, .hrf-topactions, .hrf-record-actions { display: none !important; }
-    .hrf-id-panel { background: #FCFBF8 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-}
-
-/* ---- Responsive ---- */
-@media (max-width: 860px) {
-    .hrf-grid { grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 680px) {
-    .hrf-file { flex-direction: column; }
-    .hrf-tabstrip { display: none; }
-    .hrf-id-panel { width: 100%; border-right: none; border-bottom: 1px solid var(--line); }
-    .hrf-grid { grid-template-columns: 1fr; }
-    .hrf-timeline-row { flex-wrap: wrap; }
-}
-</style>
-
 @endsection
+
+@push('scripts')
+<script src="{{ asset('assets/js/zp-people.js') }}"></script>
+<script>
+(function () {
+    const card = document.getElementById('pfTabsCard');
+    const open = (name) => {
+        card.querySelectorAll('.pf-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+        card.querySelectorAll('.pf-pane').forEach(p => p.hidden = p.dataset.pane !== name);
+        try { history.replaceState(null, '', '#' + name); } catch (e) {}
+    };
+    card.querySelectorAll('.pf-tab').forEach(t => t.addEventListener('click', () => open(t.dataset.tab)));
+    const h = location.hash.slice(1);
+    if (h && card.querySelector('[data-pane="' + h + '"]')) open(h);
+    @if(session('celebrate')) zpPeople.confetti(); @endif
+})();
+</script>
+@endpush

@@ -1,222 +1,73 @@
-<aside class="admin-sidebar" id="adminSidebar">
+@php
+    // Five places, one job each. Sub-pages live in tabs at the top of each module.
+    $u = auth()->user();
+    $can = fn ($p) => $u?->hasPermission($p);
+    $pendingLeave = $can('leave.approve') ? \App\Models\LeaveRequest::where('status', 'pending')->count() : null;
+    $pendingPay = ($can('overtime.approve') ? \App\Models\OvertimeRequest::where('status', 'pending')->count() : 0)
+        + ($can('loans.manage') ? \App\Models\LoanRequest::where('status', 'pending')->count() : 0);
+    // Pay runs waiting for this person's approval
+    if ($can('payroll.view')) {
+        $approvalsSvc = app(\App\Services\PayrollApprovals::class);
+        $pendingPay += \App\Models\PayrollRun::where('status', \App\Models\PayrollRun::IN_REVIEW)->get()
+            ->filter(fn ($r) => $approvalsSvc->canApprove($u, $r))->count();
+    }
+    $navCompanyName = $u?->company?->name;
 
-    {{-- BRAND --}}
+    // The Payroll module opens on the first of its tabs this role can see.
+    $payRoute = collect(['payroll.view' => 'payroll.runs.index', 'overtime.approve' => 'overtime.dashboard', 'loans.view' => 'loan.dashboard', 'reports.view' => 'payroll.reports.index'])
+        ->first(fn ($route, $perm) => $can($perm));
+
+    $nav = array_filter([
+        ['dashboard', 'dashboard', 'bi-house-door', 'Home', 'Today at a glance', null],
+        $can('employees.view') ? ['employees.index', 'employees.*', 'bi-people', 'People', 'Employees & onboarding', null] : null,
+        $can('attendance.view') ? ['attendance.calendar', 'attendance.*', 'bi-clock-history', 'Attendance', 'Who is in today', null] : null,
+        $can('leave.view') ? ['leave.dashboard', 'leave.*', 'bi-calendar2-heart', 'Leave', 'Requests & balances', $pendingLeave] : null,
+        $payRoute ? ($can('payroll.view') || $can('reports.view')
+            ? [$payRoute, ['payroll.*', 'overtime.*', 'loan.*'], 'bi-cash-stack', 'Payroll', 'Pay, overtime, loans, returns', $pendingPay]
+            : [$payRoute, ['overtime.*', 'loan.*'], $can('overtime.approve') ? 'bi-alarm' : 'bi-cash-coin', $can('overtime.approve') ? 'Overtime' : 'Loans', $can('overtime.approve') && $can('loans.view') ? 'Overtime & loan requests' : 'Requests to review', $pendingPay]) : null,
+    ]);
+    $settingsRoute = $can('settings.company') ? 'company.settings' : ($can('team.manage') ? 'team.index' : 'profile.index');
+@endphp
+<aside class="admin-sidebar zp-sidebar" id="adminSidebar">
+
     <div class="sidebar-header">
         <a class="brand-mark" href="{{ route('dashboard') }}">
             <img src="{{ asset('assets/images/logo.png') }}" width="36" height="36" alt="ZamPayroll Logo" class="brand-logo">
             <span class="brand-copy">
                 <span class="brand-title">ZamPayroll</span>
-                <span class="brand-subtitle" title="{{ auth()->user()?->company?->name }}">{{ \Illuminate\Support\Str::limit(auth()->user()?->company?->name ?? 'Payroll Made Simple', 26) }}</span>
+                <span class="brand-subtitle" title="{{ $navCompanyName }}">{{ \Illuminate\Support\Str::limit($navCompanyName ?? 'Payroll Made Simple', 26) }}</span>
             </span>
         </a>
     </div>
 
-    {{-- NAVIGATION --}}
-    <nav class="sidebar-nav">
-
-        {{-- DASHBOARD --}}
-        <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"
-           href="{{ route('dashboard') }}">
-            <i class="bi bi-speedometer2 nav-icon"></i>
-            <span class="nav-text">Dashboard</span>
-        </a>
-
-        {{-- EMPLOYEES --}}
-        <div class="nav-group {{ request()->routeIs('employees.*') ? 'open' : '' }}">
-            <a class="nav-link nav-group-toggle {{ request()->routeIs('employees.*') ? 'active' : '' }}"
-               href="#" data-bs-toggle="collapse" data-bs-target="#navEmployees"
-               aria-expanded="{{ request()->routeIs('employees.*') ? 'true' : 'false' }}">
-                <i class="bi bi-people nav-icon"></i>
-                <span class="nav-text">Employees</span>
-                <i class="bi bi-chevron-down nav-caret"></i>
+    <nav class="sidebar-nav" aria-label="Main">
+        @foreach($nav as [$route, $match, $icon, $label, $hint, $badge])
+            @php $active = request()->routeIs(...(array) $match); @endphp
+            <a class="nav-link zp-nav {{ $active ? 'active' : '' }}" href="{{ route($route) }}" @if($active) aria-current="page" @endif>
+                <i class="bi {{ $icon }} nav-icon"></i>
+                <span class="nav-text">
+                    {{ $label }}
+                    <small class="zp-nav-hint">{{ $hint }}</small>
+                </span>
+                @if($badge)
+                    <span class="zp-nav-badge" title="{{ $badge }} waiting for you">{{ $badge }}</span>
+                @endif
             </a>
-            <div class="collapse nav-submenu {{ request()->routeIs('employees.*') ? 'show' : '' }}" id="navEmployees">
-                <a class="nav-sublink {{ request()->routeIs('employees.index') ? 'active' : '' }}"
-                   href="{{ route('employees.index') }}">
-                    <i class="bi bi-list-ul"></i> All Employees
-                </a>
-                <a class="nav-sublink {{ request()->routeIs('employees.create') ? 'active' : '' }}"
-                   href="{{ route('employees.create') }}">
-                    <i class="bi bi-person-plus"></i> Add Employee
-                </a>
-                <a class="nav-sublink" href="{{ route('employees.sample-csv') }}">
-                    <i class="bi bi-file-earmark-arrow-down"></i> Import Template
-                </a>
-                <a class="nav-sublink" href="{{ route('employees.index') }}#portal" title="Create portals from the employee list or an employee's file">
-                    <i class="bi bi-phone"></i> Self-service portals
-                </a>
-            </div>
-        </div>
+        @endforeach
 
-        {{-- LEAVE --}}
-        <div class="nav-group {{ request()->routeIs('leave.*') ? 'open' : '' }}">
-            <a class="nav-link nav-group-toggle {{ request()->routeIs('leave.*') ? 'active' : '' }}"
-               href="#" data-bs-toggle="collapse" data-bs-target="#navLeave"
-               aria-expanded="{{ request()->routeIs('leave.*') ? 'true' : 'false' }}">
-                <i class="bi bi-calendar-check nav-icon"></i>
-                <span class="nav-text">Leave</span>
-                <i class="bi bi-chevron-down nav-caret"></i>
-            </a>
-            <div class="collapse nav-submenu {{ request()->routeIs('leave.*') ? 'show' : '' }}" id="navLeave">
-                <a class="nav-sublink {{ request()->routeIs('leave.years') || request()->routeIs('leave.sheet') ? 'active' : '' }}"
-                   href="{{ route('leave.years') }}">
-                    <i class="bi bi-table"></i> Leave Sheet
-                </a>
-                <a class="nav-sublink {{ request()->routeIs('leave.dashboard') ? 'active' : '' }}"
-                   href="{{ route('leave.dashboard') }}">
-                    <i class="bi bi-inbox"></i> Leave Requests
-                </a>
-            </div>
-        </div>
-
-        {{-- ATTENDANCE --}}
-        <div class="nav-group {{ request()->routeIs('attendance.*') ? 'open' : '' }}">
-            <a class="nav-link nav-group-toggle {{ request()->routeIs('attendance.*') ? 'active' : '' }}"
-               href="#" data-bs-toggle="collapse" data-bs-target="#navAttendance"
-               aria-expanded="{{ request()->routeIs('attendance.*') ? 'true' : 'false' }}">
-                <i class="bi bi-clock-history nav-icon"></i>
-                <span class="nav-text">Attendance</span>
-                <i class="bi bi-chevron-down nav-caret"></i>
-            </a>
-            <div class="collapse nav-submenu {{ request()->routeIs('attendance.*') ? 'show' : '' }}" id="navAttendance">
-                <a class="nav-sublink {{ request()->routeIs('attendance.calendar') || request()->routeIs('attendance.day') ? 'active' : '' }}"
-                   href="{{ route('attendance.calendar') }}">
-                    <i class="bi bi-calendar3"></i> Calendar
-                </a>
-                <a class="nav-sublink {{ request()->routeIs('attendance.report') ? 'active' : '' }}"
-                   href="{{ route('attendance.report') }}">
-                    <i class="bi bi-graph-up"></i> Attendance Report
-                </a>
-                <a class="nav-sublink {{ request()->routeIs('attendance.settings') ? 'active' : '' }}"
-                   href="{{ route('attendance.settings') }}">
-                    <i class="bi bi-sliders"></i> Working Days &amp; Holidays
-                </a>
-            </div>
-        </div>
-
-        {{-- OVERTIME --}}
-        <div class="nav-group {{ request()->routeIs('overtime.*') ? 'open' : '' }}">
-            <a class="nav-link nav-group-toggle {{ request()->routeIs('overtime.*') ? 'active' : '' }}"
-               href="#" data-bs-toggle="collapse" data-bs-target="#navOvertime"
-               aria-expanded="{{ request()->routeIs('overtime.*') ? 'true' : 'false' }}">
-                <i class="bi bi-alarm nav-icon"></i>
-                <span class="nav-text">Overtime</span>
-                <i class="bi bi-chevron-down nav-caret"></i>
-            </a>
-            <div class="collapse nav-submenu {{ request()->routeIs('overtime.*') ? 'show' : '' }}" id="navOvertime">
-                <a class="nav-sublink {{ request()->routeIs('overtime.dashboard') ? 'active' : '' }}"
-                   href="{{ route('overtime.dashboard') }}">
-                    <i class="bi bi-inbox"></i> Overtime Requests
-                </a>
-            </div>
-        </div>
-
-        {{-- LOANS --}}
-        <div class="nav-group {{ request()->routeIs('loan.*') ? 'open' : '' }}">
-            <a class="nav-link nav-group-toggle {{ request()->routeIs('loan.*') ? 'active' : '' }}"
-               href="#" data-bs-toggle="collapse" data-bs-target="#navLoans"
-               aria-expanded="{{ request()->routeIs('loan.*') ? 'true' : 'false' }}">
-                <i class="bi bi-cash-coin nav-icon"></i>
-                <span class="nav-text">Loans</span>
-                <i class="bi bi-chevron-down nav-caret"></i>
-            </a>
-            <div class="collapse nav-submenu {{ request()->routeIs('loan.*') ? 'show' : '' }}" id="navLoans">
-                <a class="nav-sublink {{ request()->routeIs('loan.dashboard') ? 'active' : '' }}"
-                   href="{{ route('loan.dashboard') }}">
-                    <i class="bi bi-inbox"></i> Loan Requests
-                </a>
-                <a class="nav-sublink {{ request()->routeIs('loan.ledger.*') ? 'active' : '' }}"
-                   href="{{ route('loan.ledger.index') }}">
-                    <i class="bi bi-journal-text"></i> Loan Ledger
-                </a>
-                <a class="nav-sublink {{ request()->routeIs('loan.ledger.create') ? 'active' : '' }}"
-                   href="{{ route('loan.ledger.create') }}">
-                    <i class="bi bi-plus-circle"></i> Add Loan Ledger
-                </a>
-            </div>
-        </div>
-
-        {{-- PAYROLL --}}
-        <div class="nav-group {{ request()->routeIs('payroll.*') ? 'open' : '' }}">
-            <a class="nav-link nav-group-toggle {{ request()->routeIs('payroll.*') ? 'active' : '' }}"
-               href="#" data-bs-toggle="collapse" data-bs-target="#navPayroll"
-               aria-expanded="{{ request()->routeIs('payroll.*') ? 'true' : 'false' }}">
-                <i class="bi bi-cash-stack nav-icon"></i>
-                <span class="nav-text">Payroll</span>
-                <i class="bi bi-chevron-down nav-caret"></i>
-            </a>
-            <div class="collapse nav-submenu {{ request()->routeIs('payroll.*') ? 'show' : '' }}" id="navPayroll">
-                
-                <a class="nav-sublink {{ request()->routeIs('payroll.runs.*') ? 'active' : '' }}"
-                   href="{{ route('payroll.runs.index') }}">
-                    <i class="bi bi-play-circle"></i> Payroll Runs
-                </a>
-               
-                <a class="nav-sublink {{ request()->routeIs('payroll.reports.*') ? 'active' : '' }}"
-                   href="{{ route('payroll.reports.index') }}">
-                    <i class="bi bi-file-earmark-bar-graph"></i> Payroll Reports
-                </a>
-            </div>
-        </div>
-
-        {{-- REPORTS (general) --}}
-        <a class="nav-link {{ request()->routeIs('reports.*') ? 'active' : '' }}"
-           href="{{ route('payroll.reports.index') }}">
-            <i class="bi bi-bar-chart nav-icon"></i>
-            <span class="nav-text">Reports</span>
-        </a>
-
-        {{-- PUBLIC APPLICATION FORMS --}}
-        <div class="nav-group">
-            <a class="nav-link nav-group-toggle"
-               href="#" data-bs-toggle="collapse" data-bs-target="#navPublicForms"
-               aria-expanded="false">
-                <i class="bi bi-box-arrow-up-right nav-icon"></i>
-                <span class="nav-text">Public Forms</span>
-                <i class="bi bi-chevron-down nav-caret"></i>
-            </a>
-            <div class="collapse nav-submenu" id="navPublicForms">
-                <a class="nav-sublink nav-link-public" href="{{ route('leave.apply.form') }}" target="_blank" rel="noopener">
-                    <i class="bi bi-box-arrow-up-right"></i> Apply for Leave
-                </a>
-                <a class="nav-sublink nav-link-public" href="{{ route('overtime.apply.form') }}" target="_blank" rel="noopener">
-                    <i class="bi bi-box-arrow-up-right"></i> Apply for Overtime
-                </a>
-                <a class="nav-sublink nav-link-public" href="{{ route('loan.apply.form') }}" target="_blank" rel="noopener">
-                    <i class="bi bi-box-arrow-up-right"></i> Apply for Loan
-                </a>
-            </div>
-        </div>
-
-        {{-- SETTINGS (company admin only) --}}
-        @if(auth()->user()?->isCompanyAdmin())
-        <div class="nav-group {{ request()->routeIs('settings.*') || request()->routeIs('profile.*') ? 'open' : '' }}">
-            <a class="nav-link nav-group-toggle {{ request()->routeIs('settings.*') ? 'active' : '' }}"
-               href="#" data-bs-toggle="collapse" data-bs-target="#navSettings"
-               aria-expanded="{{ request()->routeIs('settings.*') ? 'true' : 'false' }}">
-                <i class="bi bi-gear nav-icon"></i>
-                <span class="nav-text">Settings</span>
-                <i class="bi bi-chevron-down nav-caret"></i>
-            </a>
-            <div class="collapse nav-submenu {{ request()->routeIs('settings.*') ? 'show' : '' }}" id="navSettings">
-                <a class="nav-sublink {{ request()->routeIs('settings.index') ? 'active' : '' }}"
-                   href="{{ route('company.settings') }}">
-                    <i class="bi bi-building"></i> Company Settings
-                </a>
-                <a class="nav-sublink {{ request()->routeIs('profile.index') || request()->routeIs('profile.edit') ? 'active' : '' }}"
-                   href="{{ route('profile.index') }}">
-                    <i class="bi bi-person-circle"></i> My Profile
-                </a>
-            </div>
-        </div>
-        @else
-        <a class="nav-link {{ request()->routeIs('profile.*') ? 'active' : '' }}"
-           href="{{ route('profile.index') }}">
-            <i class="bi bi-person-circle nav-icon"></i>
-            <span class="nav-text">My Profile</span>
-        </a>
+        @if($can('ai.use'))
+        <button type="button" class="nav-link zp-nav zp-nav-ai" data-ai-prompt="What needs my attention today?">
+            <i class="bi bi-stars nav-icon"></i>
+            <span class="nav-text">Ask AI<small class="zp-nav-hint">Questions & quick actions</small></span>
+        </button>
         @endif
-
     </nav>
 
+    <div class="zp-sidebar-foot">
+        @php $settingsActive = request()->routeIs('company.*', 'bank-templates.*', 'profile.*', 'settings.*', 'team.*'); @endphp
+        <a class="nav-link zp-nav {{ $settingsActive ? 'active' : '' }}" href="{{ route($settingsRoute) }}">
+            <i class="bi bi-gear nav-icon"></i>
+            <span class="nav-text">Settings<small class="zp-nav-hint">{{ $u?->roleName() }}</small></span>
+        </a>
+    </div>
 </aside>

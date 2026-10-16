@@ -100,7 +100,7 @@ class InvitationController extends Controller
             'existingUser' => $existingUser,
             'isNewUser' => $existingUser === null,
             'token' => $token,
-            'invitableRoles' => User::INVITABLE_ROLES,
+            'invitableRoles' => \App\Models\CompanyRole::withoutGlobalScope('company')->where('company_id', $invitation->company_id)->pluck('name', 'key'),
         ]);
     }
 
@@ -130,7 +130,7 @@ class InvitationController extends Controller
                 $existingUser->update([
                     'email_verified_at' => $existingUser->email_verified_at ?? now(),
                     'company_id' => $invitation->company_id,
-                    'role'       => $request->input('role'),
+                    'role'       => $invitation->role,
                     'position'   => $request->input('position'),
                 ]);
                 $user = $existingUser;
@@ -141,7 +141,8 @@ class InvitationController extends Controller
                     'name'       => $request->input('name'),
                     'email'      => $invitation->email,
                     'password'   => Hash::make($request->input('password')),
-                    'role'       => $request->input('role'),
+                    // The role is set by the person who sent the invite, not by the invitee.
+                    'role'       => $invitation->role,
                     'position'   => $request->input('position'),
                     // The invite link was delivered to this mailbox, so the address is confirmed.
                     'email_verified_at' => now(),

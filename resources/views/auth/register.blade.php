@@ -187,7 +187,7 @@
             <p>Create your account now and finish the company profile later from Settings, or take two more minutes to add statutory numbers and payroll preferences.</p>
             <label class="ob-terms" style="color:#DCEDE2;margin:0 0 1rem">
                 <input type="checkbox" class="terms-box" value="1">
-                <span>I agree to the ZamPayroll terms of service and privacy policy.</span>
+                <span>I agree to the ZamPayroll <a href="{{ route('site.terms') }}" target="_blank" style="color:inherit;font-weight:600">terms of service</a> and <a href="{{ route('site.privacy') }}" target="_blank" style="color:inherit;font-weight:600">privacy policy</a>.</span>
             </label>
             <div style="display:flex;gap:.6rem;flex-wrap:wrap">
                 <button type="button" class="zp-btn zp-btn-copper" id="finishNow"><i class="bi bi-lightning-charge"></i> Create my account now</button>
@@ -323,7 +323,7 @@
 
         <label class="ob-terms">
             <input type="checkbox" name="terms" class="terms-box" id="terms" value="1" @checked(old('terms'))>
-            <span>I agree to the ZamPayroll terms of service and privacy policy.</span>
+            <span>I agree to the ZamPayroll <a href="{{ route('site.terms') }}" target="_blank" style="color:inherit;font-weight:600">terms of service</a> and <a href="{{ route('site.privacy') }}" target="_blank" style="color:inherit;font-weight:600">privacy policy</a>.</span>
         </label>
         @error('terms')<div class="zp-error">{{ $message }}</div>@enderror
         <div class="zp-error" id="termsError" hidden>Please accept the terms first.</div>

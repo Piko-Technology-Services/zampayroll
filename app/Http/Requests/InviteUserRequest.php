@@ -10,7 +10,7 @@ class InviteUserRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user() && $this->user()->isCompanyAdmin();
+        return $this->user() && $this->user()->hasPermission('team.manage');
     }
 
     public function rules(): array
@@ -24,7 +24,7 @@ class InviteUserRequest extends FormRequest
                 // Prevent inviting someone who is already an active member of THIS company.
                 Rule::unique('users', 'email')->where(fn ($q) => $q->where('company_id', $this->user()->company_id)),
             ],
-            'role'     => ['required', Rule::in(array_keys(User::INVITABLE_ROLES))],
+            'role'     => ['required', Rule::in(\App\Models\CompanyRole::withoutGlobalScope('company')->pluck('key')->unique()->all())],
             'position' => ['nullable', 'string', 'max:255'],
         ];
     }

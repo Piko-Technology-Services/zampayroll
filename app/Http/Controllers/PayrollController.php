@@ -146,6 +146,10 @@ class PayrollController extends Controller
     */
     public function update(Request $request, Payroll $payroll)
     {
+        if ($payroll->isLocked()) {
+            return back()->with('error', 'This payslip belongs to a payroll that is in approval or locked.');
+        }
+
         $request->validate([
             'employee_id' => 'required|exists:employees,id,company_id,' . (int) auth()->user()->company_id,
             'pay_period'  => 'required',
@@ -174,6 +178,10 @@ class PayrollController extends Controller
     */
     public function destroy(Payroll $payroll)
     {
+        if ($payroll->isLocked()) {
+            return back()->with('error', 'This payslip belongs to a payroll that is in approval or locked.');
+        }
+
         $payroll->delete();
 
         return redirect()
@@ -189,6 +197,10 @@ class PayrollController extends Controller
 
     public function process(Payroll $payroll, PayrollEngine $engine)
     {
+        if ($payroll->isLocked()) {
+            return back()->with('error', 'This payslip belongs to a payroll that is in approval or locked.');
+        }
+
         // 1. BUILD PAYROLL ITEMS AUTOMATICALLY
         $engine->build($payroll);
 

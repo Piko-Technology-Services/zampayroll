@@ -46,21 +46,9 @@ class OvertimeDashboardController extends Controller
     {
         $request->validate(['comment' => 'nullable|string|max:500']);
 
-        $overtimeRequest->update([
-            'status'      => $status,
-            'hr_comment'  => $request->input('comment'),
-            'reviewed_by' => $request->user()?->id,
-            'reviewed_at' => now(),
-        ]);
-
-        try {
-            Mail::to($overtimeRequest->employee->personal_email ?? $overtimeRequest->employee->company_email)
-                ->send(new OvertimeDecided($overtimeRequest));
-        } catch (\Exception $e) {
-            report($e);
-        }
+        // Shared with AI mode — see App\Services\HrActions.
+        app(\App\Services\HrActions::class)->decideOvertime($overtimeRequest, $status, $request->input('comment'), $request->user());
     }
-
 
     public function exportApprovedOvertime(Request $request)
     {

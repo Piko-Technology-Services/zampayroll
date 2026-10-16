@@ -26,13 +26,32 @@
 <form method="POST" action="{{ route('login') }}" novalidate>
     @csrf
 
+    @unless($workspace)
+    <div class="mb-3">
+        <div class="d-flex justify-content-between">
+            <label class="form-label small fw-semibold text-muted" for="company_code">Company code</label>
+            <a href="{{ route('company-code.request') }}" class="small text-success text-decoration-none fw-semibold">Forgot your code?</a>
+        </div>
+        <div class="input-group">
+            <span class="input-group-text bg-light border-end-0"><i class="bi bi-building"></i></span>
+            <input type="text" name="company_code" id="company_code" value="{{ old('company_code', $prefillCode) }}"
+                   class="form-control border-start-0 @error('company_code') is-invalid @enderror"
+                   placeholder="e.g. KAF-4821" autocomplete="organization" autocapitalize="characters" spellcheck="false"
+                   style="text-transform:uppercase;letter-spacing:.06em;font-weight:600" translate="no" required @if(! old('company_code', $prefillCode)) autofocus @endif>
+        </div>
+        @error('company_code')
+            <small class="text-danger d-block mt-1">{{ $message }}</small>
+        @enderror
+    </div>
+    @endunless
+
     <div class="mb-3">
         <label class="form-label small fw-semibold text-muted" for="email">Email address</label>
         <div class="input-group">
             <span class="input-group-text bg-light border-end-0"><i class="bi bi-envelope"></i></span>
             <input type="email" name="email" id="email" value="{{ old('email', $prefillEmail) }}"
                    class="form-control border-start-0 @error('email') is-invalid @enderror"
-                   placeholder="name@company.com" autocomplete="username" required autofocus>
+                   placeholder="name@company.com" autocomplete="username" required @if($workspace || old('company_code', $prefillCode)) autofocus @endif>
         </div>
         @error('email')
             <small class="text-danger d-block mt-1">{{ $message }}</small>
@@ -85,6 +104,6 @@
     </a>
 @endunless
 
-<p class="small text-muted mt-4 mb-0"><i class="bi bi-person-badge"></i> Employees: use the email and temporary password HR sent you.</p>
+<p class="small text-muted mt-4 mb-0"><i class="bi bi-person-badge"></i> Employees: use the company code, email and temporary password HR sent you.</p>
 
 @endsection

@@ -1,2 +1,19 @@
 User-agent: *
-Disallow:
+Allow: /
+Disallow: /dashboard
+Disallow: /employees
+Disallow: /payroll
+Disallow: /attendance
+Disallow: /leave/
+Disallow: /overtime/
+Disallow: /loan/
+Disallow: /portal
+Disallow: /settings
+Disallow: /profile
+Disallow: /ai/
+Disallow: /invitations/
+Disallow: /email/
+Disallow: /reset-password/
+Disallow: /auth/
+
+Sitemap: https://zampayroll.com/sitemap.xml

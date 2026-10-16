@@ -31,6 +31,8 @@ class EmployeePortalWelcomeMail extends Mailable
     {
         return new Content(view: 'emails.portal-welcome', with: [
             'firstName' => strtok($this->user->name, ' '),
+            // Dedicated workspaces sign in on their own sub-domain, no code needed.
+            'companyCode' => \App\Support\Tenancy::isDedicated() ? null : $this->user->company?->company_code,
         ]);
     }
 }

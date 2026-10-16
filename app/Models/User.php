@@ -139,6 +139,52 @@ class User extends Authenticatable implements MustVerifyEmail
         return ! $this->isEmployee();
     }
 
+    /* ------------------------------------------------------------------ */
+    /*  Role-based permissions (editable per company in Settings → Team)    */
+    /* ------------------------------------------------------------------ */
+
+    protected ?CompanyRole $roleModelCache = null;
+
+    public function roleKey(): string
+    {
+        return \App\Support\Permissions::LEGACY_ROLE_MAP[$this->role] ?? (string) $this->role;
+    }
+
+    public function roleModel(): ?CompanyRole
+    {
+        if ($this->roleModelCache && $this->roleModelCache->key === $this->roleKey()) {
+            return $this->roleModelCache;
+        }
+
+        $role = CompanyRole::withoutGlobalScope('company')
+            ->where('company_id', $this->company_id)->where('key', $this->roleKey())->first();
+
+        if (! $role && $this->company_id && ! CompanyRole::withoutGlobalScope('company')->where('company_id', $this->company_id)->exists()) {
+            \App\Support\Permissions::seedDefaultRoles((int) $this->company_id);
+            $role = CompanyRole::withoutGlobalScope('company')->where('company_id', $this->company_id)->where('key', $this->roleKey())->first();
+        }
+
+        return $this->roleModelCache = $role;
+    }
+
+    public function roleName(): string
+    {
+        return $this->isEmployee() ? 'Employee (portal)' : ($this->roleModel()?->name ?? ucfirst(str_replace('_', ' ', (string) $this->role)));
+    }
+
+    public function hasPermission(string $permission): bool
+    {
+        if ($this->isEmployee()) {
+            return false;
+        }
+
+        if ($this->isCompanyAdmin() || $this->isSuperAdmin()) {
+            return true;
+        }
+
+        return (bool) $this->roleModel()?->allows($permission);
+    }
+
     /**
      * Where this user should land after signing in.
      */

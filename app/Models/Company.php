@@ -29,6 +29,7 @@ class Company extends Model
         'vat_number',
         'access_code',
         'access_code_active',
+        'company_code',
 
         // Tenancy & onboarding
         'tenancy_mode',
@@ -120,6 +121,28 @@ class Company extends Model
         'onboarding_completed_at' => 'datetime',
         'provisioned_at' => 'datetime',
     ];
+
+    /**
+     * Short, readable code staff type at sign-in, e.g. "PIK-4821".
+     * Unique across the whole platform (checked on the landlord database).
+     */
+    public static function makeCompanyCode(?string $name): string
+    {
+        $letters = strtoupper(preg_replace('/[^A-Za-z]/', '', (string) $name));
+        $prefix = str_pad(substr($letters, 0, 3), 3, 'Z');
+        $conn = \App\Support\Tenancy::landlordConnection();
+
+        do {
+            $code = $prefix . '-' . random_int(1000, 9999);
+        } while (\Illuminate\Support\Facades\DB::connection($conn)->table('companies')->where('company_code', $code)->exists());
+
+        return $code;
+    }
+
+    public function roles()
+    {
+        return $this->hasMany(CompanyRole::class);
+    }
 
     /* ------------------------------------------------------------------ */
     /*  Tenancy helpers                                                     */

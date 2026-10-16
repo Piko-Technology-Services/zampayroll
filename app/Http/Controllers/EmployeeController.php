@@ -2,13 +2,30 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Bank;
 use App\Models\Employee;
+use App\Services\EmployeePortalService;
+use App\Services\HrActions;
 use App\Services\PayrollEngine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class EmployeeController extends Controller
 {
+    /** Everything the add/edit journey can save (photo & documents handled separately). */
+    private const FORM_FIELDS = [
+        'first_name', 'middle_name', 'last_name', 'date_of_birth', 'gender', 'nationality',
+        'nrc_no', 'passport_number', 'personal_email', 'company_email', 'primary_phone', 'secondary_phone',
+        'position', 'department', 'branch', 'supervisor', 'employment_nature', 'employment_status',
+        'probation_start', 'probation_end', 'contract_start', 'contract_end',
+        'emergency_name', 'emergency_relationship', 'emergency_phone',
+        'next_of_kin_name', 'next_of_kin_phone', 'next_of_kin_address',
+        'bank_name', 'bank_branch', 'bank_sort_code', 'bank_account_no',
+        'ssn', 'nhima_no', 'tpin', 'net_salary', 'leave_days_entitled', 'leave_days_balance',
+    ];
+
+    public const NATURES = ['PERMANENT' => 'Permanent', 'CONTRACT' => 'Contract', 'PROBATION' => 'Probation', 'CASUAL' => 'Casual', 'INTERN' => 'Intern / attachment'];
+
     /*
     |--------------------------------------------------------------------------
     | LIST ALL EMPLOYEES
@@ -23,252 +40,251 @@ class EmployeeController extends Controller
 
     /*
     |--------------------------------------------------------------------------
-    | SHOW CREATE FORM
+    | ADD EMPLOYEE — step-by-step journey
     |--------------------------------------------------------------------------
     */
     public function create()
     {
-        return view('dashboard.employees.create');
+        return view('dashboard.employees.create', $this->formData(new Employee([
+            'nationality'         => 'Zambian',
+            'employment_nature'   => 'PERMANENT',
+            'employment_status'   => 'Active',
+            'leave_days_entitled' => 24,
+        ])));
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | STORE EMPLOYEE
-    |--------------------------------------------------------------------------
-    */
-    public function store(Request $request)
+    public function store(Request $request, EmployeePortalService $portal)
     {
-        $request->validate([
-            'first_name' => 'required',
-            'last_name' => 'required',
-            'date_of_birth' => 'required|date',
-            'gender' => 'required',
-            'primary_phone' => 'required',
-            'position' => 'required',
-            'leave_days_entitled' => 'nullable|numeric|min:0',
-            'leave_days_balance' => 'nullable|numeric|min:0',
-        ]);
+        $data = $request->validate($this->rules());
 
-        // Generate Employee ID (EIN)
-        $employeeId = 'EMP-' . date('Y') . '-' . strtoupper(Str::random(5));
+        $employee = new Employee();
+        $this->fillFromForm($employee, $data, $request);
+        $employee->employee_id = filled($request->employee_id) && ! Employee::where('employee_id', $request->employee_id)->exists()
+            ? trim($request->employee_id)
+            : app(HrActions::class)->nextEmployeeNumber();
+        $employee->employment_status = $employee->employment_status ?: 'Active';
+        $employee->employment_nature = $employee->employment_nature ?: 'PERMANENT';
+        $employee->nationality = $employee->nationality ?: 'Zambian';
+        $employee->leave_days_entitled = $employee->leave_days_entitled ?? 24;
+        $employee->save();
 
-        // Handle passport photo upload
-        $passportPath = null;
-        if ($request->hasFile('passport_photo')) {
-            $file = $request->file('passport_photo');
-            $passportPath = $file->store('uploads/employees/passports', 'public');
-        }
-
-        $employee = Employee::create([
-            'employee_id' => $employeeId,
-            'first_name' => $request->first_name,
-            'middle_name' => $request->middle_name,
-            'last_name' => $request->last_name,
-            'date_of_birth' => $request->date_of_birth,
-            'gender' => $request->gender,
-            'nationality' => $request->nationality,
-            'nrc_no' => $request->nrc_no,
-            'passport_number' => $request->passport_number,
-            'passport_photo' => $passportPath,
-
-            'personal_email' => $request->personal_email,
-            'company_email' => $request->company_email,
-            'primary_phone' => $request->primary_phone,
-            'secondary_phone' => $request->secondary_phone,
-
-            'position' => $request->position,
-            'department' => $request->department,
-            'branch' => $request->branch,
-            'supervisor' => $request->supervisor,
-            'employment_status' => 'Active',
-
-            'probation_start' => $request->probation_start,
-            'probation_end' => $request->probation_end,
-            'contract_start' => $request->contract_start,
-            'contract_end' => $request->contract_end,
-
-            'emergency_name' => $request->emergency_name,
-            'emergency_relationship' => $request->emergency_relationship,
-            'emergency_phone' => $request->emergency_phone,
-
-            'next_of_kin_name' => $request->next_of_kin_name,
-            'next_of_kin_phone' => $request->next_of_kin_phone,
-            'next_of_kin_address' => $request->next_of_kin_address,
-
-            'bank_name' => $request->bank_name,
-            'bank_account_no' => $request->bank_account_no,
-            'ssn' => $request->ssn,
-            'nhima_no' => $request->nhima_no,
-            'tpin' => $request->tpin,
-            'net_salary' => $request->net_salary,
-            'leave_days_entitled' => $request->leave_days_entitled,
-            'leave_days_balance' => $request->leave_days_balance,
-
-            'uploads' => null,
-        ]);
-
-        /*
-        |--------------------------------------------------------------------------
-        | HANDLE MULTIPLE DOCUMENT UPLOADS
-        |--------------------------------------------------------------------------
-        */
-        if ($request->hasFile('documents')) {
-
-            $uploads = [];
-
-            foreach ($request->file('documents') as $file) {
-                $path = $file->store('uploads/employees/documents', 'public');
-
-                $uploads[] = [
-                    'name' => $file->getClientOriginalName(),
-                    'path' => $path,
-                    'uploaded_at' => now()->toDateTimeString(),
-                ];
-            }
-
-            $employee->update([
-                'uploads' => $uploads
-            ]);
-        }
-
-        // Seed natural_gross_salary / daily_rate_salary / leave_days_value
-        // /leave_days_balance so leave, overtime, and other modules have
-        // values to work with right away. Wrapped defensively — priming
-        // depends on payroll_rules being seeded, and a failure here should
-        // never block employee creation.
+        $this->storeFiles($employee, $request);
         $this->primeDerivedSalaryValues($employee);
 
-        return redirect()->route('employees.show', $employee)
-            ->with('success', 'Employee created successfully. You can now create their self-service portal below.');
+        $message = "🎉 {$employee->first_name} is on the team! Employee number {$employee->employee_id}.";
+        $message .= $this->maybeCreatePortal($employee, $request, $portal);
+        if ($request->input('intent') === 'later') {
+            $message .= ' Saved the basics — the checklist on the right shows what\'s still missing.';
+        }
+
+        return redirect()->route('employees.show', $employee)->with('success', $message)->with('celebrate', true);
     }
 
     /*
     |--------------------------------------------------------------------------
-    | SHOW SINGLE EMPLOYEE
+    | PROFILE
     |--------------------------------------------------------------------------
     */
     public function show(Employee $employee)
     {
-        return view('dashboard.employees.show', compact('employee'));
+        $employee->load(['user']);
+
+        $payslips = $employee->payrolls()->with('run')->latest('id')->take(12)->get();
+        $leave = $employee->leaveRequests()->latest('start_date')->take(12)->get();
+        $overtime = $employee->overtimeRequests()->latest('date')->take(8)->get();
+        $loans = $employee->loans()->latest('id')->get();
+        $since = now()->subDays(30)->startOfDay();
+        $attendance = $employee->attendances()->where('date', '>=', $since)->orderByDesc('date')->get();
+
+        $attendanceSummary = $attendance->groupBy(fn ($a) => strtolower((string) $a->status))->map->count();
+
+        return view('dashboard.employees.show', [
+            'employee'          => $employee,
+            'completeness'      => $employee->profileCompleteness(),
+            'payslips'          => $payslips,
+            'leave'             => $leave,
+            'overtime'          => $overtime,
+            'loans'             => $loans,
+            'attendance'        => $attendance,
+            'attendanceSummary' => $attendanceSummary,
+            'lastPayslip'       => $payslips->first(),
+            'activeLoanBalance' => (float) $loans->whereIn('status', ['active', 'ACTIVE', 'Active'])->sum('balance') ?: (float) $employee->total_loan_balance,
+            'leaveTaken'        => (float) $leave->where('status', 'approved')->filter(fn ($l) => optional($l->start_date)->year === now()->year)->sum('days'),
+        ]);
     }
 
     /*
     |--------------------------------------------------------------------------
-    | EDIT FORM
+    | EDIT — same journey, pre-filled
     |--------------------------------------------------------------------------
     */
-    public function edit(Employee $employee)
+    public function edit(Request $request, Employee $employee)
     {
-        return view('dashboard.employees.edit', compact('employee'));
+        return view('dashboard.employees.edit', $this->formData($employee) + [
+            'startStep' => $request->query('step'),
+        ]);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | UPDATE EMPLOYEE
-    |--------------------------------------------------------------------------
-    */
-public function update(Request $request, Employee $employee)
-{
-    // 1. VALIDATION
-    $request->validate([
-        'employee_id'=> 'required',
-        'first_name' => 'required',
-        'last_name' => 'required',
-        'date_of_birth' => 'nullable|date',
-        'gender' => 'nullable|string',
-        'primary_phone' => 'nullable',
-        'position' => 'required',
-        'net_salary' => 'nullable|numeric',
-        'leave_days_entitled' => 'nullable|numeric|min:0',
-        'leave_days_balance' => 'nullable|numeric|min:0',
-    ]);
+    public function update(Request $request, Employee $employee, EmployeePortalService $portal)
+    {
+        $data = $request->validate($this->rules($employee));
 
-    // 2. SAFE DATA (NO $request->all())
-    $employee->employee_id = $request->employee_id;
-    $employee->first_name = $request->first_name;
-    $employee->middle_name = $request->middle_name;
-    $employee->last_name = $request->last_name;
-    $employee->date_of_birth = $request->date_of_birth;
-    $employee->gender = $request->gender;
-    $employee->nationality = $request->nationality;
-    $employee->nrc_no = $request->nrc_no;
-    $employee->passport_number = $request->passport_number;
-
-    $employee->personal_email = $request->personal_email;
-    $employee->company_email = $request->company_email;
-    $employee->primary_phone = $request->primary_phone;
-    $employee->secondary_phone = $request->secondary_phone;
-
-    $employee->position = $request->position;
-    $employee->department = $request->department;
-    $employee->supervisor = $request->supervisor;
-    $employee->branch = $request->branch;
-    // $employee->employment_status = $request->employment_status;
-    $employee->employment_status = $request->employment_status ?? 'Active';
-
-    $employee->probation_start = $request->probation_start;
-    $employee->probation_end = $request->probation_end;
-    $employee->contract_start = $request->contract_start;
-    $employee->contract_end = $request->contract_end;
-
-    $employee->emergency_name = $request->emergency_name;
-    $employee->emergency_relationship = $request->emergency_relationship;
-    $employee->emergency_phone = $request->emergency_phone;
-
-    $employee->next_of_kin_name = $request->next_of_kin_name;
-    $employee->next_of_kin_phone = $request->next_of_kin_phone;
-    $employee->next_of_kin_address = $request->next_of_kin_address;
-
-    $employee->bank_name = $request->bank_name;
-    $employee->bank_account_no = $request->bank_account_no;
-    $employee->ssn = $request->ssn;
-    $employee->nhima_no = $request->nhima_no;
-    $employee->tpin = $request->tpin;
-
-    $employee->net_salary = $request->net_salary ? (float) $request->net_salary : null;
-    $employee->leave_days_entitled = $request->leave_days_entitled !== null && $request->leave_days_entitled !== ''
-        ? (float) $request->leave_days_entitled
-        : null;
-    $employee->leave_days_balance = $request->leave_days_balance !== null && $request->leave_days_balance !== ''
-        ? (float) $request->leave_days_balance
-        : null;
-
-    // 3. PASSPORT PHOTO UPLOAD
-    if ($request->hasFile('passport_photo')) {
-        $path = $request->file('passport_photo')
-            ->store('uploads/employees/passports', 'public');
-
-        $employee->passport_photo = $path;
-    }
-
-    // 4. DOCUMENT UPLOADS (MERGE WITH EXISTING)
-    if ($request->hasFile('documents')) {
-
-        $uploads = $employee->uploads ?? [];
-
-        foreach ($request->file('documents') as $file) {
-            $path = $file->store('uploads/employees/documents', 'public');
-
-            $uploads[] = [
-                'name' => $file->getClientOriginalName(),
-                'path' => $path,
-                'uploaded_at' => now()->toDateTimeString(),
-            ];
+        $this->fillFromForm($employee, $data, $request);
+        if (filled($request->employee_id)) {
+            $employee->employee_id = trim($request->employee_id);
         }
+        $employee->employment_status = $employee->employment_status ?: 'Active';
+        $employee->employment_nature = $employee->employment_nature ?: 'PERMANENT';
+        $employee->leave_days_entitled = $employee->leave_days_entitled ?? 24;
 
-        $employee->uploads = $uploads;
+        // Remove documents the user ticked
+        if ($remove = (array) $request->input('remove_documents', [])) {
+            $uploads = collect($employee->uploads ?? [])->reject(fn ($u, $i) => in_array((string) $i, $remove, true))->values()->all();
+            $employee->uploads = $uploads;
+        }
+        $employee->save();
+
+        $this->storeFiles($employee, $request);
+        $this->primeDerivedSalaryValues($employee);
+
+        $message = "Saved {$employee->first_name}'s profile.";
+        $message .= $this->maybeCreatePortal($employee, $request, $portal);
+
+        return redirect()->route('employees.show', $employee)->with('success', $message);
     }
 
-    // 5. SAVE
-    $employee->save();
+    /* ------------------------------------------------------------------ */
 
-    // 6. Re-prime derived salary values in case salary, assignments, or
-    //    entitlements changed. Same defensive wrapper as store().
-    $this->primeDerivedSalaryValues($employee);
+    private function rules(?Employee $employee = null): array
+    {
+        return [
+            'employee_id'            => ['nullable', 'string', 'max:40', $employee
+                ? \Illuminate\Validation\Rule::unique('employees', 'employee_id')->ignore($employee->id)->where('company_id', $employee->company_id)
+                : 'string'],
+            'first_name'             => 'required|string|max:80',
+            'middle_name'            => 'nullable|string|max:80',
+            'last_name'              => 'required|string|max:80',
+            'date_of_birth'          => 'nullable|date|before:today',
+            'gender'                 => 'nullable|in:Male,Female',
+            'nationality'            => 'nullable|string|max:60',
+            'nrc_no'                 => 'nullable|string|max:30',
+            'passport_number'        => 'nullable|string|max:30',
+            'personal_email'         => 'nullable|email|max:120',
+            'company_email'          => 'nullable|email|max:120',
+            'primary_phone'          => 'nullable|string|max:30',
+            'secondary_phone'        => 'nullable|string|max:30',
+            'position'               => 'nullable|string|max:100',
+            'department'             => 'nullable|string|max:100',
+            'branch'                 => 'nullable|string|max:100',
+            'supervisor'             => 'nullable|string|max:120',
+            'employment_nature'      => 'nullable|in:' . implode(',', array_keys(self::NATURES)),
+            'employment_status'      => 'nullable|in:Active,Inactive,Suspended,Terminated',
+            'probation_start'        => 'nullable|date',
+            'probation_end'          => 'nullable|date',
+            'contract_start'         => 'nullable|date',
+            'contract_end'           => 'nullable|date',
+            'emergency_name'         => 'nullable|string|max:120',
+            'emergency_relationship' => 'nullable|string|max:60',
+            'emergency_phone'        => 'nullable|string|max:30',
+            'next_of_kin_name'       => 'nullable|string|max:120',
+            'next_of_kin_phone'      => 'nullable|string|max:30',
+            'next_of_kin_address'    => 'nullable|string|max:255',
+            'bank_name'              => 'nullable|string|max:100',
+            'bank_branch'            => 'nullable|string|max:100',
+            'bank_sort_code'         => 'nullable|string|max:20',
+            'bank_account_no'        => 'nullable|string|max:40',
+            'ssn'                    => 'nullable|string|max:30',
+            'nhima_no'               => 'nullable|string|max:30',
+            'tpin'                   => 'nullable|string|max:20',
+            'net_salary'             => 'nullable|numeric|min:0',
+            'leave_days_entitled'    => 'nullable|numeric|min:0|max:366',
+            'leave_days_balance'     => 'nullable|numeric|min:-366|max:366',
+            'passport_photo'         => 'nullable|image|max:4096',
+            'documents'              => 'nullable|array|max:10',
+            'documents.*'            => 'file|max:10240|mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx',
+            'create_portal'          => 'nullable|boolean',
+            'intent'                 => 'nullable|in:save,later',
+        ];
+    }
 
-    return redirect()->route('employees.index')
-        ->with('success', 'Employee updated successfully');
-}
+    private function fillFromForm(Employee $employee, array $data, Request $request): void
+    {
+        foreach (self::FORM_FIELDS as $f) {
+            if (! $request->exists($f)) {
+                continue; // keep what's stored if the field wasn't on the form
+            }
+            $v = $data[$f] ?? null;
+            $employee->{$f} = is_string($v) && trim($v) === '' ? null : (is_string($v) ? trim($v) : $v);
+        }
+        foreach (['net_salary', 'leave_days_entitled', 'leave_days_balance'] as $n) {
+            if ($employee->{$n} !== null) {
+                $employee->{$n} = (float) $employee->{$n};
+            }
+        }
+        if ($employee->bank_name && ! $employee->bank_sort_code && ($bank = Bank::findMatch($employee->bank_name))) {
+            $employee->bank_sort_code = $bank->sort_code;
+        }
+    }
+
+    private function storeFiles(Employee $employee, Request $request): void
+    {
+        $dirty = false;
+        if ($request->hasFile('passport_photo')) {
+            $employee->passport_photo = $request->file('passport_photo')->store('uploads/employees/passports', 'public');
+            $dirty = true;
+        }
+        if ($request->hasFile('documents')) {
+            $uploads = $employee->uploads ?? [];
+            foreach ($request->file('documents') as $file) {
+                $uploads[] = [
+                    'name'        => $file->getClientOriginalName(),
+                    'path'        => $file->store('uploads/employees/documents', 'public'),
+                    'uploaded_at' => now()->toDateTimeString(),
+                ];
+            }
+            $employee->uploads = $uploads;
+            $dirty = true;
+        }
+        if ($dirty) {
+            $employee->save();
+        }
+    }
+
+    private function maybeCreatePortal(Employee $employee, Request $request, EmployeePortalService $portal): string
+    {
+        if (! $request->boolean('create_portal') || $employee->user()->exists() || ! $request->user()->hasPermission('portal.manage')) {
+            return '';
+        }
+        if ($problem = $portal->eligibilityProblem($employee)) {
+            return " (Portal not created: they {$problem}.)";
+        }
+        try {
+            [$user] = $portal->grant($employee, $request->user());
+
+            return " Portal login sent to {$user->email}.";
+        } catch (\Throwable $e) {
+            report($e);
+
+            return ' (We couldn\'t send the portal email — try again from their profile.)';
+        }
+    }
+
+    private function formData(Employee $employee): array
+    {
+        $distinct = fn (string $col) => Employee::query()->whereNotNull($col)->where($col, '!=', '')->distinct()->orderBy($col)->pluck($col);
+
+        return [
+            'employee'    => $employee,
+            'departments' => $distinct('department'),
+            'branches'    => $distinct('branch'),
+            'positions'   => $distinct('position'),
+            'people'      => Employee::query()->when($employee->exists, fn ($q) => $q->whereKeyNot($employee->id))
+                ->orderBy('first_name')->get(['first_name', 'last_name'])->map(fn ($e) => trim("{$e->first_name} {$e->last_name}")),
+            'banks'       => Bank::query()->active()->orderBy('name')->get(['name', 'sort_code']),
+            'natures'     => self::NATURES,
+            'nextNumber'  => $employee->employee_id ?: app(HrActions::class)->nextEmployeeNumber(),
+        ];
+    }
 
     /*
     |--------------------------------------------------------------------------

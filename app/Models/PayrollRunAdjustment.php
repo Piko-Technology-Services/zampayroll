@@ -12,6 +12,8 @@ class PayrollRunAdjustment extends Model
         'payroll_run_id',
         'employee_id',
         'payroll_rule_id',
+        'loan_id',              // set by LoanRepaymentService
+        'overtime_request_id',  // set when approved overtime is pulled into the run
         'name',
         'type',           // 'earning' | 'deduction'
         'formula_type',   // 'fixed' | 'percentage'

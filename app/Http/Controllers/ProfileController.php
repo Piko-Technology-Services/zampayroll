@@ -36,7 +36,7 @@ class ProfileController extends Controller
             'company' => $company,
             'teamMembers' => $teamMembers,
             'pendingInvitations' => $pendingInvitations,
-            'invitableRoles' => User::INVITABLE_ROLES,
+            'invitableRoles' => \App\Models\CompanyRole::options(),
         ]);
     }
 
@@ -69,7 +69,7 @@ class ProfileController extends Controller
             'company' => $company,
             'teamMembers' => $teamMembers,
             'pendingInvitations' => $pendingInvitations,
-            'invitableRoles' => User::INVITABLE_ROLES,
+            'invitableRoles' => \App\Models\CompanyRole::options(),
         ]);
     }
 

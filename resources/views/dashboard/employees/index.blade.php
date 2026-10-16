@@ -21,11 +21,11 @@
                 <i class="bi bi-plus-lg"></i> New Employee
             </a>
 
-            <button class="emp-rail-secondary"
-                    data-bs-toggle="modal"
-                    data-bs-target="#importEmployeesModal">
-                <i class="bi bi-upload"></i> Import Employees
-            </button>
+            @if(auth()->user()->hasPermission('employees.import'))
+            <a class="emp-rail-secondary" href="{{ route('employees.import.wizard') }}" style="display:flex;align-items:center;justify-content:center;gap:.45rem;text-decoration:none">
+                <i class="bi bi-upload"></i> Import a list
+            </a>
+            @endif
 
             @php $withoutPortal = $employees->filter(fn ($e) => ! $e->user && $e->portal_email && strcasecmp((string) $e->employment_status, 'Active') === 0)->count(); @endphp
             <form method="POST" action="{{ route('employees.portal.bulk') }}"
@@ -113,7 +113,20 @@
                 </div>
             </div>
 
-            <div class="emp-toolbar">
+            @if($employees->isEmpty())
+            <div class="pp"><div class="pp-card pp-empty-team">
+                <div class="pp-done-badge" style="animation:none"><i class="bi bi-people-fill"></i></div>
+                <h2 style="font-family:var(--zp-font-display)">Let's bring your team in</h2>
+                <p class="pp-muted">Pick whichever is easiest — you can mix and match.</p>
+                <div class="opts">
+                    <a class="opt" href="{{ route('employees.import.wizard') }}"><i class="bi bi-file-earmark-spreadsheet"></i><b>Import a spreadsheet</b><small>Excel or CSV from your old payroll. Best for 5+ people.</small></a>
+                    <a class="opt" href="{{ route('employees.create') }}"><i class="bi bi-person-plus"></i><b>Add one person</b><small>A quick step-by-step journey.</small></a>
+                    <button type="button" class="opt" data-ai-prompt="I want to add employees. I will paste or attach the list."><i class="bi bi-stars"></i><b>Paste into AI mode</b><small>Paste a list in any shape — AI mode reads it.</small></button>
+                </div>
+            </div></div>
+            @endif
+
+            <div class="emp-toolbar" @if($employees->isEmpty()) hidden @endif>
                 <div class="emp-search-wrap">
                     <i class="bi bi-search emp-search-icon"></i>
                     <input type="text"
@@ -125,7 +138,7 @@
             </div>
 
             {{-- ===== TABLE VIEW ===== --}}
-            <div class="emp-card emp-table-card" id="empTableView">
+            <div class="emp-card emp-table-card" id="empTableView" @if($employees->isEmpty()) hidden @endif>
 
                 <table class="emp-table" id="empTable">
 
@@ -166,15 +179,21 @@
                             <td>
                                 <div class="emp-name-cell">
                                     <div class="emp-avatar">
-                                        <img src="{{ $employee->passport_photo
-                                            ? asset('storage/' . $employee->passport_photo)
-                                            : asset('assets/images/avatar/avatar.jpg') }}">
+                                        @if($employee->photo_url)
+                                            <img src="{{ $employee->photo_url }}" alt="">
+                                        @else
+                                            <span>{{ $employee->initials }}</span>
+                                        @endif
                                     </div>
                                     <div>
                                         <div class="emp-name">{{ $employee->first_name }} {{ $employee->last_name }}</div>
                                         <div class="emp-pos">
-                                            <i class="bi bi-briefcase"></i> {{ $employee->position }}
+                                            <i class="bi bi-briefcase"></i> {{ $employee->position ?: 'No job title yet' }}
                                         </div>
+                                        @php $pct = $employee->profileCompleteness()['percent']; @endphp
+                                        @if($pct < 100)
+                                            <div class="pp-mini-meter" title="Profile {{ $pct }}% complete"><i style="--w: {{ $pct }}%"></i>{{ $pct }}%</div>
+                                        @endif
                                     </div>
                                 </div>
                             </td>
@@ -342,6 +361,10 @@
 
 </div>
 
+
+@push('styles')
+<link rel="stylesheet" href="{{ asset('assets/css/zp-people.css') }}">
+@endpush
 
 {{-- ===== STYLES ===== --}}
 <style>

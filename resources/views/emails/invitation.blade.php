@@ -19,7 +19,7 @@
                 <p style="font-size:15px; color:#495057; line-height:1.6;">
                     {{ $invitation->inviter->name ?? 'A company administrator' }} has invited you to join
                     <strong>{{ $company->name }}</strong> on the payroll platform as a
-                    <strong>{{ \App\Models\User::INVITABLE_ROLES[$invitation->role] ?? $invitation->role }}</strong>.
+                    <strong>{{ \App\Models\CompanyRole::withoutGlobalScope('company')->where('company_id', $invitation->company_id)->where('key', $invitation->role)->value('name') ?? ucfirst($invitation->role) }}</strong>.
                 </p>
 
                 <p style="text-align:center; margin:28px 0;">

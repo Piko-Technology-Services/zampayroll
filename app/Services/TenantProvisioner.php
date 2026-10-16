@@ -59,6 +59,7 @@ class TenantProvisioner
             // Payroll rules + anything else that has to exist inside the tenant DB.
             $this->insideTenant($company, function () use ($company) {
                 DefaultPayrollRules::ensureFor((int) $company->id);
+                \App\Support\Permissions::seedDefaultRoles((int) $company->id);
             });
 
             foreach ($users as $user) {

@@ -40,6 +40,7 @@ class VerifyEmailNotification extends Notification
                 'host'        => $company?->workspaceHost(),
                 'limit'       => config('tenancy.shared_employee_limit'),
                 'expires'     => self::EXPIRES_MINUTES,
+                'companyCode' => $company?->isDedicated() ? null : $company?->company_code,
             ]);
     }
 }

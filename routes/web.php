@@ -56,12 +56,22 @@ Route::get('/payments', [PaymentController::class, 'index'])->name('payments.ind
 Route::post('/payments', [PaymentController::class, 'store'])->name('payments.store');
 
 Route::get('/', [DemoRequestController::class, 'index'])->name('home');
+
+// Public website pages (SEO)
+Route::get('/features', [\App\Http\Controllers\SiteController::class, 'features'])->name('site.features');
+Route::get('/ai-assistant', [\App\Http\Controllers\SiteController::class, 'ai'])->name('site.ai');
+Route::get('/pricing', [\App\Http\Controllers\SiteController::class, 'pricing'])->name('site.pricing');
+Route::get('/terms', [\App\Http\Controllers\SiteController::class, 'terms'])->name('site.terms');
+Route::get('/privacy', [\App\Http\Controllers\SiteController::class, 'privacy'])->name('site.privacy');
+Route::get('/sitemap.xml', [\App\Http\Controllers\SiteController::class, 'sitemap'])->name('site.sitemap');
 Route::post('/demo-request', [DemoRequestController::class, 'store'])->name('demo.request.store');
 
 Route::middleware('guest')->group(function () {
 
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
+    Route::get('/company-code', [AuthController::class, 'showCodeReminder'])->name('company-code.request');
+    Route::post('/company-code', [AuthController::class, 'sendCodeReminder'])->name('company-code.send')->middleware('throttle:5,1');
 
     // Interactive multi-step registration wizard
     Route::get('/register', [RegistrationController::class, 'show'])->name('register');
@@ -142,6 +152,9 @@ Route::post('/payroll/{payroll}/email', [PayslipMailController::class, 'sendSing
 Route::post('/payroll/runs/{run}/email-all', [PayslipMailController::class, 'sendBulk'])
     ->name('payroll.email.bulk');
 
+Route::get('/settings/payroll-approvals', [\App\Http\Controllers\PayrollApprovalSettingsController::class, 'index'])->name('payroll-approvals.index');
+Route::put('/settings/payroll-approvals', [\App\Http\Controllers\PayrollApprovalSettingsController::class, 'update'])->name('payroll-approvals.update');
+
 Route::prefix('payroll/runs')->name('payroll.runs.')->group(function () {
  
     // ... your existing routes (index, create, store, show, generate,
@@ -178,6 +191,13 @@ Route::group([], function () { // (inside staff area)
 
     Route::post('/employees/import', [EmployeeController::class, 'import'])
         ->name('employees.import');
+
+    // "Bring your team" bulk importer
+    Route::get('/employees/import', [\App\Http\Controllers\EmployeeImportController::class, 'index'])->name('employees.import.wizard');
+    Route::get('/employees/import/template', [\App\Http\Controllers\EmployeeImportController::class, 'template'])->name('employees.import.template');
+    Route::post('/employees/import/parse', [\App\Http\Controllers\EmployeeImportController::class, 'parse'])->name('employees.import.parse');
+    Route::post('/employees/import/preview', [\App\Http\Controllers\EmployeeImportController::class, 'preview'])->name('employees.import.preview');
+    Route::post('/employees/import/commit', [\App\Http\Controllers\EmployeeImportController::class, 'commit'])->name('employees.import.commit');
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])
@@ -367,11 +387,19 @@ Route::middleware(['auth', 'staff'])->prefix('payroll')->name('payroll.')->group
     // -------------------------
     // PAYROLL RUNS (BATCH LEVEL)
     // -------------------------
-    Route::get('/runs/all', [PayrollRunController::class, 'index'])->name('runs.index');
-    Route::get('/runs/create', [PayrollRunController::class, 'create'])->name('runs.create');
-    Route::post('/runs', [PayrollRunController::class, 'store'])->name('runs.store');
+    // Guided payroll: start → check → submit → approval chain → locked → paid
+    Route::get('/runs/all', [\App\Http\Controllers\PayrollFlowController::class, 'index'])->name('runs.index');
+    Route::get('/runs/create', [\App\Http\Controllers\PayrollFlowController::class, 'create'])->name('runs.create');
+    Route::post('/runs', [\App\Http\Controllers\PayrollFlowController::class, 'store'])->name('runs.store');
+    Route::get('/runs/{run}/editor', [PayrollRunController::class, 'show'])->name('runs.editor');
+    Route::post('/runs/{run}/submit', [\App\Http\Controllers\PayrollFlowController::class, 'submit'])->name('runs.submit');
+    Route::post('/runs/{run}/approve', [\App\Http\Controllers\PayrollFlowController::class, 'approve'])->name('runs.approve');
+    Route::post('/runs/{run}/send-back', [\App\Http\Controllers\PayrollFlowController::class, 'sendBack'])->name('runs.sendBack');
+    Route::post('/runs/{run}/recall', [\App\Http\Controllers\PayrollFlowController::class, 'recall'])->name('runs.recall');
+    Route::post('/runs/{run}/paid', [\App\Http\Controllers\PayrollFlowController::class, 'markPaid'])->name('runs.paid');
+    Route::post('/runs/{run}/overtime', [\App\Http\Controllers\PayrollFlowController::class, 'overtime'])->name('runs.overtime');
 
-    Route::get('/runs/{run}', [PayrollRunController::class, 'show'])->name('runs.show');
+    Route::get('/runs/{run}', [\App\Http\Controllers\PayrollFlowController::class, 'show'])->name('runs.show');
 
     Route::post('/runs/{run}/generate', [PayrollRunController::class, 'generate'])->name('runs.generate');
 
@@ -475,4 +503,30 @@ Route::middleware(['auth', 'employee', 'force.password'])->prefix('portal')->nam
     Route::get('/loans', [PortalRequestController::class, 'loans'])->name('loans');
     Route::post('/loans', [PortalRequestController::class, 'storeLoan'])->name('loans.store');
     Route::delete('/loans/{loanRequest}', [PortalRequestController::class, 'cancelLoan'])->name('loans.cancel');
+});
+
+/*
+|--------------------------------------------------------------------------
+| AI MODE — floating assistant (HR / admin users)
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'staff', 'throttle:40,1'])->prefix('ai')->name('ai.')->group(function () {
+    Route::post('/message', [\App\Http\Controllers\AiAssistantController::class, 'message'])->name('message');
+    Route::post('/actions/{token}/confirm', [\App\Http\Controllers\AiAssistantController::class, 'confirm'])->name('confirm');
+    Route::post('/actions/{token}/cancel', [\App\Http\Controllers\AiAssistantController::class, 'cancel'])->name('cancel');
+    Route::post('/reset', [\App\Http\Controllers\AiAssistantController::class, 'reset'])->name('reset');
+});
+
+/*
+|--------------------------------------------------------------------------
+| TEAM & ROLES (Settings) — needs the "Manage team" permission
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'staff'])->prefix('settings/team')->name('team.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\TeamController::class, 'index'])->name('index');
+    Route::put('/members/{user}', [\App\Http\Controllers\TeamController::class, 'updateMember'])->name('members.update');
+    Route::delete('/members/{user}', [\App\Http\Controllers\TeamController::class, 'removeMember'])->name('members.destroy');
+    Route::post('/roles', [\App\Http\Controllers\TeamController::class, 'storeRole'])->name('roles.store');
+    Route::put('/roles', [\App\Http\Controllers\TeamController::class, 'updateRoles'])->name('roles.update');
+    Route::delete('/roles/{role}', [\App\Http\Controllers\TeamController::class, 'destroyRole'])->name('roles.destroy');
 });

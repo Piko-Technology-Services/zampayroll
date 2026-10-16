@@ -54,6 +54,7 @@ class Employee extends Model
         'branch',
         'supervisor',
         'employment_status',
+        'employment_nature',
 
         /*
         |--------------------------------------------------------------------------
@@ -89,6 +90,8 @@ class Employee extends Model
         |--------------------------------------------------------------------------
         */
         'bank_name',
+        'bank_branch',
+        'bank_sort_code',
         'bank_account_no',
         'ssn',
         'nhima_no',
@@ -141,7 +144,7 @@ class Employee extends Model
     // Full name helper
     public function getFullNameAttribute()
     {
-        return trim("{$this->first_name} {$this->middle_name} {$this->last_name}");
+        return trim(preg_replace('/\s+/', ' ', "{$this->first_name} {$this->middle_name} {$this->last_name}"));
     }
 
     // Passport photo URL helper
@@ -246,5 +249,58 @@ class Employee extends Model
         $days = $this->company?->working_days_per_month;
 
         return ($days && $days > 0) ? (int) $days : 26;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | PROFILE COMPLETENESS
+    |--------------------------------------------------------------------------
+    */
+
+    /** What a complete file needs, grouped the same way as the add-employee journey. */
+    public const PROFILE_CHECKS = [
+        'who'       => ['label' => 'Personal', 'fields' => ['first_name' => 'First name', 'last_name' => 'Last name', 'date_of_birth' => 'Date of birth', 'gender' => 'Gender', 'nrc_no' => 'NRC']],
+        'job'       => ['label' => 'Job', 'fields' => ['position' => 'Job title', 'department' => 'Department', 'contract_start' => 'Start date']],
+        'pay'       => ['label' => 'Pay & bank', 'fields' => ['net_salary' => 'Take-home pay', 'bank_name' => 'Bank', 'bank_account_no' => 'Account number']],
+        'statutory' => ['label' => 'ZRA · NAPSA · NHIMA', 'fields' => ['tpin' => 'TPIN', 'ssn' => 'NAPSA number', 'nhima_no' => 'NHIMA number']],
+        'contact'   => ['label' => 'Contact', 'fields' => ['primary_phone' => 'Mobile', 'portal_email' => 'Email', 'next_of_kin_name' => 'Next of kin']],
+    ];
+
+    /**
+     * @return array{percent:int, missing:array<string,array<string,string>>, done:int, total:int}
+     */
+    public function profileCompleteness(): array
+    {
+        $missing = [];
+        $done = $total = 0;
+        foreach (self::PROFILE_CHECKS as $step => $group) {
+            foreach ($group['fields'] as $field => $label) {
+                $total++;
+                $value = $this->{$field};
+                if ($value !== null && $value !== '' && ! ($field === 'net_salary' && (float) $value <= 0)) {
+                    $done++;
+                } else {
+                    $missing[$step][$field] = $label;
+                }
+            }
+        }
+
+        return ['percent' => (int) round($done / max($total, 1) * 100), 'missing' => $missing, 'done' => $done, 'total' => $total];
+    }
+
+    public function getInitialsAttribute(): string
+    {
+        return strtoupper(mb_substr((string) $this->first_name, 0, 1) . mb_substr((string) $this->last_name, 0, 1));
+    }
+
+    /** Public URL for the photo, or null (views show initials instead). */
+    public function getPhotoUrlAttribute(): ?string
+    {
+        return $this->passport_photo ? asset('storage/' . $this->passport_photo) : null;
+    }
+
+    public function attendances()
+    {
+        return $this->hasMany(Attendance::class);
     }
 }

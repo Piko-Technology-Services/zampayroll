@@ -16,6 +16,11 @@
 
     @include('emails.partials.button', ['url' => $url, 'label' => 'Confirm my email'])
 
+    @if($companyCode)
+        <p style="margin:0 0 12px;background:#EAF3EA;border-radius:10px;padding:12px 14px;">Your company code is
+            <strong style="font-size:18px;letter-spacing:.06em;">{{ $companyCode }}</strong>. You and your team will use it, with your email and password, to sign in.</p>
+    @endif
+
     <p style="margin:0 0 6px;font-size:13px;color:#6B6F78;">The link expires in {{ $expires }} minutes. If the button doesn't work, paste this into your browser:</p>
     <p style="margin:0;font-size:12px;word-break:break-all;"><a href="{{ $url }}" style="color:#00742D;">{{ $url }}</a></p>
 @endsection

@@ -52,4 +52,14 @@ class Payroll extends Model
 }
 
 
+
+    /** True once the pay run has gone for approval (or is approved/paid). */
+    public function isLocked(): bool
+    {
+        if (in_array($this->status, ['Approved', 'Paid'], true)) {
+            return true;
+        }
+
+        return $this->run ? ! $this->run->isEditable() : false;
+    }
 }

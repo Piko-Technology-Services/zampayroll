@@ -16,6 +16,9 @@
                 <div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:#00742D;margin-bottom:10px;">Your sign-in details</div>
                 <table role="presentation" cellpadding="0" cellspacing="0" style="font-size:14px;">
                     <tr><td style="padding:3px 14px 3px 0;color:#6B6F78;">Portal</td><td style="padding:3px 0;"><a href="{{ $loginUrl }}" style="color:#00742D;font-weight:600;">{{ parse_url($loginUrl, PHP_URL_HOST) }}</a></td></tr>
+                    @if($companyCode)
+                    <tr><td style="padding:3px 14px 3px 0;color:#6B6F78;">Company code</td><td style="padding:3px 0;font-weight:700;letter-spacing:.06em;">{{ $companyCode }}</td></tr>
+                    @endif
                     <tr><td style="padding:3px 14px 3px 0;color:#6B6F78;">Email</td><td style="padding:3px 0;font-weight:600;">{{ $user->email }}</td></tr>
                     <tr><td style="padding:3px 14px 3px 0;color:#6B6F78;">Temporary password</td><td style="padding:3px 0;"><code style="font-size:15px;background:#fff;border:1px dashed #00742D;border-radius:6px;padding:3px 8px;">{{ $temporaryPassword }}</code></td></tr>
                 </table>
@@ -28,7 +31,7 @@
     <div style="font-size:15px;font-weight:700;margin:4px 0 8px;color:#14161A;">How to get started</div>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;line-height:1.55;">
         @foreach([
-            ['🔑', 'Sign in', 'Use the email and temporary password above. You\'ll be asked to choose your own password straight away.'],
+            ['🔑', 'Sign in', 'Use the company code, email and temporary password above. You\'ll be asked to choose your own password straight away.'],
             ['🧾', 'Payslips', 'Open <strong>Payslips</strong> to view or download every finalised payslip as a PDF.'],
             ['🌴', 'Leave', 'Go to <strong>Leave</strong>, pick your dates and we\'ll count the working days and your return date for you.'],
             ['⏱️', 'Overtime', 'Log extra hours under <strong>Overtime</strong> — the estimated payout is shown before you submit.'],

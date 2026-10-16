@@ -28,6 +28,8 @@
     
             <div class="container-fluid px-3 px-lg-4 py-4">
 
+                @include('partials.module-tabs')
+
                 @include('partials.alerts')
 
                 @if(request()->routeIs('dashboard'))
@@ -178,66 +180,10 @@ document.addEventListener('DOMContentLoaded', function () {
 </div>
 
 
-<div class="modal fade" id="importEmployeesModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-
-        <div class="modal-content">
-
-            {{-- HEADER --}}
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="bi bi-file-earmark-spreadsheet me-2"></i>
-                    Import Employees
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-
-            {{-- BODY --}}
-            <div class="modal-body">
-
-                <p class="text-muted small mb-3">
-                    Upload a CSV file to bulk create employees. Make sure it follows the required format.
-                </p>
-
-                {{-- DOWNLOAD SAMPLE --}}
-                <a href="{{ route('employees.sample-csv') }}"
-                   class="btn btn-sm btn-outline-success mb-3 w-100">
-                    <i class="bi bi-download"></i>
-                    Download Sample CSV
-                </a>
-
-                {{-- UPLOAD FORM --}}
-                <form method="POST"
-                      action="{{ route('employees.import') }}"
-                      enctype="multipart/form-data">
-
-                    @csrf
-
-                    <label class="form-label">Select CSV File</label>
-
-                    <input type="file"
-                           name="file"
-                           accept=".csv"
-                           class="form-control mb-3"
-                           required>
-
-                    <button class="btn btn-primary w-100">
-                        <i class="bi bi-cloud-upload"></i>
-                        Upload & Import
-                    </button>
-
-                </form>
-
-            </div>
-
-        </div>
-
-    </div>
-</div>
-
 @stack('modals')
 
 <script src="{{ asset('assets/js/zp-confetti.js') }}"></script>
+@include('partials.ai-mode')
 @if(session('celebrate'))
     <script>window.addEventListener('load', () => ZPConfetti.burst());</script>
 @endif

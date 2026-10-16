@@ -112,7 +112,7 @@ class EmployeePortalService
                 $password,
                 Tenancy::company()?->name ?? 'your company',
                 $grantedBy->name,
-                route('login', ['email' => $user->email]),
+                route('login', array_filter(['email' => $user->email, 'code' => \App\Support\Tenancy::isDedicated() ? null : $user->company?->company_code])),
             ));
         } catch (\Throwable $e) {
             report($e);

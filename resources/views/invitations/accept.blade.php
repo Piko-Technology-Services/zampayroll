@@ -90,11 +90,8 @@
 
                 <div class="mb-4">
                     <label class="form-label small">Role</label>
-                    <select name="role" class="form-select">
-                        @foreach($invitableRoles as $value => $label)
-                            <option value="{{ $value }}" @selected(old('role', $invitation->role) === $value)>{{ $label }}</option>
-                        @endforeach
-                    </select>
+                    <input type="text" class="form-control" value="{{ $invitableRoles[$invitation->role] ?? ucfirst($invitation->role) }}" disabled>
+                    <div class="form-text">Set by the person who invited you.</div>
                 </div>
 
                 <button class="btn btn-primary w-100" @if(!$isNewUser && !auth()->check()) disabled @endif>

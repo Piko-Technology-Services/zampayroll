@@ -169,6 +169,10 @@ class PayrollRunController extends Controller
     */
     public function trash(PayrollRun $run)
     {
+        if (! $run->isEditable()) {
+            return back()->with('error', 'Approved or in-approval payrolls can\'t be deleted — they are part of your records.');
+        }
+
         $run->delete(); // soft delete — recoverable from the Trash view
 
         return redirect()->route('payroll.runs.index')
@@ -290,45 +294,16 @@ class PayrollRunController extends Controller
     | the payment against the loan's running balance in the ledger.
     |
     */
-    public function generate(PayrollRun $run, PayrollEngine $engine, LoanRepaymentService $loanService)
+    public function generate(PayrollRun $run)
     {
-        if ($run->status === 'Approved') {
-            return back()->with('error', 'This payroll run has already been finalized.');
+        if (! $run->isEditable()) {
+            return back()->with('error', 'This payroll is waiting for approval or already locked. Recall it to make changes.');
         }
 
-        $employees = Employee::where('employment_status', 'Active')->get();
+        // Same routine AI mode uses ("prepare this month's payroll").
+        app(\App\Services\HrActions::class)->generatePayroll($run, auth()->user());
 
-        foreach ($employees as $employee) {
-            $payroll = Payroll::updateOrCreate(
-                [
-                    'payroll_run_id' => $run->id,
-                    'employee_id'    => $employee->id,
-                ],
-                [
-                    'pay_period'   => $run->period,
-                    'company'      => (\App\Support\Tenancy::company()?->name ?? 'ZAMPAYROLL'),
-                    'branch'       => $employee->branch,
-                    'cost_centre'  => $employee->department,
-                    'date_engaged' => $employee->contract_start,
-                    'salary_rate'  => $employee->net_salary ?? 0,
-                    'status'       => 'Draft',
-                ]
-            );
-
-            // Sync any due loan-repayment deductions BEFORE the engine
-            // reads adjustments, so they're included in this build.
-            $loanService->syncForEmployee($run, $employee->id);
-
-            $engine->build($payroll);
-
-            // Now that the payslip items exist, confirm the loan
-            // deduction landed and post it against the loan ledger.
-            $loanService->recordDeductions($payroll);
-        }
-
-        $run->update(['status' => 'Processed']);
-
-        return back()->with('success', 'Payroll generated successfully.');
+        return redirect()->route('payroll.runs.show', $run)->with('success', 'Recalculated. Check the highlights below.');
     }
 
     /*
@@ -349,8 +324,8 @@ class PayrollRunController extends Controller
         PayrollRun $run,
         PayrollEngine $engine
     ) {
-        if ($run->status === 'Approved') {
-            return back()->with('error', 'Cannot adjust a finalized payroll run.');
+        if (! $run->isEditable()) {
+            return response()->json(['success' => false, 'message' => 'This payroll is waiting for approval or already locked. Recall it to make changes.'], 423);
         }
 
         $request->validate([
@@ -439,12 +414,8 @@ class PayrollRunController extends Controller
             'file' => 'required|file|mimes:csv'
         ]);
 
-        if ($run->status === 'Approved') {
-
-            return back()->with(
-                'error',
-                'Cannot modify a finalized payroll run.'
-            );
+        if (! $run->isEditable()) {
+            return back()->with('error', 'This payroll is waiting for approval or already locked. Recall it to make changes.');
         }
 
         Excel::import(
@@ -475,17 +446,9 @@ class PayrollRunController extends Controller
     ) {
         $run = $adjustment->run;
 
-        // Log::info('Payroll Run DESTROY - ', [
-        //     'run_id'      => $run->id,
-        //     'Run Status'      => $run->status,
-        // ]);
-
-        // if ($run->status === 'Approved') {
-        //     return response()->json([
-        //         'success' => false,
-        //         'message' => 'Cannot modify a finalized payroll run.',
-        //     ], 403);
-        // }
+        if ($run && ! $run->isEditable()) {
+            return response()->json(['success' => false, 'message' => 'This payroll is waiting for approval or already locked. Recall it to make changes.'], 423);
+        }
 
         $payroll = Payroll::where('payroll_run_id', $adjustment->payroll_run_id)
             ->where('employee_id', $adjustment->employee_id)
@@ -511,29 +474,9 @@ class PayrollRunController extends Controller
     */
     public function finalize(PayrollRun $run)
     {
-        if ($run->payrolls()->count() === 0) {
-            return back()->with('error', 'Generate payroll before finalizing.');
-        }
-
-        // Lock all payslips
-        Payroll::where('payroll_run_id', $run->id)
-            ->update(['status' => 'Approved']);
-
-        // Aggregate from locked payslip records
-        $totalIncome     = $run->payrolls()->sum('total_income');
-        $totalDeductions = $run->payrolls()->sum('total_deductions');
-        $totalNet        = $run->payrolls()->sum('net_pay');
-
-        $run->update([
-            'total_income'     => $totalIncome,
-            'total_deductions' => $totalDeductions,
-            'net_pay'          => $totalNet,
-            'status'           => 'Approved',
-            'finalized_at'     => now(),
-            'finalized_by'     => auth()->id(),
-        ]);
-
-        return back()->with('success', 'Payroll run finalized successfully.');
+        // Runs are no longer locked in one click: they go through the approval chain.
+        return redirect()->route('payroll.runs.show', $run)
+            ->with('info', 'Payroll is now approved through your approval chain. Submit it for approval below.');
     }
 
     /*
@@ -571,11 +514,8 @@ class PayrollRunController extends Controller
 
         $payroll = $item->payroll;
 
-        if ($payroll->status === 'Approved') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Cannot edit a finalized payslip.',
-            ], 403);
+        if ($payroll->isLocked()) {
+            return response()->json(['success' => false, 'message' => 'This payroll is waiting for approval or already locked. Recall it to make changes.'], 423);
         }
 
         Log::info('Payroll item field updated (direct override)', [
@@ -608,11 +548,8 @@ class PayrollRunController extends Controller
     {
         $payroll = $item->payroll;
 
-        if ($payroll && $payroll->status === 'Approved') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Cannot edit a finalized payslip.',
-            ], 403);
+        if ($payroll && $payroll->isLocked()) {
+            return response()->json(['success' => false, 'message' => 'This payroll is waiting for approval or already locked. Recall it to make changes.'], 423);
         }
 
         $item->delete();

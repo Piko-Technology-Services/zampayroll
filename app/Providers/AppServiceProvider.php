@@ -28,6 +28,15 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->makeQueueTenantAware();
+
+        // @can('payroll.run') / ->can(...) in Blade and code use the company's role permissions.
+        \Illuminate\Support\Facades\Gate::before(function ($user, string $ability) {
+            if (\App\Support\Permissions::exists($ability) && method_exists($user, 'hasPermission')) {
+                return $user->hasPermission($ability);
+            }
+
+            return null;
+        });
     }
 
     /**

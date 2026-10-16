@@ -31,6 +31,15 @@ class LoanRepaymentService
 
         $periodDate = $this->resolvePeriodDate($run);
 
+        // Older versions lost the loan link (loan_id wasn't fillable), leaving
+        // orphan "Loan Repayment" lines that piled up on every recalculation.
+        PayrollRunAdjustment::where('payroll_run_id', $run->id)
+            ->where('employee_id', $employeeId)
+            ->where('payroll_rule_id', $rule->id)
+            ->whereNull('loan_id')
+            ->where('name', 'like', 'Loan Repayment%')
+            ->delete();
+
         $loans = Loan::where('employee_id', $employeeId)
             ->where('status', 'active')
             ->get();
@@ -179,6 +188,11 @@ class LoanRepaymentService
      */
     private function resolvePeriodDate(PayrollRun $run): Carbon
     {
+        // A repayment due any day in the run's month belongs to that month's payroll.
+        if ($run->period_date) {
+            return $run->period_date->copy()->endOfMonth();
+        }
+
         try {
             return Carbon::parse($run->period);
         } catch (\Exception $e) {

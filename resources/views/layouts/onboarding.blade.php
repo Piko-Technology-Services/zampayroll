@@ -18,6 +18,7 @@
             <img src="{{ asset('assets/images/logo.png') }}" alt="">
             <span class="zp-brand-word"><b>Zam</b>Payroll</span>
         </a>
+        <div style="position:absolute;top:1.6rem;right:1.6rem;z-index:3">@include('partials.translate', ['variant' => 'dark'])</div>
         @yield('aside')
     </aside>
 

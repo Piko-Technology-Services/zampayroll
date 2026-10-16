@@ -9,14 +9,15 @@ use Symfony\Component\HttpFoundation\Response;
 class EnsureCompanyAdmin
 {
     /**
-     * Only company_admin (or super_admin) users may proceed.
-     * Blocks company-settings management, access-code control, and invitations.
+     * Company settings, access codes and invitations: administrators, or any
+     * role the administrator has given "Company settings" or "Manage team" to.
+     * (Fine-grained checks happen in EnsureStaff.)
      */
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();
 
-        if (! $user || (! $user->isCompanyAdmin() && ! $user->isSuperAdmin())) {
+        if (! $user || ! ($user->hasPermission('settings.company') || $user->hasPermission('team.manage'))) {
             abort(403, 'Only company administrators can perform this action.');
         }
 

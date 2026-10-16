@@ -23,6 +23,8 @@
 
         <div class="navbar-actions ms-auto">
 
+        @include('partials.translate', ['variant' => 'light'])
+
         {{-- Theme Toggle --}}
     
             <button class="icon-button" type="button" data-theme-toggle>

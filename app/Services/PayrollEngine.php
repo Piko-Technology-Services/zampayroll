@@ -551,7 +551,8 @@ class PayrollEngine
             $rule = PayrollRule::where('id', $adj->payroll_rule_id)->first();
 
 
-            $this->addItem($payroll, $rule->code, $adj->name, 'earning',
+            // One-off adjustments may have no rule (e.g. overtime pulled in automatically).
+            $this->addItem($payroll, $rule?->code ?? ($adj->overtime_request_id ? 'OVERTIME' : 'ADJ'), $adj->name, 'earning',
                 round((float) ($adj->value ?? 0), 2));
         }
     }
@@ -581,7 +582,7 @@ class PayrollEngine
         foreach ($adjustments->where('type', 'deduction') as $adj) {
             $rule = PayrollRule::where('id', $adj->payroll_rule_id)->first();
 
-            $this->addItem($payroll, $rule->code, $adj->name, 'deduction',
+            $this->addItem($payroll, $rule?->code ?? 'ADJ', $adj->name, 'deduction',
                 round((float) ($adj->value ?? 0), 2));
         }
     }

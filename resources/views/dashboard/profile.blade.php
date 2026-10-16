@@ -61,7 +61,7 @@
                 <div class="text-start small">
                     <p class="mb-2">
                         <i class="bi bi-shield-lock me-1 text-primary"></i>
-                        Role: {{ \App\Models\User::INVITABLE_ROLES[$user->role] ?? ucfirst($user->role ?? 'User') }}
+                        Role: {{ $user->roleName() }}
                     </p>
                     <p class="mb-2">
                         <i class="bi bi-calendar-check me-1 text-success"></i>
@@ -112,7 +112,7 @@
 
                         <div class="col-md-6">
                             <label class="text-muted form-label">Role</label>
-                            <input type="text" class="form-control" value="{{ \App\Models\User::INVITABLE_ROLES[$user->role] ?? ucfirst($user->role ?? 'User') }}" disabled>
+                            <input type="text" class="form-control" value="{{ $user->roleName() }}" disabled>
                             <small class="text-muted">Role is managed by your company administrator.</small>
                         </div>
 
@@ -254,6 +254,8 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="zp-alert zp-alert-info mt-3"><i class="bi bi-shield-lock"></i><div>Roles and permissions now live in <a href="{{ route('team.index') }}" style="font-weight:600;color:inherit">Settings → Team &amp; roles</a>, together with your company code.</div></div>
 
                 {{-- 5. TEAM MEMBERS --}}
                 <div class="card shadow-sm border-0 p-3 mt-3">

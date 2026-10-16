@@ -17,7 +17,7 @@ class DemoRequestController extends Controller
      */
     public function index()
     {
-        return view('landing');
+        return view('site.home');
     }
 
     /**
@@ -75,7 +75,7 @@ class DemoRequestController extends Controller
         }
 
         return redirect()
-            ->route('home')
+            ->to(route('home') . '#demo')
             ->with('demo_request_success', true);
     }
 }

@@ -24,6 +24,8 @@
         <i class="bi bi-moon-stars" data-theme-icon></i>
     </button>
 
+    <div style="position:fixed;top:1rem;right:4.5rem;z-index:50">@include('partials.translate', ['variant' => 'dark'])</div>
+
     <main class="auth-page">
         <section class="auth-card @yield('card_size')" id="page-content">
 
