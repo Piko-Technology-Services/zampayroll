@@ -1,222 +1,178 @@
 @extends('layouts.app')
 
+@section('title', 'Loans · ZamPayroll')
+
+@push('styles')
+<link rel="stylesheet" href="{{ asset('assets/css/zp-people.css') }}">
+<link rel="stylesheet" href="{{ asset('assets/css/zp-payroll.css') }}">
+<link rel="stylesheet" href="{{ asset('assets/css/zp-requests.css') }}">
+@endpush
+
+@php
+    $u = auth()->user();
+    $k = fn ($n) => 'K ' . number_format((float) $n, 2);
+    $tabs = ['pending' => 'Waiting', 'approved' => 'Approved', 'rejected' => 'Rejected', 'cancelled' => 'Cancelled', 'all' => 'All'];
+    $plans = \App\Models\LoanRequest::PAYMENT_PLANS;
+@endphp
+
 @section('content')
-
-<div class="lnd p-5">
-
-    <div class="lnd-header">
+<div class="pr pp rq">
+    <div class="pr-head">
         <div>
-            <div class="lnd-eyebrow">Loan Management</div>
-            <h1 class="lnd-title">Loan Requests</h1>
-            <div class="lnd-subtitle">Applications, their proposed repayment terms, and where each one stands</div>
+            <h1>Loans &amp; advances</h1>
+            <p>Three steps, each recorded: <b>approve</b> → <b>pay out</b> → repayments come out of pay automatically.</p>
         </div>
-        <a href="{{ route('loan.ledger.index') }}" class="lnd-btn lnd-btn-outline">
-            <i class="bi bi-journal-text"></i> Loan Ledger
-        </a>
+        <div class="pr-head-actions">
+            <a href="{{ route('loan.ledger.index') }}" class="pp-btn pp-btn-ghost"><i class="bi bi-journal-text"></i> Loan ledger</a>
+            @if($u->hasPermission('loans.manage'))<a href="{{ route('loan.ledger.create') }}" class="pp-btn pp-btn-primary"><i class="bi bi-plus-lg"></i> Add a loan</a>@endif
+        </div>
     </div>
 
-    @if(session('success'))
-        <div class="lnd-alert"><i class="bi bi-check-circle"></i> {{ session('success') }}</div>
+    <div class="rq-kpis">
+        <div class="rq-kpi main"><span>Requests waiting</span><b>{{ $counts['pending'] }}</b><small style="color:rgba(255,255,255,.7)">{{ $k($totals['pending_amount']) }} asked</small></div>
+        <div class="rq-kpi"><span>Approved, not paid out</span><b>{{ $k($totals['awaiting_payout']) }}</b></div>
+        <div class="rq-kpi"><span>Running loans</span><b>{{ $totals['active'] }}</b></div>
+        <div class="rq-kpi"><span>Still owed to the company</span><b>{{ $k($totals['outstanding']) }}</b></div>
+    </div>
+
+    @if($awaitingPayout->isNotEmpty())
+        <section class="pr-card" style="margin-bottom:1rem;border-color:#c9d6f5">
+            <div class="pr-card-head">
+                <div><h2><i class="bi bi-cash-stack" style="color:#2E4C9A"></i> Waiting to be paid out</h2><div class="sub">Approved, but the money hasn't been recorded as paid. Nothing is deducted from pay until it is.</div></div>
+            </div>
+            <div class="rq-list">
+                @foreach($awaitingPayout as $loan)
+                    <article class="rq-item">
+                        <div class="rq-av">{{ $loan->employee?->initials }}</div>
+                        <div class="rq-main">
+                            <div class="rq-who"><b>{{ $loan->employee?->full_name }}</b><small>{{ $loan->employee?->employee_id }}</small><span class="rq-pill pending_disbursement">Not paid out</span></div>
+                            <div class="rq-what">
+                                <span><i class="bi bi-cash"></i> <b>{{ $k($loan->principal_amount) }}</b></span>
+                                <span><i class="bi bi-arrow-repeat"></i> {{ $loan->payment_plan === 'once_off' ? 'Once-off' : $k($loan->installment_amount) . ' ' . ($loan->payment_plan === 'bi_monthly' ? 'every 2 months' : 'a month') }}</span>
+                                <span><i class="bi bi-calendar"></i> from {{ $loan->next_deduction_date?->format('F Y') }}</span>
+                            </div>
+                            <div class="rq-trail"><span><i class="bi bi-check2-circle"></i>Approved by {{ $loan->approvedBy?->name ?? '—' }} · {{ optional($loan->approved_at)->format('j M Y') }}</span></div>
+                        </div>
+                        <div class="rq-side">
+                            @if($service->canDisburse($u, $loan))
+                                <button type="button" class="pp-btn pp-btn-sm pp-btn-primary" data-rq-open="pay{{ $loan->id }}"><i class="bi bi-cash-coin"></i> Record payout</button>
+                            @elseif($u->hasPermission('loans.disburse'))
+                                <small style="color:var(--zp-ink-3);max-width:180px;text-align:right">Someone other than the approver records the payout.</small>
+                            @else
+                                <small style="color:var(--zp-ink-3)">Waiting for payroll/finance</small>
+                            @endif
+                            @if($u->hasPermission('loans.manage'))
+                                <details class="rq-more"><summary><i class="bi bi-x-circle"></i> Cancel</summary>
+                                    <form method="POST" action="{{ route('loan.loans.cancel', $loan) }}">@csrf
+                                        <input class="pp-input" type="text" name="reason" placeholder="Reason" style="width:150px;padding:.45rem .6rem;font-size:.8rem"><button class="pp-btn pp-btn-sm rq-btn-no">Cancel loan</button></form>
+                                </details>
+                            @endif
+                        </div>
+                    </article>
+                    @push('modals')
+                        <div class="rq-modal-bg" id="pay{{ $loan->id }}">
+                            <form class="rq-modal" method="POST" action="{{ route('loan.disburse', $loan) }}">
+                                @csrf
+                                <h2 class="zp-display">Record payout</h2>
+                                <div class="sub">{{ $loan->employee?->full_name }} · {{ $k($loan->principal_amount) }}. Only record this once the money has been paid.</div>
+                                <div class="rq-grid2">
+                                    <div class="pp-field"><label>Date paid</label><input class="pp-input" type="date" name="date" value="{{ today()->toDateString() }}" max="{{ today()->toDateString() }}" required></div>
+                                    <div class="pp-field"><label>How</label>
+                                        <select class="pp-select" name="method" required>@foreach(\App\Models\Loan::DISBURSEMENT_METHODS as $m => $label)<option value="{{ $m }}">{{ $label }}</option>@endforeach</select>
+                                    </div>
+                                </div>
+                                <div class="pp-field"><label>Reference <small>(bank or mobile money reference)</small></label><input class="pp-input" name="reference" maxlength="120"></div>
+                                <div class="pp-field"><label>First repayment from</label><input class="pp-input" type="month" name="first_deduction" value="{{ $loan->next_deduction_date?->format('Y-m') }}" min="{{ now()->format('Y-m') }}"></div>
+                                <div class="rq-modal-actions">
+                                    <button type="button" class="pp-btn pp-btn-ghost" data-rq-close>Close</button>
+                                    <button class="pp-btn pp-btn-primary"><i class="bi bi-check-lg"></i> Money was paid</button>
+                                </div>
+                            </form>
+                        </div>
+                    @endpush
+                @endforeach
+            </div>
+        </section>
     @endif
 
-    {{-- ===== COMPREHENSIVE SUMMARY ===== --}}
-    <div class="lnd-summary">
-        <div class="lnd-summary-card">
-            <div class="lnd-summary-label">Pending Review</div>
-            <div class="lnd-summary-value">{{ $counts['pending'] }}</div>
-            <div class="lnd-summary-sub">K {{ number_format($totals['pending_amount'], 2) }} requested</div>
-        </div>
-        <div class="lnd-summary-card">
-            <div class="lnd-summary-label">Approved</div>
-            <div class="lnd-summary-value">{{ $counts['approved'] }}</div>
-            <div class="lnd-summary-sub">K {{ number_format($totals['approved_amount'], 2) }} total</div>
-        </div>
-        <div class="lnd-summary-card lnd-summary-warn">
-            <div class="lnd-summary-label">Awaiting Ledger Entry</div>
-            <div class="lnd-summary-value">{{ $totals['awaiting_ledger'] }}</div>
-            <div class="lnd-summary-sub">Approved but not yet tracked</div>
-        </div>
-        <div class="lnd-summary-card">
-            <div class="lnd-summary-label">Rejected</div>
-            <div class="lnd-summary-value">{{ $counts['rejected'] }}</div>
-        </div>
+    <div class="rq-bar">
+        <nav class="rq-tabs">
+            @foreach($tabs as $key => $label)
+                <a href="{{ route('loan.dashboard', array_filter(['status' => $key, 'q' => request('q')])) }}" class="rq-tab {{ $status === $key ? 'on' : '' }}">{{ $label }} @isset($counts[$key])<span class="n">{{ $counts[$key] }}</span>@endisset</a>
+            @endforeach
+        </nav>
+        <form class="rq-filters" method="GET"><input type="hidden" name="status" value="{{ $status }}"><input class="pp-input" type="search" name="q" value="{{ request('q') }}" placeholder="Search a name or number"></form>
     </div>
 
-    <div class="lnd-tabs">
-        @foreach(['all' => 'All', 'pending' => 'Pending', 'approved' => 'Approved', 'rejected' => 'Rejected'] as $key => $label)
-            <a href="{{ route('loan.dashboard', ['status' => $key]) }}" class="lnd-tab {{ $status === $key ? 'lnd-tab-active' : '' }}">
-                {{ $label }} @if(isset($counts[$key]))<span class="lnd-tab-count">{{ $counts[$key] }}</span>@endif
-            </a>
-        @endforeach
-    </div>
-
-    <div class="lnd-card">
-        <table class="lnd-table">
-            <thead>
-                <tr>
-                    <th>Employee</th>
-                    <th class="num">Amount</th>
-                    <th>Payment Plan</th>
-                    <th class="num">Installment</th>
-                    <th>Est. Duration</th>
-                    <th>Documents</th>
-                    <th>Status</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($requests as $req)
-                    <tr>
-                        <td>
-                            <div class="lnd-emp-name">{{ $req->employee->first_name }} {{ $req->employee->last_name }}</div>
-                            <div class="lnd-emp-id"><i class="bi bi-hash"></i>{{ $req->employee->employee_id }}</div>
-                        </td>
-                        <td class="num lnd-mono">K {{ number_format($req->amount, 2) }}</td>
-                        <td>
-                            {{ \App\Models\LoanRequest::PAYMENT_PLANS[$req->payment_plan] ?? $req->payment_plan }}
-                            @if($req->payment_plan_note)
-                                <div class="lnd-td-muted">{{ $req->payment_plan_note }}</div>
-                            @endif
-                        </td>
-                        <td class="num lnd-mono">
-                            @if($req->payment_plan === 'once_off')
-                                <span class="lnd-td-muted">Full amount</span>
-                            @elseif($req->installment_amount)
-                                K {{ number_format($req->installment_amount, 2) }}
-                            @else
-                                <span class="lnd-td-muted">—</span>
-                            @endif
-                        </td>
-                        <td class="lnd-td-muted">
-                            @php $installments = $req->estimatedInstallments(); @endphp
-                            @if($installments)
-                                {{ $installments }} installment{{ $installments === 1 ? '' : 's' }}
-                                <div class="lnd-td-faint">by {{ $req->estimatedPayoffDate()?->format('M Y') }}</div>
-                            @else
-                                <span class="lnd-td-faint">—</span>
-                            @endif
-                        </td>
-                        <td>
-                            @if(!empty($req->documents))
-                                @foreach($req->documents as $doc)
-                                    <a href="{{ asset('storage/' . $doc['path']) }}" target="_blank" class="lnd-doc-link">
-                                        <i class="bi bi-file-earmark-text"></i> {{ Str::limit($doc['name'], 16) }}
-                                    </a>
-                                @endforeach
-                            @else
-                                <span class="lnd-td-muted">—</span>
-                            @endif
-                        </td>
-                        <td>
-                            <span class="lnd-status lnd-status-{{ $req->status }}">{{ ucfirst($req->status) }}</span>
-                            @if($req->status === 'approved')
-                                @if($req->loan)
-                                    <div class="lnd-ledger-flag lnd-ledger-in"><i class="bi bi-check2"></i> In Ledger</div>
-                                @else
-                                    <div class="lnd-ledger-flag lnd-ledger-out"><i class="bi bi-exclamation-circle"></i> Not Ledgered</div>
-                                @endif
-                            @endif
-                        </td>
-                        <td class="lnd-actions">
-                            @if($req->status === 'pending')
-                                <form method="POST" action="{{ route('loan.approve', $req) }}" class="lnd-decision-form">
+    <div class="rq-list">
+        @forelse($requests as $req)
+            @php $emp = $req->employee; $decide = $service->canDecide($u, $req); $months = $req->estimatedInstallments(); @endphp
+            <article class="rq-item {{ $decide ? 'attn' : '' }}">
+                <div class="rq-av">{{ $emp?->initials }}</div>
+                <div class="rq-main">
+                    <div class="rq-who"><b>{{ $emp?->full_name ?? 'Former employee' }}</b><small>{{ $emp?->employee_id }}{{ $emp?->department ? ' · ' . $emp->department : '' }}</small>
+                        @if($emp && (float) $emp->total_loan_balance > 0)<span class="rq-type">already owes {{ $k($emp->total_loan_balance) }}</span>@endif</div>
+                    <div class="rq-what">
+                        <span><i class="bi bi-cash"></i> <b>{{ $k($req->amount) }}</b></span>
+                        <span><i class="bi bi-arrow-repeat"></i> {{ $plans[$req->payment_plan] ?? $req->payment_plan }}{{ $req->installment_amount ? ' · ' . $k($req->installment_amount) : '' }}</span>
+                        @if($months)<span><i class="bi bi-hourglass-split"></i> about {{ $months }} deduction{{ $months === 1 ? '' : 's' }}</span>@endif
+                        @if($emp && $emp->net_salary)<span><i class="bi bi-wallet2"></i> take-home {{ $k($emp->net_salary) }}</span>@endif
+                    </div>
+                    @if($req->reason)<div class="rq-note">“{{ $req->reason }}”</div>@endif
+                    @if($req->documents)
+                        <div class="rq-docs">@foreach($req->documents as $doc)<a href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($doc['path']) }}" target="_blank" rel="noopener"><i class="bi bi-paperclip"></i> {{ \Illuminate\Support\Str::limit($doc['name'] ?? 'Document', 28) }}</a>@endforeach</div>
+                    @endif
+                    <div class="rq-trail">
+                        <span><i class="bi bi-send"></i>Asked {{ $req->created_at->diffForHumans() }}</span>
+                        @if($req->reviewed_at && in_array($req->status, ['approved', 'rejected'], true))<span><i class="bi bi-check2-circle"></i>{{ ucfirst($req->status) }} by {{ $req->reviewedBy?->name }} · {{ $req->reviewed_at->format('j M') }}</span>@endif
+                        @if($req->loan)<span><i class="bi bi-journal-text"></i><a href="{{ route('loan.ledger.show', $req->loan) }}">On the ledger · {{ strtolower($req->loan->statusLabel()) }}</a></span>@endif
+                        @if($req->hr_comment)<span><i class="bi bi-chat-left-text"></i>{{ $req->hr_comment }}</span>@endif
+                        @if($req->status === 'cancelled')<span><i class="bi bi-x-circle"></i>Cancelled{{ $req->cancel_reason ? ' — ' . $req->cancel_reason : '' }}</span>@endif
+                    </div>
+                </div>
+                <div class="rq-side">
+                    <span class="rq-pill {{ $req->status }}">{{ $req->statusLabel() }}</span>
+                    @if($decide)
+                        <button type="button" class="pp-btn pp-btn-sm pp-btn-primary" data-rq-open="ok{{ $req->id }}"><i class="bi bi-check-lg"></i> Approve…</button>
+                        <form method="POST" action="{{ route('loan.reject', $req) }}" class="rq-decide">@csrf
+                            <input class="pp-input" type="text" name="comment" placeholder="Reason (optional)" style="width:150px"><button class="pp-btn pp-btn-sm rq-btn-no"><i class="bi bi-x-lg"></i> Reject</button></form>
+                        @push('modals')
+                            <div class="rq-modal-bg" id="ok{{ $req->id }}">
+                                <form class="rq-modal" method="POST" action="{{ route('loan.approve', $req) }}">
                                     @csrf
-                                    <input type="text" name="comment" class="lnd-comment" placeholder="Comment (optional)">
-                                    <button class="lnd-btn-icon lnd-btn-approve" title="Approve"><i class="bi bi-check-lg"></i></button>
+                                    <h2 class="zp-display">Approve loan</h2>
+                                    <div class="sub">{{ $emp?->full_name }} asked for {{ $k($req->amount) }}. You can change the terms. Approving puts it on the ledger as "not paid out yet".</div>
+                                    <div class="rq-grid2">
+                                        <div class="pp-field"><label>Amount (K)</label><input class="pp-input" type="number" step="0.01" min="1" name="amount" value="{{ (float) $req->amount }}"></div>
+                                        @if($req->payment_plan !== 'once_off')<div class="pp-field"><label>Each deduction (K)</label><input class="pp-input" type="number" step="0.01" min="0.01" name="installment_amount" value="{{ (float) $req->installment_amount }}"></div>@endif
+                                    </div>
+                                    <div class="pp-field"><label>First deduction</label><input class="pp-input" type="month" name="first_deduction" value="{{ now()->addMonthNoOverflow()->format('Y-m') }}" min="{{ now()->format('Y-m') }}"></div>
+                                    <div class="pp-field"><label>Note to the employee <small>(optional)</small></label><input class="pp-input" type="text" name="comment" maxlength="500"></div>
+                                    <div class="rq-modal-actions"><button type="button" class="pp-btn pp-btn-ghost" data-rq-close>Close</button><button class="pp-btn pp-btn-primary"><i class="bi bi-check-lg"></i> Approve</button></div>
                                 </form>
-                                <form method="POST" action="{{ route('loan.reject', $req) }}" class="lnd-decision-form">
-                                    @csrf
-                                    <button class="lnd-btn-icon lnd-btn-reject" title="Reject" onclick="return confirm('Reject this loan request?');"><i class="bi bi-x-lg"></i></button>
-                                </form>
-                            @elseif($req->status === 'approved' && !$req->loan)
-                                <a href="{{ route('loan.ledger.create') }}" class="lnd-btn-icon lnd-btn-ledger" title="Add to Ledger"><i class="bi bi-journal-plus"></i></a>
-                            @elseif($req->loan)
-                                <a href="{{ route('loan.ledger.show', $req->loan) }}" class="lnd-btn-icon lnd-btn-ledger" title="View in Ledger"><i class="bi bi-eye"></i></a>
-                            @endif
-                        </td>
-                    </tr>
-                @empty
-                    <tr><td colspan="8" class="lnd-empty">No loan requests here.</td></tr>
-                @endforelse
-            </tbody>
-        </table>
+                            </div>
+                        @endpush
+                    @endif
+                    @if($req->status === 'pending' && $u->hasPermission('loans.manage'))
+                        <details class="rq-more"><summary><i class="bi bi-x-circle"></i> Cancel</summary>
+                            <form method="POST" action="{{ route('loan.cancel', $req) }}">@csrf<input class="pp-input" type="text" name="reason" placeholder="Reason" style="width:150px;padding:.45rem .6rem;font-size:.8rem"><button class="pp-btn pp-btn-sm rq-btn-no">Cancel it</button></form>
+                        </details>
+                    @endif
+                </div>
+            </article>
+        @empty
+            <div class="rq-empty"><i class="bi bi-cash-coin"></i>{{ $status === 'pending' ? 'No loan requests waiting.' : 'Nothing here.' }}</div>
+        @endforelse
     </div>
-
+    <div style="margin-top:1rem">{{ $requests->links() }}</div>
 </div>
-
-<style>
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
-.lnd * { box-sizing: border-box; }
-.lnd {
-    --paper: #ffffff;
-    --ink: #00742E;
-    --ink-soft: #58687D;
-    --ink-faint: #93A0B2;
-    --brass: #00742E;
-    --brass-soft: #EAF7ED;
-    --line: #D9E9DE;
-    --accent-orange: #E97B00;
-    --accent-red: #D50115;
-    --active: #00742E;
-    --active-bg: #EAF7ED;
-    --warn: #D50115;
-    --warn-bg: #FDEBEC;
-    font-family: 'IBM Plex Sans', sans-serif; color: var(--ink); background: var(--paper); padding: 1.5rem 0 2.5rem;
-}
-.lnd-header { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: .75rem; margin-bottom: 1rem; }
-.lnd-eyebrow { font-family: 'IBM Plex Sans', sans-serif; font-size: .68rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--brass); margin-bottom: .2rem; }
-.lnd-title { font-family: 'IBM Plex Sans', sans-serif; font-size: 1.4rem; font-weight: 700; margin: 0; }
-.lnd-subtitle { font-size: .8rem; color: var(--ink-faint); margin-top: .2rem; }
-.lnd-btn { display: inline-flex; align-items: center; gap: .4rem; font-size: .8rem; font-weight: 600; padding: .55rem 1rem; border-radius: 6px; text-decoration: none; border: 1px solid var(--line); background: #fff; color: var(--ink-soft); }
-.lnd-btn-outline:hover { border-color: var(--brass); color: var(--brass); }
-.lnd-alert { border-radius: 6px; font-size: .84rem; padding: .7rem 1rem; margin-bottom: 1rem; background: var(--active-bg); color: var(--active); border: 1px solid var(--line); }
-
-.lnd-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1rem; }
-@media (max-width: 800px) { .lnd-summary { grid-template-columns: repeat(2, 1fr); } }
-.lnd-summary-card { background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: .9rem 1.1rem; border-top: 3px solid var(--brass); }
-.lnd-summary-card.lnd-summary-warn { border-top-color: var(--accent-orange); }
-.lnd-summary-label { font-size: .64rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-faint); margin-bottom: .4rem; }
-.lnd-summary-value { font-size: 1.3rem; font-weight: 700; color: var(--ink); }
-.lnd-summary-sub { font-size: .72rem; color: var(--ink-faint); margin-top: .2rem; }
-
-.lnd-tabs { display: flex; gap: .4rem; margin-bottom: 1rem; }
-.lnd-tab { display: inline-flex; align-items: center; gap: .4rem; font-size: .8rem; font-weight: 600; padding: .5rem .9rem; border-radius: 6px; text-decoration: none; color: var(--ink-soft); border: 1px solid var(--line); background: #fff; }
-.lnd-tab-active { background: var(--ink); color: #fff; border-color: var(--ink); }
-.lnd-tab-count { font-size: .68rem; background: rgba(0,116,46,.08); padding: .05rem .4rem; border-radius: 10px; }
-.lnd-tab-active .lnd-tab-count { background: rgba(255,255,255,.2); }
-
-.lnd-card { background: #fff; border: 1px solid var(--line); border-radius: 6px; overflow-x: auto; }
-.lnd-table { width: 100%; border-collapse: collapse; font-size: .82rem; min-width: 1080px; }
-.lnd-table thead th { font-size: .64rem; font-weight: 600; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .06em; padding: .8rem 1rem; border-bottom: 2px solid var(--ink); text-align: left; background: #F9FCFA; }
-.lnd-table thead th.num, .lnd-table td.num { text-align: right; }
-.lnd-table td { padding: .6rem 1rem; border-bottom: 1px solid var(--line); vertical-align: middle; }
-.lnd-mono { font-family: 'IBM Plex Sans', sans-serif; }
-.lnd-emp-name { font-weight: 600; font-size: .82rem; }
-.lnd-emp-id { font-size: .66rem; color: var(--ink-faint); }
-.lnd-td-muted { color: var(--ink-faint); font-size: .72rem; }
-.lnd-td-faint { color: var(--ink-faint); font-size: .68rem; margin-top: .1rem; }
-.lnd-empty { text-align: center; color: var(--ink-faint); padding: 1.5rem 0 !important; }
-.lnd-doc-link { display: block; font-size: .74rem; color: var(--ink-soft); text-decoration: none; margin-bottom: .2rem; }
-.lnd-doc-link:hover { color: var(--brass); }
-
-.lnd-status { display: inline-block; font-size: .68rem; font-weight: 700; padding: .2rem .6rem; border-radius: 4px; text-transform: uppercase; }
-.lnd-status-pending { background: #FFF2E7; color: var(--accent-orange); }
-.lnd-status-approved { background: var(--active-bg); color: var(--active); }
-.lnd-status-rejected { background: var(--warn-bg); color: var(--warn); }
-
-.lnd-ledger-flag { display: flex; align-items: center; gap: .3rem; font-size: .66rem; font-weight: 600; margin-top: .3rem; }
-.lnd-ledger-in { color: var(--active); }
-.lnd-ledger-out { color: var(--accent-orange); }
-
-.lnd-actions { display: flex; gap: .4rem; align-items: center; }
-.lnd-decision-form { display: flex; align-items: center; gap: .3rem; }
-.lnd-comment { font-size: .74rem; padding: .3rem .5rem; border: 1px solid var(--line); border-radius: 4px; width: 110px; }
-.lnd-btn-icon { width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border-radius: 5px; border: 1px solid var(--line); background: #fff; cursor: pointer; text-decoration: none; color: var(--ink-soft); }
-.lnd-btn-approve { color: var(--active); }
-.lnd-btn-approve:hover { background: var(--active-bg); border-color: var(--line); }
-.lnd-btn-reject { color: var(--warn); }
-.lnd-btn-reject:hover { background: var(--warn-bg); border-color: #F2C7CC; }
-.lnd-btn-ledger:hover { background: var(--brass-soft); color: var(--ink); border-color: var(--brass); }
-</style>
-
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[data-rq-open]').forEach(b => b.addEventListener('click', () => document.getElementById(b.dataset.rqOpen).classList.add('open')));
+    document.querySelectorAll('.rq-modal-bg').forEach(bg => bg.addEventListener('click', e => { if (e.target === bg || e.target.closest('[data-rq-close]')) bg.classList.remove('open'); }));
+});
+</script>
+@endpush

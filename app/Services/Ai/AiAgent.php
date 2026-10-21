@@ -169,11 +169,15 @@ PROMPT;
         try {
             // ---- employees from a file or pasted CSV
             if ($attachment || (Str::contains($m, ['add', 'import', 'onboard', 'create']) && Str::contains($m, ['employee', 'staff', 'worker']) && substr_count($message, "\n") >= 1)) {
-                $rows = $attachment['rows'] ?? $this->rowsFromPaste($message);
-                $employees = array_map(fn ($r) => $this->mapColumns($r), $rows);
+                // Any layout: tables, several sheets, or messy text — see SmartEmployeeParser.
+                $employees = $attachment['employees']
+                    ?? \App\Services\Import\SmartEmployeeParser::employees(app(\App\Services\Import\SmartEmployeeParser::class)->fromText($message));
+                if (! $employees && ! empty($attachment['rows'])) {
+                    $employees = array_map(fn ($r) => $this->mapColumns($r), $attachment['rows']);
+                }
                 $res = $use('propose_add_employees', ['employees' => $employees]);
                 $reply = isset($res['error'])
-                    ? "I couldn't find employee rows I understand. In basic mode I need a table with a header row (e.g. First Name, Last Name, Position, Net Salary, NRC). " . $res['error']
+                    ? "I couldn't find anyone in that. Put each person on their own line (or attach a spreadsheet) starting with their name, e.g. “Chanda Mwila, 0977 123 456, accountant, net K8,500”. " . $res['error']
                     : "I've prepared {$res['new']} employee" . ($res['new'] === 1 ? '' : 's') . ' from your list. Check the preview and press Confirm.';
             }
             // ---- approve / reject leave or overtime for someone
@@ -255,18 +259,6 @@ PROMPT;
         $reply ??= "I can help with questions like **how many employees do we have**, **who is on leave today**, **how much was last month's payroll**, and actions like **approve leave for Mary**, **prepare this month's payroll** or attaching an employee list to add people.";
 
         return ['reply' => $reply, 'cards' => $this->cards, 'mode' => 'basic'];
-    }
-
-    private function rowsFromPaste(string $text): array
-    {
-        $lines = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $text)), fn ($l) => $l !== '' && (str_contains($l, ',') || str_contains($l, "\t") || str_contains($l, '|') || str_contains($l, ';'))));
-        if (count($lines) < 2) {
-            return [];
-        }
-        $delim = collect([',', "\t", '|', ';'])->sortByDesc(fn ($d) => substr_count($lines[0], $d))->first();
-        $headers = array_map('trim', str_getcsv($lines[0], $delim));
-
-        return array_map(fn ($l) => array_combine($headers, array_pad(array_map('trim', array_slice(str_getcsv($l, $delim), 0, count($headers))), count($headers), '')), array_slice($lines, 1));
     }
 
     /**

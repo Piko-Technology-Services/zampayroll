@@ -15,7 +15,7 @@
     <section class="pp-hero">
         <div class="pp-eyebrow">People · Bring your team</div>
         <h1>Import your whole team in three steps</h1>
-        <p>Drop the spreadsheet from your old payroll system (Sage, Pastel, QuickBooks, Excel — anything). We match the columns, you check the list, done.</p>
+        <p>Drop the spreadsheet from your old payroll system (Sage, Pastel, QuickBooks, Excel, anything), or just paste a message with your people in it. We sort it out, you check the list, done.</p>
     </section>
 
     <ol class="pp-steps" id="ppSteps">
@@ -31,19 +31,19 @@
     <div class="pp-panel" data-panel="1">
         <div class="pp-sources">
             <label class="pp-drop" id="ppDrop">
-                <input type="file" id="ppFile" accept=".xlsx,.xls,.csv,.tsv,.txt">
+                <input type="file" id="ppFile" accept=".xlsx,.xls,.ods,.csv,.tsv,.txt">
                 <div class="pp-drop-icon"><i class="bi bi-file-earmark-spreadsheet"></i></div>
                 <strong id="ppDropTitle">Drop your Excel or CSV file here</strong>
-                <div class="pp-muted">or click to choose a file · up to {{ number_format(\App\Http\Controllers\EmployeeImportController::MAX_ROWS) }} people</div>
+                <div class="pp-muted">Any layout — titles, several sheets, odd column names · up to {{ number_format(\App\Http\Controllers\EmployeeImportController::MAX_ROWS) }} people</div>
                 <div class="pp-formats"><span>.XLSX</span><span>.XLS</span><span>.CSV</span></div>
             </label>
 
             <div class="pp-card pp-paste">
                 <div class="pp-card-title" style="margin-bottom:.6rem">
-                    <h3><i class="bi bi-clipboard-check me-1"></i> …or paste from a spreadsheet</h3>
+                    <h3><i class="bi bi-clipboard-check me-1"></i> …or paste anything</h3>
                 </div>
-                <p class="pp-muted" style="margin:0 0 .6rem">Select the rows in Excel or Google Sheets (including the heading row), copy, and paste here.</p>
-                <textarea id="ppPaste" placeholder="First name	Surname	NRC	Job title	Net pay&#10;Chanda	Mwila	123456/10/1	Accountant	8500"></textarea>
+                <p class="pp-muted" style="margin:0 0 .6rem">Rows copied from Excel, a WhatsApp message, an email, your notes. We pick out names, NRCs, phones, emails, pay, banks and job titles. Put each person on their own line or paragraph.</p>
+                <textarea id="ppPaste" placeholder="Chanda Mwila, NRC 123456/10/1, 0977 123 456, accountant in Finance, net K8,500, Zanaco 0123456789012&#10;&#10;Bwalya Phiri – driver, 0966 555 111, born 12/03/1990, basic 4500"></textarea>
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-top:.7rem;gap:.6rem;flex-wrap:wrap">
                     <a class="pp-link" href="{{ route('employees.import.template') }}"><i class="bi bi-download"></i> Download a blank template</a>
                     <button class="pp-btn pp-btn-primary" type="button" id="ppPasteGo">Continue <i class="bi bi-arrow-right"></i></button>
@@ -52,7 +52,7 @@
         </div>
 
         <div class="pp-tips">
-            <div class="pp-tip"><i class="bi bi-magic"></i><div><b>Any column names</b>"Surname", "Man No", "NAPSA No", "Take home"… we recognise them.</div></div>
+            <div class="pp-tip"><i class="bi bi-magic"></i><div><b>Any layout</b>"Surname", "Man No", "Take home", headings on row 5, one sheet per branch, or no headings at all. We work it out.</div></div>
             <div class="pp-tip"><i class="bi bi-shield-check"></i><div><b>No double entries</b>People already on your team (same NRC, email or name) are spotted for you.</div></div>
             <div class="pp-tip"><i class="bi bi-hourglass-split"></i><div><b>Only names are required</b>Missing NRC, TPIN or bank details? Import now and finish profiles later.</div></div>
         </div>
@@ -66,6 +66,7 @@
                     <div>
                         <h2>Match your columns</h2>
                         <div class="pp-muted"><span id="ppSource"></span> · <span id="ppRowCount"></span> people found. We matched what we could — change anything that looks wrong.</div>
+                        <ul class="pp-notes" id="ppNotes" hidden></ul>
                     </div>
                 </div>
                 <div class="pp-maplist" id="ppMapList"></div>
@@ -193,6 +194,9 @@
             Object.assign(state, { headers: d.headers, samples: d.samples, mapping: d.mapping, raw: d.rows });
             $('#ppSource').textContent = d.source;
             $('#ppRowCount').textContent = d.rows.length;
+            const notes = $('#ppNotes');
+            notes.innerHTML = (d.notes || []).map(n => '<li><i class="bi bi-info-circle"></i> ' + esc(n) + '</li>').join('');
+            notes.hidden = !(d.notes || []).length;
             renderMap();
             go(2);
         } catch (err) { showError(err.message); }
@@ -213,7 +217,7 @@
     });
     $('#ppPasteGo').addEventListener('click', () => {
         const t = $('#ppPaste').value.trim();
-        if (!t) { showError('Paste your list first — include the heading row.'); return; }
+        if (!t) { showError('Paste your list first. Any format works.'); return; }
         const fd = new FormData(); fd.append('paste', t); parse(fd, 'your list');
     });
 

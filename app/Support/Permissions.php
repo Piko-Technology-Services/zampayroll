@@ -29,6 +29,7 @@ class Permissions
             'overtime.approve' => 'Review and approve overtime',
             'loans.view'       => 'See loan requests and the loan ledger',
             'loans.manage'     => 'Approve loans and record repayments',
+            'loans.disburse'   => 'Record loan payouts (money paid to the employee)',
         ],
         'Payroll' => [
             'payroll.view'     => 'See payroll runs and payslips',
@@ -42,6 +43,7 @@ class Permissions
         ],
         'Administration' => [
             'settings.company' => 'Company settings and bank templates',
+            'billing.manage'   => 'Subscription, invoices and payments to ZamPayroll',
             'team.manage'      => 'Invite people and manage roles',
             'ai.use'           => 'Use AI mode',
         ],
@@ -62,7 +64,7 @@ class Permissions
         'payroll' => [
             'name' => 'Payroll Officer',
             'description' => 'Prepares payroll, loans and statutory returns.',
-            'permissions' => ['employees.view', 'attendance.view', 'leave.view', 'overtime.approve', 'loans.view', 'loans.manage',
+            'permissions' => ['employees.view', 'attendance.view', 'leave.view', 'overtime.approve', 'loans.view', 'loans.manage', 'loans.disburse',
                 'payroll.view', 'payroll.run', 'payroll.rules', 'reports.view', 'reports.statutory', 'ai.use'],
         ],
         'manager' => [
@@ -87,6 +89,7 @@ class Permissions
      */
     public const ROUTE_MAP = [
         'employees.portal.*'           => 'portal.manage',
+        'employees.changes.*'          => 'employees.manage',
         'employees.import'             => 'employees.import',
         'employees.import.*'           => 'employees.import',
         'employees.sample-csv'         => 'employees.import',
@@ -104,6 +107,10 @@ class Permissions
         'attendance.*'                 => 'attendance.manage',
 
         'leave.approve'                => 'leave.approve',
+        'leave.cancel'                 => 'leave.approve',
+        'leave.record'                 => 'leave.approve',
+        'leave.check'                  => 'leave.approve',
+        'leave.types.*'                => 'leave.approve',
         'leave.reject'                 => 'leave.approve',
         'leave.sheet.update'           => 'leave.approve',
         'leave.cell.update'            => 'leave.approve',
@@ -111,6 +118,7 @@ class Permissions
 
         'overtime.*'                   => 'overtime.approve',
 
+        'loan.disburse'                => 'loans.disburse',
         'loan.dashboard'               => 'loans.view',
         'loan.ledger.index'            => 'loans.view',
         'loan.ledger.show'             => 'loans.view',
@@ -142,6 +150,7 @@ class Permissions
         'payroll.*'                    => 'payroll.run',
 
         'company.*'                    => 'settings.company',
+        'billing.*'                    => 'billing.manage',
         'bank-templates.*'             => 'settings.company',
         'invitations.store'            => 'team.manage',
         'invitations.revoke'           => 'team.manage',

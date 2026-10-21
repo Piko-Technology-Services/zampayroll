@@ -31,7 +31,7 @@
     <div style="font-size:15px;font-weight:700;margin:4px 0 8px;color:#14161A;">How to get started</div>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;line-height:1.55;">
         @foreach([
-            ['🔑', 'Sign in', 'Use the company code, email and temporary password above. You\'ll be asked to choose your own password straight away.'],
+            ['🔑', 'Sign in', 'Use your email and the temporary password above. You\'ll be asked to choose your own password straight away.'],
             ['🧾', 'Payslips', 'Open <strong>Payslips</strong> to view or download every finalised payslip as a PDF.'],
             ['🌴', 'Leave', 'Go to <strong>Leave</strong>, pick your dates and we\'ll count the working days and your return date for you.'],
             ['⏱️', 'Overtime', 'Log extra hours under <strong>Overtime</strong> — the estimated payout is shown before you submit.'],

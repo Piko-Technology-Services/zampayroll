@@ -126,6 +126,24 @@
             <div id="scheduleMore" class="llc-schedule-more" style="display:none;"></div>
         </div>
 
+        {{-- ================= PAYOUT ================= --}}
+        <div class="llc-card">
+            <div class="llc-section-label">Payout</div>
+            @if(auth()->user()->hasPermission('loans.disburse'))
+                <label style="display:flex;gap:.5rem;align-items:center;font-size:.86rem;margin-bottom:.6rem">
+                    <input type="checkbox" name="paid_out" value="1" id="paidOutToggle" @checked(old('paid_out'))> The money has already been paid to the employee
+                </label>
+                <div class="llc-grid" id="paidOutFields" style="{{ old('paid_out') ? '' : 'display:none' }}">
+                    <div class="llc-field"><label class="llc-label">Date paid</label><input type="date" name="disbursed_at" class="llc-input" value="{{ old('disbursed_at', now()->toDateString()) }}" max="{{ now()->toDateString() }}"></div>
+                    <div class="llc-field"><label class="llc-label">How</label>
+                        <select name="disbursement_method" class="llc-input">@foreach(\App\Models\Loan::DISBURSEMENT_METHODS as $m => $label)<option value="{{ $m }}" @selected(old('disbursement_method') === $m)>{{ $label }}</option>@endforeach</select></div>
+                    <div class="llc-field"><label class="llc-label">Reference</label><input type="text" name="disbursement_reference" class="llc-input" value="{{ old('disbursement_reference') }}" maxlength="120"></div>
+                </div>
+                <script>document.getElementById('paidOutToggle').addEventListener('change', e => document.getElementById('paidOutFields').style.display = e.target.checked ? '' : 'none');</script>
+            @endif
+            <p style="font-size:.8rem;color:#58687D;margin:.4rem 0 0">Repayments only come out of pay once the payout is recorded{{ auth()->user()->hasPermission('loans.disburse') ? '' : ' by someone allowed to record payouts' }}.</p>
+        </div>
+
         <div class="llc-actions">
             <a href="{{ route('loan.ledger.index') }}" class="llc-btn llc-btn-outline">Cancel</a>
             <button class="llc-btn llc-btn-primary"><i class="bi bi-save"></i> Save Loan</button>

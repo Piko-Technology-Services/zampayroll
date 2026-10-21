@@ -5,7 +5,7 @@
 <div class="pt-page-head">
     <div>
         <h1>My profile</h1>
-        <p>Keep your contact details current. Job, salary and bank details are managed by HR.</p>
+        <p>Keep your contact details current. Job and salary are managed by HR; bank changes are checked by HR first.</p>
     </div>
     <a class="zp-btn zp-btn-ghost" href="{{ route('portal.password.edit') }}"><i class="bi bi-key"></i> Change password</a>
 </div>
@@ -79,6 +79,60 @@
             </div>
             <button class="zp-btn zp-btn-primary" type="submit"><i class="bi bi-check2"></i> Save my details</button>
         </form>
+    </div>
+
+    <div class="pt-card pt-span-12" id="bank">
+        <h3>Change the bank account my salary goes to</h3>
+        <p class="zp-hint" style="margin-top:-.4rem">For your safety, HR checks this with you before anything changes. You'll get an email when you send it and when HR decides.</p>
+        @php $waiting = $changes->firstWhere('status', 'pending'); @endphp
+        @if($waiting)
+            <div class="pt-estimate" style="justify-content:space-between;align-items:center">
+                <span>Waiting for HR: <b>{{ $waiting->changes['bank_name'] ?? '' }} ••••{{ substr((string) ($waiting->changes['bank_account_no'] ?? ''), -4) }}</b>, sent {{ $waiting->created_at->diffForHumans() }}</span>
+                <form method="POST" action="{{ route('portal.profile.changes.cancel', $waiting) }}" onsubmit="return confirm('Cancel this change?')">@csrf @method('DELETE')<button class="zp-btn-link" style="border:0;background:none;color:var(--zp-red)">Cancel</button></form>
+            </div>
+        @else
+            <form method="POST" action="{{ route('portal.profile.bank') }}" enctype="multipart/form-data" novalidate>
+                @csrf
+                <div class="ob-grid">
+                    <div class="zp-field">
+                        <label class="zp-label" for="bank_name">Bank</label>
+                        <input class="zp-input @error('bank_name') is-invalid @enderror" name="bank_name" id="bank_name" list="bankList" value="{{ old('bank_name') }}" required>
+                        <datalist id="bankList">@foreach($banks as $b)<option value="{{ $b }}">@endforeach</datalist>
+                        @error('bank_name')<div class="zp-error">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="zp-field">
+                        <label class="zp-label" for="bank_branch">Branch <small>(optional)</small></label>
+                        <input class="zp-input" name="bank_branch" id="bank_branch" value="{{ old('bank_branch') }}">
+                    </div>
+                    <div class="zp-field">
+                        <label class="zp-label" for="bank_account_no">New account number</label>
+                        <input class="zp-input @error('bank_account_no') is-invalid @enderror" name="bank_account_no" id="bank_account_no" inputmode="numeric" autocomplete="off" required>
+                        @error('bank_account_no')<div class="zp-error">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="zp-field">
+                        <label class="zp-label" for="bank_account_no_confirmation">Type it again</label>
+                        <input class="zp-input @error('bank_account_no_confirmation') is-invalid @enderror" name="bank_account_no_confirmation" id="bank_account_no_confirmation" inputmode="numeric" autocomplete="off" required>
+                        @error('bank_account_no_confirmation')<div class="zp-error">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="zp-field">
+                        <label class="zp-label" for="document">Bank letter or card <small>(optional, PDF/photo)</small></label>
+                        <input class="zp-input" type="file" name="document" id="document" accept=".pdf,.jpg,.jpeg,.png">
+                    </div>
+                    <div class="zp-field">
+                        <label class="zp-label" for="note">Note for HR <small>(optional)</small></label>
+                        <input class="zp-input" name="note" id="note" maxlength="500" value="{{ old('note') }}">
+                    </div>
+                </div>
+                <button class="zp-btn zp-btn-ghost" type="submit"><i class="bi bi-shield-check"></i> Send to HR to check</button>
+            </form>
+        @endif
+        @if($changes->where('status', '!=', 'pending')->isNotEmpty())
+            <ul class="pt-list mt-2">
+                @foreach($changes->where('status', '!=', 'pending') as $c)
+                    <li><span class="ic"><i class="bi bi-bank"></i></span><span class="tx"><b>{{ $c->changes['bank_name'] ?? '' }} ••••{{ substr((string) ($c->changes['bank_account_no'] ?? ''), -4) }}</b><span>{{ $c->created_at->format('j M Y') }}{{ $c->review_comment ? ' · HR: ' . $c->review_comment : '' }}</span></span><span class="pt-status {{ $c->status }}">{{ $c->statusLabel() }}</span></li>
+                @endforeach
+            </ul>
+        @endif
     </div>
 </div>
 @endsection

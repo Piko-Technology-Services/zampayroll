@@ -7,7 +7,7 @@
             Leave Application Update
         </div>
         <h2 style="margin:0 0 16px; font-size:18px; color:{{ $leaveRequest->status === 'approved' ? '#2F6F4E' : '#9B3A2A' }};">
-            Your leave request has been {{ $leaveRequest->status }}
+            Your {{ strtolower($leaveRequest->typeName()) }} request has been {{ $leaveRequest->status }}
         </h2>
 
         <table style="width:100%; font-size:13px; color:#17263A; border-collapse:collapse;">
@@ -21,6 +21,18 @@
                 <td style="padding:6px 0; color:#7A8595;">Days</td>
                 <td style="padding:6px 0; text-align:right; font-weight:700;">{{ $leaveRequest->days }}</td>
             </tr>
+            @if($leaveRequest->status === 'cancelled' && (float) $leaveRequest->deducted_days > 0)
+            <tr>
+                <td style="padding:6px 0; color:#7A8595;">Balance</td>
+                <td style="padding:6px 0; text-align:right;">{{ rtrim(rtrim(number_format((float) $leaveRequest->deducted_days, 1), '0'), '.') }} days given back</td>
+            </tr>
+            @endif
+            @if($leaveRequest->cancel_reason)
+            <tr>
+                <td style="padding:6px 0; color:#7A8595; vertical-align:top;">Reason</td>
+                <td style="padding:6px 0; text-align:right;">{{ $leaveRequest->cancel_reason }}</td>
+            </tr>
+            @endif
             @if($leaveRequest->hr_comment)
             <tr>
                 <td style="padding:6px 0; color:#7A8595; vertical-align:top;">HR Comment</td>

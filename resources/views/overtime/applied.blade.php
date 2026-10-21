@@ -39,7 +39,7 @@ p { font-size: .88rem; color: var(--ink-soft); line-height: 1.6; }
     <div class="card">
         <div class="row"><span>Date</span><span>{{ $overtimeRequest->date->format('d M Y') }}</span></div>
         <div class="row"><span>Hours</span><span>{{ $overtimeRequest->hours }}</span></div>
-        <div class="row"><span>Type</span><span>{{ \App\Models\OvertimeRequest::TYPES[$overtimeRequest->type]['label'] ?? $overtimeRequest->type }}</span></div>
+        <div class="row"><span>Type</span><span>{{ $overtimeRequest->typeLabel() }}</span></div>
         <div class="row"><span>Estimated Amount</span><span>K {{ number_format($overtimeRequest->amount, 2) }}</span></div>
         <div class="row"><span>Status</span><span>Pending</span></div>
     </div>

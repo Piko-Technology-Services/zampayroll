@@ -119,6 +119,12 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->role === 'super_admin';
     }
 
+    /** ZamPayroll staff who run the platform (no company of their own). */
+    public function isPlatformAdmin(): bool
+    {
+        return $this->role === 'platform_admin' && empty($this->company_id);
+    }
+
     public function isCompanyAdmin(): bool
     {
         return $this->role === 'company_admin';
@@ -174,8 +180,8 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function hasPermission(string $permission): bool
     {
-        if ($this->isEmployee()) {
-            return false;
+        if ($this->isEmployee() || $this->isPlatformAdmin()) {
+            return false; // platform admins use the /platform console, not a company's screens
         }
 
         if ($this->isCompanyAdmin() || $this->isSuperAdmin()) {
@@ -190,6 +196,10 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function homeRoute(): string
     {
+        if ($this->isPlatformAdmin()) {
+            return 'platform.dashboard';
+        }
+
         return $this->isEmployee() ? 'portal.dashboard' : 'dashboard';
     }
 

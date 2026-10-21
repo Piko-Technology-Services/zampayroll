@@ -12,9 +12,10 @@ class LoanRequest extends Model
     use HasInstallmentSchedule;
 
     public const STATUSES = [
-        'pending'  => 'Pending',
-        'approved' => 'Approved',
-        'rejected' => 'Rejected',
+        'pending'   => 'Waiting',
+        'approved'  => 'Approved',
+        'rejected'  => 'Rejected',
+        'cancelled' => 'Cancelled',
     ];
 
     public const PAYMENT_PLANS = [
@@ -37,13 +38,23 @@ class LoanRequest extends Model
         'hr_comment',
         'reviewed_by',
         'reviewed_at',
+        'cancelled_at',
+        'cancelled_by',
+        'cancel_reason',
+        'recorded_by',
     ];
+
+    public function statusLabel(): string
+    {
+        return self::STATUSES[$this->status] ?? ucfirst((string) $this->status);
+    }
 
     protected $casts = [
         'amount'              => 'decimal:2',
         'installment_amount'  => 'decimal:2',
         'documents'           => 'array',
         'reviewed_at'         => 'datetime',
+        'cancelled_at'        => 'datetime',
     ];
 
     public function employee()

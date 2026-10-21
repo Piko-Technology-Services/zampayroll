@@ -93,12 +93,10 @@ class TenancyFlowTest extends TestCase
         $this->assertGreaterThan(20, PayrollRule::withoutGlobalScopes()->where('company_id', $user->company_id)->count());
     }
 
-    public function test_03_dedicated_registration_provisions_database(): void
+    public function test_03_big_company_starts_shared_then_moves_to_private_workspace(): void
     {
         Notification::fake();
-
-        $this->get('/register/check-subdomain?subdomain=www')->assertJson(['available' => false]);
-        $this->get('/register/check-subdomain?subdomain=acme')->assertJson(['available' => true]);
+        \Illuminate\Support\Facades\Mail::fake();
 
         $this->post('/register', [
             'name' => 'Big Boss', 'phone' => '0966000000', 'email' => 'boss@acme.zm',
@@ -109,37 +107,44 @@ class TenancyFlowTest extends TestCase
 
         $user = User::where('email', 'boss@acme.zm')->firstOrFail();
         $company = $user->company;
-        $this->assertTrue($company->isDedicated());
+        $this->assertTrue($company->isShared(), 'every company starts on the shared workspace');
+        $this->assertSame('trialing', $company->subscription_status);
 
         $url = null;
         Notification::assertSentTo($user, VerifyEmailNotification::class, function ($n) use ($user, &$url) {
             $url = $n->verificationUrl($user); return true;
         });
+        $this->get($url)->assertRedirect(route('dashboard'));
 
-        $res = $this->get($url)->assertOk()->assertSee('Acme Mining is live');
-        preg_match('/href="([^"]+auth\/handoff[^"]+)"/', $res->getContent(), $m);
-        $handoff = html_entity_decode($m[1]);
-        $this->assertStringContainsString('acme.localhost', $handoff);
+        // Their data before the move
+        $this->actingAs($user->fresh())->post('/employees', ['first_name' => 'Shared', 'last_name' => 'Worker', 'net_salary' => 5000])->assertRedirect();
+        $this->post('/settings/billing/private-workspace', ['subdomain' => 'acme'])->assertSessionHas('success');
+        $this->post('/logout');
+
+        // ZamPayroll admin approves the move from the admin console
+        Tenancy::reset(); DB::setDefaultConnection('mysql');
+        $this->artisan('zampayroll:admin', ['email' => 'ops@zampayroll.com'])->expectsQuestion('Password (leave empty to generate one)', 'opsPass123')->assertSuccessful();
+        $ops = User::where('email', 'ops@zampayroll.com')->first();
+        $this->actingAs($ops)->get('/platform')->assertOk()->assertSee('Acme Mining wants a private workspace');
+        $this->get('/dashboard')->assertRedirect(route('platform.dashboard')); // no company screens
+        $this->post('/platform/companies/' . $company->id . '/action', ['action' => 'upgrade', 'subdomain' => 'acme'])->assertSessionHas('success');
 
         $company = Company::find($company->id);
-        $this->assertSame('active', $company->status);
+        $this->assertTrue($company->isDedicated());
         $this->assertSame('zp_acme', $company->database_name);
-        $this->assertNull(User::where('email', 'boss@acme.zm')->first(), 'admin moved out of landlord');
+        $this->assertNull(User::where('email', 'boss@acme.zm')->first(), 'admin moved out of the shared database');
+        $this->assertSame(0, DB::connection('mysql')->table('employees')->where('first_name', 'Shared')->count());
         $this->assertDatabaseHas('tenant_user_directory', ['email' => 'boss@acme.zm', 'company_id' => $company->id]);
-
-        $tenantRules = DB::connection('tenant')->table('payroll_rules')->where('company_id', $company->id)->count();
-        $this->assertGreaterThan(20, $tenantRules);
-
-        // handoff signs in on the sub-domain
-        Tenancy::reset(); DB::setDefaultConnection('mysql');
-        $this->get($handoff)->assertRedirect('http://acme.localhost/dashboard');
-        $this->get('http://acme.localhost/dashboard')->assertOk()->assertSee('Acme Mining');
+        Tenancy::configureTenantConnection('zp_acme');
+        $this->assertSame(1, DB::connection('tenant')->table('employees')->where('first_name', 'Shared')->count());
+        $this->assertGreaterThan(20, DB::connection('tenant')->table('payroll_rules')->where('company_id', $company->id)->count());
+        $this->post('/logout');
     }
 
     public function test_04_dedicated_workspace_is_isolated_and_central_login_hands_off(): void
     {
         // central login with a dedicated user's credentials -> signed hop to sub-domain
-        $res = $this->post('/login', ['company_code' => $this->codeFor('boss@acme.zm'), 'email' => 'boss@acme.zm', 'password' => 'secret123']);
+        $res = $this->post('/login', ['email' => 'boss@acme.zm', 'password' => 'secret123']);
         $this->assertStringContainsString('http://acme.localhost/auth/handoff/', $res->headers->get('Location'));
         $this->assertGuest();
 
@@ -179,7 +184,7 @@ class TenancyFlowTest extends TestCase
         $this->get('/reset-password/' . $token . '?email=admin@pikozm.com')->assertOk()->assertSee('Choose a new password');
         $this->post('/reset-password', ['token' => $token, 'email' => 'admin@pikozm.com', 'password' => 'newpass123', 'password_confirmation' => 'newpass123'])
             ->assertRedirect();
-        $this->post('/login', ['company_code' => $this->codeFor('admin@pikozm.com'), 'email' => 'admin@pikozm.com', 'password' => 'newpass123'])->assertRedirect(route('dashboard'));
+        $this->post('/login', ['email' => 'admin@pikozm.com', 'password' => 'newpass123'])->assertRedirect(route('dashboard'));
         $this->post('/logout');
         DB::table('users')->where('email', 'admin@pikozm.com')->update(['password' => bcrypt('password123')]);
 

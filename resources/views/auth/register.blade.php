@@ -117,7 +117,7 @@
     {{-- ============================== STEP 2 — COMPANY ============================== --}}
     <section class="ob-panel" data-step="2" data-label="Your company" data-need="Required">
         <h1 class="ob-title" id="companyGreeting">Nice to meet you! Tell us about the company.</h1>
-        <p class="ob-sub">Your team size decides where your data lives — shared cloud for small teams, a dedicated workspace for bigger ones.</p>
+        <p class="ob-sub">Your team size helps us pick the right plan. Teams over {{ $limit }} can upgrade to their own private web address any time.</p>
 
         <div class="zp-field">
             <label class="zp-label" for="company_name">Company name</label>
@@ -131,7 +131,7 @@
                 @foreach($ranges as $key => $range)
                     <div class="ob-tile">
                         <input type="radio" name="employee_count_range" id="size-{{ $loop->index }}" value="{{ $key }}"
-                               data-dedicated="{{ $range['max'] > $limit ? 1 : 0 }}" data-label="{{ $range['label'] }}"
+                               data-dedicated="0" data-label="{{ $range['label'] }}"
                                @checked(old('employee_count_range') === $key) required>
                         <label for="size-{{ $loop->index }}">
                             <span class="emoji" aria-hidden="true">{{ $range['emoji'] }}</span>

@@ -12,10 +12,14 @@ use App\Models\Loan;
 use App\Models\LoanRequest;
 use App\Models\OvertimeRequest;
 use App\Models\User;
+use App\Services\Leave\LeaveService;
+use App\Services\Overtime\OvertimeService;
+use App\Services\Loans\LoanService;
 use App\Services\LeaveDayCalculator;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Employee self-service requests. These create exactly the same records as
@@ -28,164 +32,119 @@ class PortalRequestController extends Controller
     /*  LEAVE                                                               */
     /* ================================================================== */
 
-    public function leave(Request $request)
+    public function leave(Request $request, LeaveService $service)
     {
         $employee = $request->user()->employee;
+        $types = $service->types($employee->company_id)->where('employees_can_apply', true)->values();
 
         return view('portal.leave', [
             'employee' => $employee,
             'requests' => LeaveRequest::where('employee_id', $employee->id)->latest()->get(),
-            'types'    => LeaveRequest::TYPES,
-            'usedThisYear' => (float) LeaveRequest::where('employee_id', $employee->id)
-                ->where('status', 'approved')->whereYear('start_date', now()->year)->sum('days'),
+            'types'    => $types->pluck('name', 'key')->all(),
+            'typeInfo' => $types->keyBy('key'),
+            'balance'  => $service->balance($employee),
+            'usedThisYear' => $service->balance($employee)['taken_this_year'],
         ]);
     }
 
     /**
-     * Live preview for the form: working days + return date.
+     * Live preview for the form: working days, return date, and whether the rules allow it.
      */
-    public function calculateLeave(Request $request)
+    public function calculateLeave(Request $request, LeaveService $service)
     {
-        $request->validate(['start_date' => 'required|date', 'end_date' => 'required|date|after_or_equal:start_date']);
+        $request->validate(['start_date' => 'required|date', 'end_date' => 'required|date|after_or_equal:start_date', 'leave_type' => 'nullable|string']);
+        $employee = $request->user()->employee;
 
-        $calc = new LeaveDayCalculator($request->user()->employee);
-        $start = Carbon::parse($request->query('start_date'));
-        $end = Carbon::parse($request->query('end_date'));
+        try {
+            $c = $service->check($employee, $request->query('leave_type', 'annual'), $request->query('start_date'), $request->query('end_date'), 1);
 
-        return response()->json([
-            'days'        => $calc->businessDays($start, $end),
-            'return_date' => $calc->nextBusinessDay($end)->format('D, d M Y'),
-            'holidays'    => $calc->holidaysBetween($start, $end)->map(fn ($h) => $h->name)->values(),
-        ]);
+            return response()->json(['ok' => true, 'days' => $c['days'], 'return_date' => $c['return_date']->format('D, d M Y'), 'holidays' => $c['holidays'],
+                'needs_document' => $c['type']->needsDocument($c['days'])]);
+        } catch (ValidationException $e) {
+            $calc = new LeaveDayCalculator($employee);
+            $start = Carbon::parse($request->query('start_date'));
+            $end = Carbon::parse($request->query('end_date'));
+
+            return response()->json(['ok' => false, 'message' => collect($e->errors())->flatten()->first(),
+                'days' => $calc->businessDays($start, $end), 'return_date' => $calc->nextBusinessDay($end)->format('D, d M Y'),
+                'holidays' => $calc->holidaysBetween($start, $end)->map(fn ($h) => $h->name)->values()]);
+        }
     }
 
-    public function storeLeave(Request $request)
+    public function storeLeave(Request $request, LeaveService $service)
     {
         $employee = $request->user()->employee;
 
         $validated = $request->validate([
-            'leave_type'       => 'required|in:' . implode(',', array_keys(LeaveRequest::TYPES)),
+            'leave_type'       => 'required|string|max:40',
             'start_date'       => 'required|date|after_or_equal:' . now()->subDays(30)->toDateString(),
             'end_date'         => 'required|date|after_or_equal:start_date',
             'reason'           => 'nullable|string|max:1000',
             'supervisor_email' => 'nullable|email',
             'documents.*'      => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:5120',
-        ]);
+        ], ['start_date.after_or_equal' => 'Leave more than 30 days ago has to be entered by HR.']);
 
-        $calc = new LeaveDayCalculator($employee);
-        $start = Carbon::parse($validated['start_date']);
-        $end = Carbon::parse($validated['end_date']);
-        $days = $calc->businessDays($start, $end);
-
-        if ($days <= 0) {
-            return back()->withInput()->withErrors(['end_date' => 'Those dates fall entirely on non-working days or holidays.']);
-        }
-
-        $overlap = LeaveRequest::where('employee_id', $employee->id)
-            ->whereIn('status', ['pending', 'approved'])
-            ->whereDate('start_date', '<=', $end)
-            ->whereDate('end_date', '>=', $start)
-            ->exists();
-
-        if ($overlap) {
-            return back()->withInput()->withErrors(['start_date' => 'You already have a leave request that overlaps these dates.']);
-        }
-
-        $leaveRequest = LeaveRequest::create([
-            'employee_id'      => $employee->id,
-            'leave_type'       => $validated['leave_type'],
-            'company_email'    => $request->user()->email,
-            'start_date'       => $start,
-            'end_date'         => $end,
-            'return_date'      => $calc->nextBusinessDay($end),
-            'days'             => $days,
-            'reason'           => $validated['reason'] ?? null,
-            'supervisor_email' => $validated['supervisor_email'] ?? null,
-            'documents'        => $this->storeDocuments($request, 'uploads/leave/documents'),
-            'status'           => 'pending',
-        ]);
-
-        $this->notifyHr($employee, new LeaveApplied($leaveRequest), $validated['supervisor_email'] ?? null);
+        $leaveRequest = $service->apply($employee, $validated + ['company_email' => $request->user()->email],
+            $this->storeDocuments($request, 'uploads/leave/documents'), $request->user());
 
         return redirect()->route('portal.leave')
-            ->with('success', "🌴 Leave request sent! {$days} working day(s) — HR will let you know once it's reviewed.");
+            ->with('success', '🌴 Leave request sent! ' . $service->fmt($leaveRequest->days) . ' working day(s). You\'ll get an email once it\'s reviewed.');
     }
 
-    public function cancelLeave(Request $request, LeaveRequest $leaveRequest)
+    public function cancelLeave(Request $request, LeaveRequest $leaveRequest, LeaveService $service)
     {
-        $this->cancel($request, $leaveRequest);
+        abort_unless((int) $leaveRequest->employee_id === (int) $request->user()->employee_id, 404);
+        $wasApproved = $leaveRequest->status === 'approved';
+        $leave = $service->cancel($leaveRequest, $request->user(), $request->input('reason'));
 
-        return back()->with('success', 'Leave request cancelled.');
+        return back()->with('success', $wasApproved
+            ? 'Leave cancelled. ' . ((float) $leave->deducted_days > 0 ? $service->fmt($leave->deducted_days) . ' days are back in your balance.' : '')
+            : 'Leave request cancelled.');
     }
 
     /* ================================================================== */
     /*  OVERTIME                                                            */
     /* ================================================================== */
 
-    public function overtime(Request $request)
+    public function overtime(Request $request, OvertimeService $service)
     {
         $employee = $request->user()->employee;
-        $dailyRate = round(((float) ($employee->salary ?? 0)) / max(1, $employee->working_days_per_month), 2);
+        $settings = $service->settings($employee->company_id);
+        $daily = $service->dailyRate($employee, $settings);
 
         return view('portal.overtime', [
             'employee'  => $employee,
-            'requests'  => OvertimeRequest::where('employee_id', $employee->id)->latest()->get(),
-            'types'     => OvertimeRequest::TYPES,
-            'hourlyRate' => round($dailyRate / 8, 2),
+            'requests'  => OvertimeRequest::where('employee_id', $employee->id)->latest('date')->latest('id')->get(),
+            'types'     => $service->types($employee->company_id),
+            'settings'  => $settings,
+            'hourlyRate' => round($daily / max(1, (float) $settings['hours_per_day']), 2),
             'approvedThisMonth' => (float) OvertimeRequest::where('employee_id', $employee->id)
                 ->where('status', 'approved')->whereYear('date', now()->year)->whereMonth('date', now()->month)->sum('amount'),
         ]);
     }
 
-    public function storeOvertime(Request $request)
+    public function storeOvertime(Request $request, OvertimeService $service)
     {
         $employee = $request->user()->employee;
-
         $validated = $request->validate([
-            'date'       => 'required|date|before_or_equal:' . now()->addDays(7)->toDateString(),
-            'start_time' => 'required|date_format:H:i',
-            'end_time'   => 'required|date_format:H:i',
-            'type'       => 'required|in:' . implode(',', array_keys(OvertimeRequest::TYPES)),
-            'comment'    => 'nullable|string|max:1000',
+            'date'          => 'required|date',
+            'start_time'    => 'required|date_format:H:i',
+            'end_time'      => 'required|date_format:H:i',
+            'break_minutes' => 'nullable|integer|min:0|max:720',
+            'type'          => 'required|string|max:40',
+            'comment'       => 'nullable|string|max:1000',
         ]);
 
-        $start = Carbon::createFromFormat('H:i', $validated['start_time']);
-        $end = Carbon::createFromFormat('H:i', $validated['end_time']);
-
-        if ($end->lte($start)) {
-            return back()->withInput()->withErrors(['end_time' => 'End time must be after start time.']);
-        }
-
-        $hours = round($start->diffInMinutes($end) / 60, 2);
-        $multiplier = OvertimeRequest::TYPES[$validated['type']]['multiplier'];
-        $dailyRate = round(((float) ($employee->salary ?? 0)) / max(1, $employee->working_days_per_month), 2);
-        // Same formula as the public form: (DailyRate / 8) x multiplier x hours
-        $amount = round(($dailyRate / 8) * $multiplier * $hours, 2);
-
-        $overtimeRequest = OvertimeRequest::create([
-            'employee_id'     => $employee->id,
-            'company_email'   => $request->user()->email,
-            'date'            => $validated['date'],
-            'start_time'      => $validated['start_time'],
-            'end_time'        => $validated['end_time'],
-            'hours'           => $hours,
-            'type'            => $validated['type'],
-            'rate_multiplier' => $multiplier,
-            'daily_rate'      => $dailyRate,
-            'amount'          => $amount,
-            'comment'         => $validated['comment'] ?? null,
-            'status'          => 'pending',
-        ]);
-
-        $this->notifyHr($employee, new OvertimeApplied($overtimeRequest));
+        $ot = $service->apply($employee, $validated + ['company_email' => $request->user()->email], $request->user());
 
         return redirect()->route('portal.overtime')
-            ->with('success', "⏱️ Overtime logged: {$hours} hrs (≈ K" . number_format($amount, 2) . ') sent to HR for approval.');
+            ->with('success', '⏱️ Overtime logged: ' . $service->fmt($ot->hours) . ' hrs (≈ K' . number_format((float) $ot->amount, 2) . ') sent for approval.');
     }
 
-    public function cancelOvertime(Request $request, OvertimeRequest $overtimeRequest)
+    public function cancelOvertime(Request $request, OvertimeRequest $overtimeRequest, OvertimeService $service)
     {
-        $this->cancel($request, $overtimeRequest);
+        abort_unless((int) $overtimeRequest->employee_id === (int) $request->user()->employee_id, 404);
+        $service->cancel($overtimeRequest, $request->user(), $request->input('reason'));
 
         return back()->with('success', 'Overtime request cancelled.');
     }
@@ -206,7 +165,7 @@ class PortalRequestController extends Controller
         ]);
     }
 
-    public function storeLoan(Request $request)
+    public function storeLoan(Request $request, LoanService $service)
     {
         $employee = $request->user()->employee;
 
@@ -222,50 +181,22 @@ class PortalRequestController extends Controller
             'installment_amount.lte' => 'The instalment can\'t be more than the loan amount.',
         ]);
 
-        if (LoanRequest::where('employee_id', $employee->id)->where('status', 'pending')->exists()) {
-            return back()->withInput()->withErrors(['amount' => 'You already have a loan request waiting for HR. Please wait for a decision first.']);
-        }
-
-        $loanRequest = LoanRequest::create([
-            'employee_id'        => $employee->id,
-            'company_email'      => $request->user()->email,
-            'amount'             => $validated['amount'],
-            'payment_plan'       => $validated['payment_plan'],
-            'payment_plan_note'  => $validated['payment_plan_note'] ?? null,
-            'installment_amount' => $validated['payment_plan'] === 'once_off' ? null : ($validated['installment_amount'] ?? null),
-            'reason'             => $validated['reason'] ?? null,
-            'documents'          => $this->storeDocuments($request, 'uploads/loans/documents'),
-            'status'             => 'pending',
-        ]);
-
-        $this->notifyHr($employee, new LoanApplied($loanRequest));
+        $service->apply($employee, $validated + ['company_email' => $request->user()->email],
+            $this->storeDocuments($request, 'uploads/loans/documents'), $request->user());
 
         return redirect()->route('portal.loans')
-            ->with('success', '💳 Loan request for K' . number_format((float) $validated['amount'], 2) . ' sent to HR.');
+            ->with('success', '💳 Loan request for K' . number_format((float) $validated['amount'], 2) . ' sent. You\'ll get an email once it\'s decided.');
     }
 
-    public function cancelLoan(Request $request, LoanRequest $loanRequest)
+    public function cancelLoan(Request $request, LoanRequest $loanRequest, LoanService $service)
     {
-        $this->cancel($request, $loanRequest);
+        abort_unless((int) $loanRequest->employee_id === (int) $request->user()->employee_id, 404);
+        $service->cancelRequest($loanRequest, $request->user(), $request->input('reason'));
 
         return back()->with('success', 'Loan request cancelled.');
     }
 
     /* ================================================================== */
-
-    /**
-     * Employees can withdraw their own requests while they are still pending.
-     */
-    private function cancel(Request $request, $model): void
-    {
-        abort_unless((int) $model->employee_id === (int) $request->user()->employee_id, 404);
-
-        if ($model->status !== 'pending') {
-            abort(422, 'Only pending requests can be cancelled.');
-        }
-
-        $model->delete();
-    }
 
     private function storeDocuments(Request $request, string $folder): ?array
     {

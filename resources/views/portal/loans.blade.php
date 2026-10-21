@@ -6,7 +6,8 @@
         'title' => 'K' . number_format((float) $r->amount, 2) . ' requested',
         'detail' => ($plans[$r->payment_plan] ?? $r->payment_plan) . ($r->installment_amount ? ', K' . number_format((float) $r->installment_amount, 2) . ' per deduction' : '') . ' — ' . $r->created_at->format('d M Y'),
         'status' => $r->status,
-        'note' => $r->hr_comment,
+        'label' => $r->statusLabel(),
+        'note' => $r->hr_comment ?: $r->cancel_reason,
         'cancelUrl' => route('portal.loans.cancel', $r),
     ]);
 @endphp
@@ -66,11 +67,26 @@
                 @php $paid = $loan->principal_amount > 0 ? 1 - ($loan->balance / $loan->principal_amount) : 0; @endphp
                 <div style="padding:.6rem 0;border-bottom:1px solid #EEF2EF">
                     <div class="d-flex justify-content-between align-items-center">
-                        <b>K{{ number_format((float) $loan->principal_amount, 2) }} — since {{ $loan->start_date->format('M Y') }}</b>
-                        <span class="pt-status {{ $loan->status }}">{{ str_replace('_', ' ', $loan->status) }}</span>
+                        <b>K{{ number_format((float) $loan->principal_amount, 2) }}{{ $loan->disbursed_at ? ' — paid to you ' . $loan->disbursed_at->format('j M Y') : '' }}</b>
+                        <span class="pt-status {{ $loan->status }}">{{ $loan->status === 'pending_disbursement' ? 'Approved' : str_replace('_', ' ', $loan->status) }}</span>
                     </div>
-                    <div class="small text-muted my-1">Balance K{{ number_format((float) $loan->balance, 2) }}{{ $loan->installment_amount ? ', K' . number_format((float) $loan->installment_amount, 2) . ' per deduction' : '' }}</div>
+                    <div class="small text-muted my-1">
+                        @if($loan->status === 'pending_disbursement')
+                            Approved — waiting to be paid out. Repayments start after you receive it{{ $loan->next_deduction_date ? ' (planned from ' . $loan->next_deduction_date->format('F Y') . ')' : '' }}.
+                        @else
+                            Balance K{{ number_format((float) $loan->balance, 2) }}{{ $loan->installment_amount ? ', K' . number_format((float) $loan->installment_amount, 2) . ' per deduction' : '' }}{{ $loan->status === 'active' && $loan->next_deduction_date ? ' · next: ' . $loan->next_deduction_date->format('F Y') : '' }}
+                        @endif
+                    </div>
                     <div class="zp-setup-meter" style="width:100%;background:#EEF2EF"><span style="width:{{ round($paid * 100) }}%"></span></div>
+                    @if(in_array($loan->status, ['active', 'pending_disbursement'], true) && ($schedule = $loan->installmentSchedule(24)))
+                        <details class="small mt-2"><summary style="cursor:pointer;color:var(--zp-green);font-weight:600">Repayment plan ({{ count($schedule) }} deduction{{ count($schedule) === 1 ? '' : 's' }})</summary>
+                            <table class="pt-table mt-1">
+                                @foreach($schedule as $row)
+                                    <tr><td>{{ $row['date']->format('F Y') }}</td><td class="money">K{{ number_format($row['amount'], 2) }}</td><td class="money text-muted">K{{ number_format($row['balance_after'], 2) }} left</td></tr>
+                                @endforeach
+                            </table>
+                        </details>
+                    @endif
                     @if($loan->payments->isNotEmpty())
                         <details class="small mt-2"><summary style="cursor:pointer;color:var(--zp-green);font-weight:600">Repayment history ({{ $loan->payments->count() }})</summary>
                             <table class="pt-table mt-1">

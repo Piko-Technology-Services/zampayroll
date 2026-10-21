@@ -28,6 +28,8 @@
     
             <div class="container-fluid px-3 px-lg-4 py-4">
 
+                @include('partials.subscription-banner')
+
                 @include('partials.module-tabs')
 
                 @include('partials.alerts')

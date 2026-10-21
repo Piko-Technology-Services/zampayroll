@@ -70,6 +70,8 @@ Route::middleware('guest')->group(function () {
 
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
+    Route::get('/login/choose', [AuthController::class, 'showChooser'])->name('login.choose');
+    Route::post('/login/choose', [AuthController::class, 'choose'])->middleware('throttle:10,1');
     Route::get('/company-code', [AuthController::class, 'showCodeReminder'])->name('company-code.request');
     Route::post('/company-code', [AuthController::class, 'sendCodeReminder'])->name('company-code.send')->middleware('throttle:5,1');
 
@@ -98,6 +100,28 @@ Route::get('/auth/handoff/{user}', WorkspaceHandoffController::class)
     ->middleware(['signed'])->name('workspace.handoff');
 
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
+
+// ZamPayroll admin console (platform administrators only)
+Route::middleware(['auth', 'platform'])->prefix('platform')->name('platform.')->group(function () {
+    $c = \App\Http\Controllers\Platform\PlatformController::class;
+    Route::get('/', [$c, 'dashboard'])->name('dashboard');
+    Route::get('/companies', [$c, 'companiesIndex'])->name('companies');
+    Route::get('/companies/{company}', [$c, 'companyShow'])->name('companies.show');
+    Route::post('/companies/{company}/action', [$c, 'companyAction'])->name('companies.action');
+    Route::get('/billing', [$c, 'invoices'])->name('invoices');
+    Route::post('/invoices/{invoice}/action', [$c, 'invoiceAction'])->name('invoices.action');
+    Route::get('/invoices/{invoice}/pdf', [\App\Http\Controllers\BillingController::class, 'pdf'])->name('invoices.pdf');
+    Route::get('/tickets', [$c, 'tickets'])->name('tickets');
+    Route::get('/tickets/{ticket}', [$c, 'ticket'])->name('tickets.show');
+    Route::post('/tickets/{ticket}', [$c, 'ticketReply'])->name('tickets.reply');
+    Route::get('/settings', [$c, 'settings'])->name('settings');
+    Route::post('/settings', [$c, 'saveSettings'])->name('settings.save');
+    Route::get('/audit', [$c, 'audit'])->name('audit');
+});
+
+// DPO Pay: card popup return + server-to-server notification (verified with DPO, no sign-in needed)
+Route::get('/billing/dpo/return', [\App\Http\Controllers\BillingController::class, 'dpoReturn'])->name('billing.dpo.return');
+Route::post('/billing/dpo/notify', [\App\Http\Controllers\BillingController::class, 'dpoNotify'])->name('billing.dpo.notify')->middleware('throttle:60,1');
 
 
 /*
@@ -152,6 +176,28 @@ Route::post('/payroll/{payroll}/email', [PayslipMailController::class, 'sendSing
 Route::post('/payroll/runs/{run}/email-all', [PayslipMailController::class, 'sendBulk'])
     ->name('payroll.email.bulk');
 
+// ZamPayroll subscription & billing (company side)
+Route::prefix('settings/billing')->name('billing.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\BillingController::class, 'index'])->name('index');
+    Route::post('/prepaid', [\App\Http\Controllers\BillingController::class, 'prepaid'])->name('prepaid');
+    Route::post('/postpaid', [\App\Http\Controllers\BillingController::class, 'postpaid'])->name('postpaid');
+    Route::post('/details', [\App\Http\Controllers\BillingController::class, 'details'])->name('details');
+    Route::post('/private-workspace', [\App\Http\Controllers\BillingController::class, 'requestPrivate'])->name('private');
+    Route::get('/invoices/{invoice}/pdf', [\App\Http\Controllers\BillingController::class, 'pdf'])->name('invoices.pdf');
+    Route::post('/invoices/{invoice}/mobile', [\App\Http\Controllers\BillingController::class, 'payMobile'])->name('pay.mobile')->middleware('throttle:6,1');
+    Route::post('/invoices/{invoice}/card', [\App\Http\Controllers\BillingController::class, 'payCard'])->name('pay.card')->middleware('throttle:10,1');
+    Route::get('/payments/{payment}', [\App\Http\Controllers\BillingController::class, 'status'])->name('payments.status');
+});
+
+// Help & support tickets (company side)
+Route::prefix('help')->name('support.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\SupportController::class, 'index'])->name('index');
+    Route::post('/', [\App\Http\Controllers\SupportController::class, 'store'])->name('store');
+    Route::get('/{ticket}', [\App\Http\Controllers\SupportController::class, 'show'])->name('show');
+    Route::post('/{ticket}/reply', [\App\Http\Controllers\SupportController::class, 'reply'])->name('reply');
+    Route::post('/{ticket}/close', [\App\Http\Controllers\SupportController::class, 'close'])->name('close');
+});
+
 Route::get('/settings/payroll-approvals', [\App\Http\Controllers\PayrollApprovalSettingsController::class, 'index'])->name('payroll-approvals.index');
 Route::put('/settings/payroll-approvals', [\App\Http\Controllers\PayrollApprovalSettingsController::class, 'update'])->name('payroll-approvals.update');
 
@@ -198,6 +244,11 @@ Route::group([], function () { // (inside staff area)
     Route::post('/employees/import/parse', [\App\Http\Controllers\EmployeeImportController::class, 'parse'])->name('employees.import.parse');
     Route::post('/employees/import/preview', [\App\Http\Controllers\EmployeeImportController::class, 'preview'])->name('employees.import.preview');
     Route::post('/employees/import/commit', [\App\Http\Controllers\EmployeeImportController::class, 'commit'])->name('employees.import.commit');
+    // Changes employees asked for in the portal (bank details) — HR checks before applying.
+    Route::get('/employees/changes', [\App\Http\Controllers\EmployeeChangeController::class, 'index'])->name('employees.changes.index');
+    Route::post('/employees/changes/{change}/approve', [\App\Http\Controllers\EmployeeChangeController::class, 'approve'])->name('employees.changes.approve');
+    Route::post('/employees/changes/{change}/reject', [\App\Http\Controllers\EmployeeChangeController::class, 'reject'])->name('employees.changes.reject');
+    Route::get('/employees/changes/{change}/document', [\App\Http\Controllers\EmployeeChangeController::class, 'document'])->name('employees.changes.document');
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])
@@ -314,6 +365,15 @@ Route::middleware(['auth', 'staff'])->prefix('leave')->name('leave.')->group(fun
     Route::get('/dashboard/requests', [LeaveDashboardController::class, 'index'])->name('dashboard');
     Route::post('/dashboard/requests/{leaveRequest}/approve', [LeaveDashboardController::class, 'approve'])->name('approve');
     Route::post('/dashboard/requests/{leaveRequest}/reject', [LeaveDashboardController::class, 'reject'])->name('reject');
+    Route::post('/dashboard/requests/{leaveRequest}/cancel', [LeaveDashboardController::class, 'cancel'])->name('cancel');
+    Route::post('/dashboard/record', [LeaveDashboardController::class, 'record'])->name('record');
+    Route::get('/dashboard/check', [LeaveDashboardController::class, 'check'])->name('check');
+
+    // Leave types & policy (HR)
+    Route::get('/types', [\App\Http\Controllers\LeaveTypeController::class, 'index'])->name('types.index');
+    Route::post('/types', [\App\Http\Controllers\LeaveTypeController::class, 'store'])->name('types.store');
+    Route::put('/types/{leaveType}', [\App\Http\Controllers\LeaveTypeController::class, 'update'])->name('types.update');
+    Route::post('/types/policy', [\App\Http\Controllers\LeaveTypeController::class, 'policy'])->name('types.policy');
  
     Route::get('/{year}', [LeaveController::class, 'sheet'])
         ->where('year', '\d{4}')
@@ -338,6 +398,12 @@ Route::middleware(['auth', 'staff'])->prefix('overtime')->name('overtime.')->gro
     Route::get('/dashboard/requests', [OvertimeDashboardController::class, 'index'])->name('dashboard');
     Route::post('/dashboard/requests/{overtimeRequest}/approve', [OvertimeDashboardController::class, 'approve'])->name('approve');
     Route::post('/dashboard/requests/{overtimeRequest}/reject', [OvertimeDashboardController::class, 'reject'])->name('reject');
+    Route::post('/dashboard/requests/{overtimeRequest}/cancel', [OvertimeDashboardController::class, 'cancel'])->name('cancel');
+    Route::post('/dashboard/record', [OvertimeDashboardController::class, 'record'])->name('record');
+    Route::get('/dashboard/check', [OvertimeDashboardController::class, 'check'])->name('check');
+    Route::get('/report', [OvertimeDashboardController::class, 'report'])->name('report');
+    Route::get('/settings', [OvertimeDashboardController::class, 'settings'])->name('settings');
+    Route::post('/settings', [OvertimeDashboardController::class, 'saveSettings'])->name('settings.save');
     Route::get(
     '/dashboard/export-approved',
         [OvertimeDashboardController::class, 'exportApprovedOvertime']
@@ -353,6 +419,9 @@ Route::middleware(['auth', 'staff'])->prefix('loan')->name('loan.')->group(funct
     Route::get('/dashboard/requests', [LoanDashboardController::class, 'index'])->name('dashboard');
     Route::post('/dashboard/requests/{loanRequest}/approve', [LoanDashboardController::class, 'approve'])->name('approve');
     Route::post('/dashboard/requests/{loanRequest}/reject', [LoanDashboardController::class, 'reject'])->name('reject');
+    Route::post('/dashboard/requests/{loanRequest}/cancel', [LoanDashboardController::class, 'cancel'])->name('cancel');
+    Route::post('/loans/{loan}/disburse', [LoanDashboardController::class, 'disburse'])->name('disburse');
+    Route::post('/loans/{loan}/cancel', [LoanDashboardController::class, 'cancelLoan'])->name('loans.cancel');
 });
 Route::middleware(['auth', 'staff'])->prefix('loan/ledger')->name('loan.ledger.')->group(function () {
     Route::get('/', [LoanLedgerController::class, 'index'])->name('index');
@@ -482,6 +551,11 @@ Route::middleware(['auth', 'employee', 'force.password'])->prefix('portal')->nam
     // Profile
     Route::get('/profile', [PortalController::class, 'profile'])->name('profile');
     Route::put('/profile', [PortalController::class, 'updateProfile'])->name('profile.update');
+    Route::post('/profile/bank', [PortalController::class, 'requestBankChange'])->middleware('throttle:5,1')->name('profile.bank');
+    Route::delete('/profile/changes/{change}', [PortalController::class, 'cancelChange'])->name('profile.changes.cancel');
+
+    // Attendance
+    Route::get('/attendance', [PortalController::class, 'attendance'])->name('attendance');
 
     // Payslips
     Route::get('/payslips', [PortalController::class, 'payslips'])->name('payslips');

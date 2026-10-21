@@ -43,7 +43,7 @@ class PayrollRunAdjustment extends Model
 
     public function run()
     {
-        return $this->belongsTo(PayrollRun::class);
+        return $this->belongsTo(PayrollRun::class, 'payroll_run_id');
     }
 
     /*

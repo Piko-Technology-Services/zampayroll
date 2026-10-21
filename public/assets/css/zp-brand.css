@@ -369,7 +369,8 @@
 .pt-status.pending { background: var(--zp-copper-50); color: #9A5418; }
 .pt-status.approved, .pt-status.active, .pt-status.completed { background: var(--zp-green-50); color: var(--zp-green); }
 .pt-status.rejected, .pt-status.written_off { background: #FBEAEA; color: var(--zp-red); }
-.pt-status.paused { background: #EEF0F2; color: #4B5563; }
+.pt-status.paused, .pt-status.cancelled, .pt-status.closed { background: #EEF0F2; color: #4B5563; }
+.pt-status.manager_approved, .pt-status.pending_disbursement { background: #EEF3FF; color: #2E4C9A; }
 
 .pt-empty { text-align: center; padding: 2rem 1rem; color: var(--zp-ink-3); }
 .pt-empty i { font-size: 2rem; color: #B5C4BA; display: block; margin-bottom: .5rem; }

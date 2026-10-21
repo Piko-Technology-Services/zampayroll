@@ -13,7 +13,7 @@ Zambian payroll rules.
 
 ## 2. .env keys (already appended to your .env)
 ```
-TENANCY_CENTRAL_DOMAIN=localhost      # zampayroll.com in production
+TENANCY_CENTRAL_DOMAIN=zampayroll      # zampayroll.com in production
 TENANCY_SHARED_EMPLOYEE_LIMIT=10
 TENANCY_DB_PREFIX=zp_
 TENANCY_AUTO_PROVISION=true           # false on hosting where MySQL users can't CREATE DATABASE
@@ -82,3 +82,8 @@ SOCIAL_LINKEDIN=https://www.linkedin.com/company/yourpage
 SITE_WHATSAPP=260776136965
 SITE_DEMO_VIDEO=https://www.youtube.com/embed/VIDEO_ID
 ```
+
+## 9. Billing, admin console, leave/overtime/loan workflows (late Oct 2026)
+
+See **DEPLOYMENT.md** for the migrations, `.env` keys (DPO), the admin account command
+(`php artisan zampayroll:admin`), the scheduler and the checks to do after deploying.

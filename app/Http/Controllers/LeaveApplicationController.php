@@ -57,7 +57,7 @@ class LeaveApplicationController extends Controller
         $validated = $request->validate([
             'name'             => 'required|string|max:255',
             'email'            => 'required|email',
-            'leave_type'       => 'required|in:' . implode(',', array_keys(LeaveRequest::TYPES)),
+            'leave_type'       => 'required|string|max:40',
             'start_date'       => 'required|date',
             'end_date'         => 'required|date|after_or_equal:start_date',
             'return_date'      => 'nullable|date|after_or_equal:end_date',
@@ -82,44 +82,27 @@ class LeaveApplicationController extends Controller
         // Everything below (holidays, notifications...) is scoped to the employee's company.
         \App\Support\Tenancy::setCompanyId((int) $employee->company_id);
 
-        $start = Carbon::parse($validated['start_date']);
-        $end = Carbon::parse($validated['end_date']);
-
-        $days = $this->businessDays($start, $end, $employee);
-
-        // Return date is auto-calculated server-side too (authoritative),
-        // ignoring whatever the JS pre-filled — the client value is only a
-        // convenience, never trusted for the saved record.
-        $returnDate = $this->nextBusinessDay($end, $employee);
-
         // ── Supporting documents (optional, multiple)
         $documents = [];
         if ($request->hasFile('documents')) {
             foreach ($request->file('documents') as $file) {
-                $path = $file->store('uploads/leave/documents', 'public');
                 $documents[] = [
                     'name'        => $file->getClientOriginalName(),
-                    'path'        => $path,
+                    'path'        => $file->store('uploads/leave/documents', 'public'),
                     'uploaded_at' => now()->toDateTimeString(),
                 ];
             }
         }
 
-        $leaveRequest = LeaveRequest::create([
-            'employee_id'      => $employee->id,
+        // Same rules as the portal: balance, overlaps, limits, documents, approval routing and emails.
+        $leaveRequest = app(\App\Services\Leave\LeaveService::class)->apply($employee, [
             'leave_type'       => $validated['leave_type'],
-            'company_email'    => $validated['email'],
             'start_date'       => $validated['start_date'],
             'end_date'         => $validated['end_date'],
-            'return_date'      => $returnDate,
-            'days'             => $days,
             'reason'           => $validated['comment'] ?? null,
             'supervisor_email' => $validated['supervisor_email'] ?? null,
-            'documents'        => $documents ?: null,
-            'status'           => 'pending',
-        ]);
-
-        $this->notifyHr($leaveRequest, $validated['supervisor_email'] ?? null);
+            'company_email'    => $validated['email'],
+        ], $documents ?: null);
 
         return view('leave.applied', ['leaveRequest' => $leaveRequest]);
     }

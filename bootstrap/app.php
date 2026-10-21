@@ -18,11 +18,15 @@ return Application::configure(basePath: dirname(__DIR__))
             append: [\App\Http\Middleware\VerifyTenantSession::class],
         );
 
+        // DPO posts payment notifications server-to-server (no CSRF token); the token is verified with DPO.
+        $middleware->validateCsrfTokens(except: ['billing/dpo/notify']);
+
         $middleware->alias([
             'company_admin'  => \App\Http\Middleware\EnsureCompanyAdmin::class,
             'staff'          => \App\Http\Middleware\EnsureStaff::class,
             'employee'       => \App\Http\Middleware\EnsureEmployee::class,
             'force.password' => \App\Http\Middleware\ForcePasswordChange::class,
+            'platform'       => \App\Http\Middleware\EnsurePlatformAdmin::class,
         ]);
 
         $middleware->redirectGuestsTo(fn () => route('login'));

@@ -2,7 +2,7 @@
     // Five places, one job each. Sub-pages live in tabs at the top of each module.
     $u = auth()->user();
     $can = fn ($p) => $u?->hasPermission($p);
-    $pendingLeave = $can('leave.approve') ? \App\Models\LeaveRequest::where('status', 'pending')->count() : null;
+    $pendingLeave = $can('leave.approve') ? \App\Models\LeaveRequest::whereIn('status', \App\Models\LeaveRequest::OPEN)->count() : null;
     $pendingPay = ($can('overtime.approve') ? \App\Models\OvertimeRequest::where('status', 'pending')->count() : 0)
         + ($can('loans.manage') ? \App\Models\LoanRequest::where('status', 'pending')->count() : 0);
     // Pay runs waiting for this person's approval
@@ -64,7 +64,16 @@
     </nav>
 
     <div class="zp-sidebar-foot">
-        @php $settingsActive = request()->routeIs('company.*', 'bank-templates.*', 'profile.*', 'settings.*', 'team.*'); @endphp
+        @php
+            $helpActive = request()->routeIs('support.*');
+            $helpBadge = \App\Models\SupportTicket::query()->where('last_reply_by_staff', true)->whereIn('status', ['open', 'waiting'])->count();
+        @endphp
+        <a class="nav-link zp-nav {{ $helpActive ? 'active' : '' }}" href="{{ route('support.index') }}">
+            <i class="bi bi-life-preserver nav-icon"></i>
+            <span class="nav-text">Help<small class="zp-nav-hint">Talk to ZamPayroll</small></span>
+            @if($helpBadge)<span class="zp-nav-badge" title="New reply from support">{{ $helpBadge }}</span>@endif
+        </a>
+        @php $settingsActive = request()->routeIs('company.*', 'bank-templates.*', 'profile.*', 'settings.*', 'team.*', 'billing.*', 'payroll-approvals.*'); @endphp
         <a class="nav-link zp-nav {{ $settingsActive ? 'active' : '' }}" href="{{ route($settingsRoute) }}">
             <i class="bi bi-gear nav-icon"></i>
             <span class="nav-text">Settings<small class="zp-nav-hint">{{ $u?->roleName() }}</small></span>

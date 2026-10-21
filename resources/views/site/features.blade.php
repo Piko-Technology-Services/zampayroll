@@ -58,7 +58,7 @@
             'No app to install',
         ]],
         ['teams', 'bi-shield-lock', 'Teams, roles & languages', 'Built for real companies with many hands on payroll.', [
-            'Sign in with company code, email and password',
+            'Sign in with just email and password',
             'Administrator, HR Officer, Payroll Officer, Manager and Viewer roles — or create your own',
             'Tick exactly what each role can see and do',
             'Use the system in Chinese, French, Portuguese, Somali, Arabic, Hindi, Gujarati, Urdu, Swahili or Nyanja',

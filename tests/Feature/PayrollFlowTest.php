@@ -43,7 +43,7 @@ class PayrollFlowTest extends TestCase
         $mary->update(['net_salary' => 8000]);              // was 6,500 in September → big change
         $john->update(['net_salary' => 9000, 'bank_account_no' => null]);
         OvertimeRequest::create(['employee_id' => $john->id, 'company_email' => 'john@pikozm.com', 'date' => '2026-10-10', 'start_time' => '17:00', 'end_time' => '21:00', 'hours' => 4, 'type' => 'weekday', 'rate_multiplier' => 1.5, 'amount' => 500, 'status' => 'approved']);
-        $loan = Loan::create(['employee_id' => $john->id, 'principal_amount' => 2000, 'balance' => 2000, 'payment_plan' => 'monthly', 'installment_amount' => 500, 'start_date' => '2026-10-01', 'next_deduction_date' => '2026-10-25', 'status' => 'active']);
+        $loan = Loan::create(['employee_id' => $john->id, 'principal_amount' => 2000, 'balance' => 2000, 'payment_plan' => 'monthly', 'installment_amount' => 500, 'start_date' => '2026-10-01', 'next_deduction_date' => '2026-10-25', 'status' => 'active', 'disbursed_at' => '2026-10-01']);
         LeaveRequest::create(['employee_id' => $mary->id, 'leave_type' => 'annual', 'company_email' => 'mary@pikozm.com', 'start_date' => '2026-10-05', 'end_date' => '2026-10-07', 'days' => 3, 'status' => 'approved']);
 
         // Pat starts October

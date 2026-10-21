@@ -175,6 +175,8 @@
 .llg-status-completed { background: var(--brass-soft); color: var(--ink); }
 .llg-status-paused { background: var(--sick-bg); color: var(--sick); }
 .llg-status-written_off { background: var(--warn-bg); color: var(--warn); }
+.llg-status-pending_disbursement { background: #EEF3FF; color: #2E4C9A; }
+.llg-status-cancelled { background: #EEF0F2; color: #4B5563; }
 
 .llg-action-btn { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 5px; color: var(--ink-soft); text-decoration: none; }
 .llg-action-btn:hover { background: var(--brass-soft); color: var(--ink); border-color: var(--brass); }

@@ -8,12 +8,12 @@
     <div>
         <div class="tm-code-label">Your company code</div>
         <div class="tm-code-value" translate="no" id="tmCode">{{ $company->company_code }}</div>
-        <p>Everyone at {{ $company->name }} signs in with this code, their email and their password. Share it with your team — it isn't a password, but it keeps sign-ins separate from other companies.</p>
+        <p>Your team signs in with just their email and password. This code is only needed by people whose email belongs to more than one company.</p>
     </div>
     <div class="tm-code-actions">
         <button type="button" class="zp-btn zp-btn-copper" onclick="navigator.clipboard.writeText('{{ $company->company_code }}');this.innerHTML='<i class=\'bi bi-check2\'></i> Copied'"><i class="bi bi-clipboard"></i> Copy code</button>
         <a class="zp-btn zp-btn-ghost" style="color:#fff;border-color:rgba(255,255,255,.3)" target="_blank" rel="noopener"
-           href="https://wa.me/?text={{ urlencode("Sign in to {$company->name} on ZamPayroll: " . route('login') . " — company code {$company->company_code}") }}"><i class="bi bi-whatsapp"></i> Share on WhatsApp</a>
+           href="https://wa.me/?text={{ urlencode("Sign in to {$company->name} on ZamPayroll with your email and password: " . route('login')) }}"><i class="bi bi-whatsapp"></i> Share on WhatsApp</a>
     </div>
 </section>
 

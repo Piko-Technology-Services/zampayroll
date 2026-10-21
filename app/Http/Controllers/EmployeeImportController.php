@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Employee;
-use App\Services\Ai\AttachmentReader;
 use App\Services\EmployeeColumnMapper;
 use App\Services\EmployeePortalService;
 use App\Services\HrActions;
+use App\Services\Import\SmartEmployeeParser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -33,48 +33,41 @@ class EmployeeImportController extends Controller
         ]);
     }
 
-    /** Step 1 → 2: read the file / pasted text and guess the column matching. */
-    public function parse(Request $request, AttachmentReader $reader)
+    /**
+     * Step 1 → 2: read the file / pasted text and guess the column matching.
+     * Any layout works: spreadsheets with titles above the headings, several sheets,
+     * no headings at all, or plain messy text (one person per paragraph or line).
+     */
+    public function parse(Request $request, SmartEmployeeParser $parser)
     {
         $request->validate([
-            'file'  => 'nullable|file|max:10240|mimes:csv,txt,xlsx,xls,tsv',
+            'file'  => 'nullable|file|max:10240|mimes:csv,txt,xlsx,xls,tsv,ods',
             'paste' => 'nullable|string|max:2000000',
         ]);
 
         try {
-            if ($request->hasFile('file')) {
-                $rows = $reader->read($request->file('file'))['rows'];
-                $source = $request->file('file')->getClientOriginalName();
-            } else {
-                $rows = $reader->rowsFromText((string) $request->input('paste'));
-                $source = 'Pasted list';
-            }
+            $result = $request->hasFile('file')
+                ? $parser->fromFile($request->file('file'))
+                : $parser->fromText((string) $request->input('paste'));
         } catch (\Throwable $e) {
             report($e);
 
             return response()->json(['message' => "We couldn't read that file. Try saving it as .xlsx or .csv and upload again."], 422);
         }
 
-        if (! $rows) {
-            return response()->json(['message' => 'We found no rows. Make sure the first row has the column headings (e.g. First name, Surname, NRC, Net pay).'], 422);
+        if (! $result['rows']) {
+            return response()->json(['message' => $request->hasFile('file')
+                ? "We couldn't find any people in that file. Check that it has names in it — headings are optional."
+                : "We couldn't find any names in that text. Put each person on their own line or paragraph, starting with their name."], 422);
         }
-        if (count($rows) > self::MAX_ROWS) {
+        if (count($result['rows']) > self::MAX_ROWS) {
             return response()->json(['message' => 'That is more than ' . self::MAX_ROWS . ' people. Please split the file and import in parts.'], 422);
         }
-
-        $headers = array_keys($rows[0]);
-        $samples = [];
-        foreach ($headers as $h) {
-            $samples[$h] = collect(array_column($rows, $h))->filter(fn ($v) => $v !== '' && $v !== null)->take(3)->values();
+        if (! $request->hasFile('file')) {
+            $result['source'] = $result['mode'] === 'text' ? 'Your pasted text' : 'Pasted list';
         }
 
-        return response()->json([
-            'source'  => $source,
-            'headers' => $headers,
-            'samples' => $samples,
-            'mapping' => EmployeeColumnMapper::guessAll($headers),
-            'rows'    => $rows,
-        ]);
+        return response()->json($result);
     }
 
     /** Step 2 → 3: clean each mapped row and flag problems / existing people. */

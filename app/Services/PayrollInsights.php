@@ -230,7 +230,7 @@ class PayrollInsights
             'loans'         => Loan::where('status', 'active')->distinct('employee_id')->count('employee_id'),
             'overtime'      => (clone $ot)->distinct('employee_id')->count('employee_id'),
             'overtime_amt'  => (float) (clone $ot)->sum('amount'),
-            'pending'       => LeaveRequest::where('status', 'pending')->count() + OvertimeRequest::where('status', 'pending')->count() + LoanRequest::where('status', 'pending')->count(),
+            'pending'       => LeaveRequest::whereIn('status', LeaveRequest::OPEN)->count() + OvertimeRequest::where('status', 'pending')->count() + LoanRequest::where('status', 'pending')->count(),
             'expected_net'  => (float) (clone $active)->sum('net_salary'),
         ];
     }

@@ -7,7 +7,11 @@
             Leave Application
         </div>
         <h2 style="margin:0 0 16px; font-size:18px; color:#17263A;">
-            {{ $leaveRequest->employee->first_name }} {{ $leaveRequest->employee->last_name }} has applied for leave
+            @if($leaveRequest->status === 'manager_approved')
+                {{ $leaveRequest->employee->first_name }} {{ $leaveRequest->employee->last_name }}'s leave was approved by their manager — please confirm
+            @else
+                {{ $leaveRequest->employee->first_name }} {{ $leaveRequest->employee->last_name }} has applied for leave
+            @endif
         </h2>
 
         <table style="width:100%; font-size:13px; color:#17263A; border-collapse:collapse;">
@@ -17,7 +21,7 @@
             </tr>
             <tr>
                 <td style="padding:6px 0; color:#7A8595;">Leave Type</td>
-                <td style="padding:6px 0; text-align:right;">{{ \App\Models\LeaveRequest::TYPES[$leaveRequest->leave_type] ?? $leaveRequest->leave_type }}</td>
+                <td style="padding:6px 0; text-align:right;">{{ $leaveRequest->typeName() }}</td>
             </tr>
             <tr>
                 <td style="padding:6px 0; color:#7A8595;">Dates</td>

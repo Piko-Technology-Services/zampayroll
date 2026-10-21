@@ -1,145 +1,195 @@
 @extends('layouts.app')
 
+@section('title', 'Leave requests · ZamPayroll')
+
+@push('styles')
+<link rel="stylesheet" href="{{ asset('assets/css/zp-people.css') }}">
+<link rel="stylesheet" href="{{ asset('assets/css/zp-payroll.css') }}">
+<link rel="stylesheet" href="{{ asset('assets/css/zp-requests.css') }}">
+@endpush
+
+@php
+    $u = auth()->user();
+    $fmt = fn ($n) => rtrim(rtrim(number_format((float) $n, 1), '0'), '.');
+    $tabs = ['open' => 'Waiting', 'approved' => 'Approved', 'rejected' => 'Rejected', 'cancelled' => 'Cancelled', 'all' => 'All'];
+    $canApprove = $u->hasPermission('leave.approve');
+@endphp
+
 @section('content')
-
-<div class="ldb p-5">
-
-    <div class="ldb-header">
+<div class="pr pp rq">
+    <div class="pr-head">
         <div>
-            <a href="{{ route('leave.years') }}" class="ldb-back"><i class="bi bi-arrow-left"></i> Leave Sheets</a>
-            <div class="ldb-eyebrow">Leave Management</div>
-            <h1 class="ldb-title">Leave Requests</h1>
+            <h1>Leave requests</h1>
+            <p>
+                @if($hrConfirm) Managers approve first, then HR confirms. @else A manager or HR approves; HR can see and change everything. @endif
+                Approving updates the balance, the leave sheet and attendance.
+            </p>
+        </div>
+        <div class="pr-head-actions">
+            @if($canApprove)
+                <button type="button" class="pp-btn pp-btn-primary" data-rq-open="rqRecord"><i class="bi bi-plus-lg"></i> Record leave</button>
+            @endif
         </div>
     </div>
 
-    @if(session('success'))
-        <div class="ldb-alert"><i class="bi bi-check-circle"></i> {{ session('success') }}</div>
-    @endif
-
-    <div class="ldb-tabs">
-        @foreach(['pending' => 'Pending', 'approved' => 'Approved', 'rejected' => 'Rejected', 'all' => 'All'] as $key => $label)
-            <a href="{{ route('leave.dashboard', ['status' => $key]) }}"
-               class="ldb-tab {{ $status === $key ? 'ldb-tab-active' : '' }}">
-                {{ $label }}
-                @if(isset($counts[$key]))
-                    <span class="ldb-tab-count">{{ $counts[$key] }}</span>
-                @endif
-            </a>
-        @endforeach
+    <div class="rq-kpis">
+        <div class="rq-kpi main"><span>Waiting for a decision</span><b>{{ $counts['open'] }}</b></div>
+        <div class="rq-kpi"><span>On leave today</span><b>{{ $onLeaveToday }}</b></div>
+        <div class="rq-kpi"><span>Starting in the next 2 weeks</span><b>{{ $upcoming }}</b></div>
+        <div class="rq-kpi"><span>Approved (all time)</span><b>{{ $counts['approved'] }}</b></div>
     </div>
 
-    <div class="ldb-card">
-        <table class="ldb-table">
-            <thead>
-                <tr>
-                    <th>Employee</th>
-                    <th>Dates</th>
-                    <th class="num">Days</th>
-                    <th>Reason</th>
-                    <th>Status</th>
-                    <th>Reviewed</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($requests as $req)
-                    <tr>
-                        <td>
-                            <div class="ldb-emp-name">{{ $req->employee->first_name }} {{ $req->employee->last_name }}</div>
-                            <div class="ldb-emp-id"><i class="bi bi-hash"></i>{{ $req->employee->employee_id }}</div>
-                        </td>
-                        <td class="ldb-mono">{{ $req->start_date->format('d M Y') }} → {{ $req->end_date->format('d M Y') }}</td>
-                        <td class="num ldb-mono">{{ $req->days }}</td>
-                        <td class="ldb-reason">{{ $req->reason ?: '—' }}</td>
-                        <td><span class="ldb-status ldb-status-{{ $req->status }}">{{ ucfirst($req->status) }}</span></td>
-                        <td class="ldb-td-muted">
-                            @if($req->reviewed_by)
-                                {{ $req->reviewedBy->name }}<br>{{ $req->reviewed_at->format('d M Y') }}
-                            @else
-                                —
-                            @endif
-                        </td>
-                        <td class="ldb-actions">
-                            @if($req->status === 'pending')
-                                <form method="POST" action="{{ route('leave.approve', $req) }}" class="ldb-decision-form">
-                                    @csrf
-                                    <input type="text" name="comment" class="ldb-comment" placeholder="Comment (optional)">
-                                    <button class="ldb-btn ldb-btn-approve" title="Approve"><i class="bi bi-check-lg"></i></button>
-                                </form>
-                                <form method="POST" action="{{ route('leave.reject', $req) }}" class="ldb-decision-form">
-                                    @csrf
-                                    <button class="ldb-btn ldb-btn-reject" title="Reject" onclick="return confirm('Reject this leave request?');"><i class="bi bi-x-lg"></i></button>
-                                </form>
-                            @elseif($req->hr_comment)
-                                <span class="ldb-td-muted" title="{{ $req->hr_comment }}"><i class="bi bi-chat-left-text"></i></span>
-                            @endif
-                        </td>
-                    </tr>
-                @empty
-                    <tr><td colspan="7" class="ldb-empty">No leave requests here.</td></tr>
-                @endforelse
-            </tbody>
-        </table>
+    <div class="rq-bar">
+        <nav class="rq-tabs">
+            @foreach($tabs as $key => $label)
+                <a href="{{ route('leave.dashboard', array_filter(['status' => $key, 'q' => request('q'), 'type' => request('type')])) }}" class="rq-tab {{ $status === $key ? 'on' : '' }}">
+                    {{ $label }} @isset($counts[$key])<span class="n">{{ $counts[$key] }}</span>@endisset
+                </a>
+            @endforeach
+        </nav>
+        <form class="rq-filters" method="GET">
+            <input type="hidden" name="status" value="{{ $status }}">
+            <input class="pp-input" type="search" name="q" value="{{ request('q') }}" placeholder="Search a name or number">
+            <select class="pp-select" name="type" onchange="this.form.submit()">
+                <option value="">All types</option>
+                @foreach($types as $t)<option value="{{ $t->key }}" @selected(request('type') === $t->key)>{{ $t->name }}</option>@endforeach
+            </select>
+        </form>
     </div>
 
+    <div class="rq-list">
+        @forelse($requests as $req)
+            @php
+                $emp = $req->employee;
+                $type = $types->firstWhere('key', $req->leave_type);
+                $decide = $service->canDecide($u, $req);
+                $cancel = $service->canCancel($u, $req);
+            @endphp
+            <article class="rq-item {{ $decide ? 'attn' : '' }}">
+                <div class="rq-av">{{ $emp?->initials }}</div>
+                <div class="rq-main">
+                    <div class="rq-who">
+                        <b>{{ $emp?->full_name ?? 'Former employee' }}</b>
+                        <small>{{ $emp?->employee_id }}{{ $emp?->department ? ' · ' . $emp->department : '' }}</small>
+                        <span class="rq-type {{ $type && ! $type->is_paid ? 'unpaid' : '' }}">{{ $typeNames[$req->leave_type] ?? $req->typeName() }}</span>
+                    </div>
+                    <div class="rq-what">
+                        <span><i class="bi bi-calendar-range"></i> {{ $req->start_date->format('D j M') }} – {{ $req->end_date->format('D j M Y') }}</span>
+                        <span><i class="bi bi-hourglass-split"></i> <b>{{ $fmt($req->days) }}</b> working day{{ (float) $req->days === 1.0 ? '' : 's' }}</span>
+                        @if($req->return_date)<span><i class="bi bi-box-arrow-in-right"></i> back {{ $req->return_date->format('D j M') }}</span>@endif
+                        @if($type?->deducts_balance && $emp && $emp->leave_days_balance !== null && $req->isOpen())
+                            <span><i class="bi bi-piggy-bank"></i> {{ $fmt($emp->leave_days_balance) }} days left now</span>
+                        @endif
+                    </div>
+                    @if($req->reason)<div class="rq-note">“{{ $req->reason }}”</div>@endif
+                    @if($req->documents)
+                        <div class="rq-docs">
+                            @foreach($req->documents as $doc)
+                                <a href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($doc['path']) }}" target="_blank" rel="noopener"><i class="bi bi-paperclip"></i> {{ \Illuminate\Support\Str::limit($doc['name'] ?? 'Document', 28) }}</a>
+                            @endforeach
+                        </div>
+                    @endif
+                    <div class="rq-trail">
+                        <span><i class="bi bi-send"></i>Asked {{ $req->created_at->diffForHumans() }}{{ $req->recorded_by ? ' (entered by HR)' : '' }}</span>
+                        @if($req->manager_approved_at && $req->status !== 'approved')<span><i class="bi bi-person-check"></i>Manager OK: {{ $req->managerApprovedBy?->name }}</span>@endif
+                        @if($req->reviewed_at && in_array($req->status, ['approved', 'rejected'], true))<span><i class="bi bi-check2-circle"></i>{{ ucfirst($req->status) }} by {{ $req->reviewedBy?->name }} · {{ $req->reviewed_at->format('j M') }}</span>@endif
+                        @if($req->hr_comment)<span><i class="bi bi-chat-left-text"></i>{{ $req->hr_comment }}</span>@endif
+                        @if($req->status === 'cancelled')<span><i class="bi bi-x-circle"></i>Cancelled {{ $req->cancelled_by_employee ? 'by the employee' : 'by ' . ($req->cancelledBy?->name ?? 'HR') }} · {{ optional($req->cancelled_at)->format('j M') }}{{ (float) $req->deducted_days > 0 ? ' · ' . $fmt($req->deducted_days) . ' days returned' : '' }}{{ $req->cancel_reason ? ' — ' . $req->cancel_reason : '' }}</span>@endif
+                    </div>
+                </div>
+                <div class="rq-side">
+                    <span class="rq-pill {{ $req->status }}">{{ $req->statusLabel() }}</span>
+                    @if($decide)
+                        <form method="POST" action="{{ route('leave.approve', $req) }}" class="rq-decide">
+                            @csrf
+                            <input class="pp-input" type="text" name="comment" maxlength="500" placeholder="Comment (optional)">
+                            <button class="pp-btn pp-btn-sm rq-btn-no" formaction="{{ route('leave.reject', $req) }}"><i class="bi bi-x-lg"></i> Reject</button>
+                            <button class="pp-btn pp-btn-sm pp-btn-primary"><i class="bi bi-check-lg"></i> {{ $req->status === 'manager_approved' ? 'Confirm' : 'Approve' }}</button>
+                        </form>
+                    @endif
+                    @if($cancel)
+                        <details class="rq-more">
+                            <summary><i class="bi bi-x-circle"></i> Cancel {{ $req->status === 'approved' ? 'this leave' : 'request' }}</summary>
+                            <form method="POST" action="{{ route('leave.cancel', $req) }}">
+                                @csrf
+                                <input class="pp-input" type="text" name="reason" maxlength="500" placeholder="Reason" style="width:170px;padding:.45rem .6rem;font-size:.8rem">
+                                <button class="pp-btn pp-btn-sm rq-btn-no">Cancel it</button>
+                            </form>
+                        </details>
+                    @endif
+                </div>
+            </article>
+        @empty
+            <div class="rq-empty"><i class="bi bi-cup-hot"></i>{{ $status === 'open' ? 'Nothing waiting. All caught up!' : 'No leave requests here.' }}</div>
+        @endforelse
+    </div>
+
+    <div style="margin-top:1rem">{{ $requests->links() }}</div>
 </div>
-
-<style>
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
-.ldb * { box-sizing: border-box; }
-.ldb {
-    --paper: #ffffff;
-    --ink: #00742E;
-    --ink-soft: #58687D;
-    --ink-faint: #93A0B2;
-    --brass: #00742E;
-    --brass-soft: #EAF7ED;
-    --line: #D9E9DE;
-    --accent-orange: #E97B00;
-    --accent-red: #D50115;
-    --active: #00742E;
-    --active-bg: #EAF7ED;
-    --warn: #D50115;
-    --warn-bg: #FDECEF;
-    font-family: 'IBM Plex Sans', sans-serif; color: var(--ink); background: var(--paper); padding: 1.5rem 0 2.5rem;
-}
-.ldb-back { display: inline-flex; align-items: center; gap: .35rem; font-size: .78rem; font-weight: 600; color: var(--ink-soft); text-decoration: none; margin-bottom: .6rem; }
-.ldb-back:hover { color: var(--brass); }
-.ldb-eyebrow { font-family: 'IBM Plex Sans', sans-serif; font-size: .68rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--brass); margin-bottom: .2rem; }
-.ldb-title { font-family: 'IBM Plex Sans', sans-serif; font-size: 1.4rem; font-weight: 700; margin: 0; }
-.ldb-alert { border-radius: 6px; font-size: .84rem; padding: .7rem 1rem; margin: 1rem 0; background: var(--active-bg); color: var(--active); border: 1px solid #CFE6D5; }
-
-.ldb-tabs { display: flex; gap: .4rem; margin: 1rem 0; }
-.ldb-tab { display: inline-flex; align-items: center; gap: .4rem; font-size: .8rem; font-weight: 600; padding: .5rem .9rem; border-radius: 6px; text-decoration: none; color: var(--ink-soft); border: 1px solid var(--line); background: #fff; }
-.ldb-tab-active { background: var(--ink); color: #fff; border-color: var(--ink); }
-.ldb-tab-count { font-size: .68rem; background: rgba(0,116,46,.08); padding: .05rem .4rem; border-radius: 10px; }
-.ldb-tab-active .ldb-tab-count { background: rgba(255,255,255,.2); }
-
-.ldb-card { background: #fff; border: 1px solid var(--line); border-radius: 6px; overflow-x: auto; }
-.ldb-table { width: 100%; border-collapse: collapse; font-size: .82rem; min-width: 900px; }
-.ldb-table thead th { font-family: 'IBM Plex Sans', sans-serif; font-size: .64rem; font-weight: 600; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .06em; padding: .8rem 1rem; border-bottom: 2px solid var(--ink); text-align: left; background: #F9FCFA; }
-.ldb-table thead th.num, .ldb-table td.num { text-align: right; }
-.ldb-table td { padding: .6rem 1rem; border-bottom: 1px solid var(--line); vertical-align: middle; }
-.ldb-mono { font-family: 'IBM Plex Sans', sans-serif; }
-.ldb-emp-name { font-weight: 600; font-size: .82rem; }
-.ldb-emp-id { font-size: .66rem; color: var(--ink-faint); }
-.ldb-reason { color: var(--ink-soft); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ldb-td-muted { color: var(--ink-faint); font-size: .76rem; }
-.ldb-empty { text-align: center; color: var(--ink-faint); padding: 1.5rem 0 !important; }
-
-.ldb-status { display: inline-block; font-size: .68rem; font-weight: 700; padding: .2rem .6rem; border-radius: 4px; text-transform: uppercase; }
-.ldb-status-pending { background: #FFF0E1; color: var(--accent-orange); }
-.ldb-status-approved { background: var(--active-bg); color: var(--active); }
-.ldb-status-rejected { background: var(--warn-bg); color: var(--warn); }
-
-.ldb-actions { display: flex; gap: .4rem; align-items: center; }
-.ldb-decision-form { display: flex; align-items: center; gap: .3rem; }
-.ldb-comment { font-size: .74rem; padding: .3rem .5rem; border: 1px solid var(--line); border-radius: 4px; width: 120px; }
-.ldb-btn { width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border-radius: 5px; border: 1px solid var(--line); background: #fff; cursor: pointer; }
-.ldb-btn-approve { color: var(--active); }
-.ldb-btn-approve:hover { background: var(--active-bg); border-color: #CFE6D5; }
-.ldb-btn-reject { color: var(--warn); }
-.ldb-btn-reject:hover { background: var(--warn-bg); border-color: #F4C6CC; }
-</style>
-
 @endsection
+
+@push('modals')
+@if($canApprove)
+<div class="rq-modal-bg" id="rqRecord" data-check="{{ route('leave.check') }}">
+    <form class="rq-modal" method="POST" action="{{ route('leave.record') }}" enctype="multipart/form-data">
+        @csrf
+        <h2 class="zp-display">Record leave</h2>
+        <div class="sub">For someone who phoned in sick, or leave agreed in person. The same rules apply.</div>
+        <div class="pp-field">
+            <label for="rqEmp">Employee</label>
+            <select class="pp-select" name="employee_id" id="rqEmp" required>
+                <option value="">Choose…</option>
+                @foreach($employees as $e)<option value="{{ $e->id }}">{{ $e->first_name }} {{ $e->last_name }} · {{ $e->employee_id }}</option>@endforeach
+            </select>
+        </div>
+        <div class="pp-field">
+            <label for="rqType">Type of leave</label>
+            <select class="pp-select" name="leave_type" id="rqType" required>
+                @foreach($types->where('is_active', true) as $t)<option value="{{ $t->key }}">{{ $t->name }}{{ $t->is_paid ? '' : ' (unpaid)' }}</option>@endforeach
+            </select>
+        </div>
+        <div class="rq-grid2">
+            <div class="pp-field"><label for="rqStart">First day off</label><input class="pp-input" type="date" name="start_date" id="rqStart" required></div>
+            <div class="pp-field"><label for="rqEnd">Last day off</label><input class="pp-input" type="date" name="end_date" id="rqEnd" required></div>
+        </div>
+        <div class="rq-calc" id="rqCalc" hidden></div>
+        <div class="pp-field"><label for="rqReason">Note <small>(optional)</small></label><input class="pp-input" type="text" name="reason" id="rqReason" maxlength="1000"></div>
+        <div class="pp-field"><label for="rqDocs">Documents <small>(optional)</small></label><input class="pp-input" type="file" name="documents[]" id="rqDocs" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"></div>
+        <label class="rq-check"><input type="checkbox" name="approve_now" value="1" checked> Approve it now</label>
+        <div class="rq-modal-actions">
+            <button type="button" class="pp-btn pp-btn-ghost" data-rq-close>Close</button>
+            <button class="pp-btn pp-btn-primary"><i class="bi bi-check-lg"></i> Save leave</button>
+        </div>
+    </form>
+</div>
+@endif
+@endpush
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[data-rq-open]').forEach(b => b.addEventListener('click', () => document.getElementById(b.dataset.rqOpen).classList.add('open')));
+    document.querySelectorAll('.rq-modal-bg').forEach(bg => {
+        bg.addEventListener('click', e => { if (e.target === bg || e.target.closest('[data-rq-close]')) bg.classList.remove('open'); });
+    });
+    const m = document.getElementById('rqRecord'); if (!m) return;
+    const f = id => document.getElementById(id), out = f('rqCalc');
+    const fmt = n => (Math.round(n * 10) / 10).toString();
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    async function calc() {
+        if (!f('rqEmp').value || !f('rqStart').value || !f('rqEnd').value) { out.hidden = true; return; }
+        if (f('rqEnd').value < f('rqStart').value) f('rqEnd').value = f('rqStart').value;
+        const q = new URLSearchParams({ employee_id: f('rqEmp').value, leave_type: f('rqType').value, start_date: f('rqStart').value, end_date: f('rqEnd').value });
+        const r = await fetch(m.dataset.check + '?' + q, { headers: { Accept: 'application/json' } });
+        if (!r.ok) return;
+        const d = await r.json(), b = d.balance || {};
+        out.hidden = false;
+        out.classList.toggle('bad', !d.ok);
+        out.innerHTML = d.ok
+            ? '<span>Working days<b>' + fmt(d.days) + '</b></span><span>Back at work<b style="font-size:1rem">' + esc(d.return_date) + '</b></span>' + (b.available !== null && b.available !== undefined ? '<span>Leave days left<b>' + fmt(b.available) + '</b></span>' : '')
+            : '<span><i class="bi bi-exclamation-triangle"></i> ' + esc(d.message) + '</span>';
+    }
+    ['rqEmp', 'rqType', 'rqStart', 'rqEnd'].forEach(id => f(id).addEventListener('change', calc));
+});
+</script>
+@endpush

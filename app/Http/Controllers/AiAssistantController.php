@@ -30,6 +30,12 @@ class AiAssistantController extends Controller
         if ($request->hasFile('attachment')) {
             try {
                 $attachment = $reader->read($request->file('attachment'));
+                try {
+                    $parsed = app(\App\Services\Import\SmartEmployeeParser::class)->fromFile($request->file('attachment'));
+                    $attachment['employees'] = \App\Services\Import\SmartEmployeeParser::employees($parsed);
+                } catch (\Throwable $e) {
+                    report($e);
+                }
             } catch (\Throwable $e) {
                 report($e);
 

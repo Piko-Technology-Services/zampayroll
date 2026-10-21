@@ -292,7 +292,8 @@ class AiTools
         $limit = min(100, (int) ($in['limit'] ?? 25));
         $model = ['leave' => LeaveRequest::class, 'overtime' => OvertimeRequest::class, 'loan' => LoanRequest::class][$kind];
 
-        $q = $model::with('employee')->when($status !== 'all', fn ($w) => $w->where('status', $status))->latest();
+        $q = $model::with('employee')->when($status !== 'all', fn ($w) => $kind === 'leave' && $status === 'pending'
+            ? $w->whereIn('status', LeaveRequest::OPEN) : $w->where('status', $status))->latest();
 
         if (! empty($in['employee_query'])) {
             $ids = $this->matchEmployeeIds($in['employee_query']);
@@ -554,18 +555,27 @@ class AiTools
             case 'decide_requests':
                 $model = ['leave' => LeaveRequest::class, 'overtime' => OvertimeRequest::class, 'loan' => LoanRequest::class][$p['kind']];
                 $done = 0;
-                foreach ($model::whereIn('id', $p['ids'])->where('status', 'pending')->get() as $r) {
-                    match ($p['kind']) {
-                        'leave' => $hr->decideLeave($r, $p['status'], $p['comment'], $this->user),
-                        'overtime' => $hr->decideOvertime($r, $p['status'], $p['comment'], $this->user),
-                        'loan' => $hr->decideLoan($r, $p['status'], $p['comment'], $this->user),
-                    };
-                    $done++;
+                $problems = [];
+                $open = $p['kind'] === 'leave' ? LeaveRequest::OPEN : ['pending'];
+                foreach ($model::whereIn('id', $p['ids'])->whereIn('status', $open)->get() as $r) {
+                    try {
+                        match ($p['kind']) {
+                            'leave' => $hr->decideLeave($r, $p['status'], $p['comment'], $this->user),
+                            'overtime' => $hr->decideOvertime($r, $p['status'], $p['comment'], $this->user),
+                            'loan' => $hr->decideLoan($r, $p['status'], $p['comment'], $this->user),
+                        };
+                        $done++;
+                    } catch (\Illuminate\Validation\ValidationException $e) {
+                        $problems[] = ($r->employee?->full_name ?? "#{$r->id}") . ': ' . collect($e->errors())->flatten()->first();
+                    }
+                }
+                if ($problems) {
+                    return ['message' => "✅ {$done} done. Not done: " . implode('; ', $problems), 'link' => route(['leave' => 'leave.dashboard', 'overtime' => 'overtime.dashboard', 'loan' => 'loan.dashboard'][$p['kind']]), 'link_label' => 'View requests'];
                 }
                 $dash = ['leave' => 'leave.dashboard', 'overtime' => 'overtime.dashboard', 'loan' => 'loan.dashboard'][$p['kind']];
 
                 return ['message' => "✅ {$done} {$p['kind']} request" . ($done === 1 ? '' : 's') . ' ' . $p['status'] . '. The employees have been notified.'
-                    . ($p['kind'] === 'loan' && $p['status'] === 'approved' ? ' Remember to add approved loans to the loan ledger so repayments are deducted.' : ''),
+                    . ($p['kind'] === 'loan' && $p['status'] === 'approved' ? ' Approved loans are on the ledger as "not paid out yet" — record the payout on the Loans page and repayments start from the next payroll.' : ''),
                     'link' => route($dash), 'link_label' => 'View requests'];
 
             case 'prepare_payroll':
@@ -620,7 +630,7 @@ class AiTools
     public function pendingCounts(): array
     {
         return [
-            'leave' => LeaveRequest::where('status', 'pending')->count(),
+            'leave' => LeaveRequest::whereIn('status', LeaveRequest::OPEN)->count(),
             'overtime' => OvertimeRequest::where('status', 'pending')->count(),
             'loans' => LoanRequest::where('status', 'pending')->count(),
         ];

@@ -56,21 +56,8 @@ class LoanApplicationController extends Controller
             }
         }
 
-        $loanRequest = LoanRequest::create([
-            'employee_id'         => $employee->id,
-            'company_email'       => $validated['email'],
-            'amount'              => $validated['amount'],
-            'payment_plan'        => $validated['payment_plan'],
-            'payment_plan_note'   => $validated['payment_plan_note'] ?? null,
-            'installment_amount'  => $validated['payment_plan'] === 'once_off'
-                                        ? null
-                                        : ($validated['installment_amount'] ?? null),
-            'reason'              => $validated['reason'] ?? null,
-            'documents'           => $documents ?: null,
-            'status'              => 'pending',
-        ]);
-
-        $this->notifyHr($loanRequest);
+        // Same rules as the portal (one open request at a time, sensible terms) and the same approvers are emailed.
+        $loanRequest = app(\App\Services\Loans\LoanService::class)->apply($employee, $validated + ['company_email' => $validated['email']], $documents ?: null);
 
         return view('loan.applied', ['loanRequest' => $loanRequest]);
     }

@@ -40,8 +40,17 @@ class LoanRepaymentService
             ->where('name', 'like', 'Loan Repayment%')
             ->delete();
 
+        // Lines for loans that are no longer deductible (paused, cancelled, not paid out) come off this run.
+        PayrollRunAdjustment::where('payroll_run_id', $run->id)
+            ->where('employee_id', $employeeId)
+            ->whereNotNull('loan_id')
+            ->whereNotIn('loan_id', Loan::where('employee_id', $employeeId)->where('status', 'active')->whereNotNull('disbursed_at')->select('id'))
+            ->delete();
+
+        // Only loans that were actually paid out (disbursed) and are running are repaid from pay.
         $loans = Loan::where('employee_id', $employeeId)
             ->where('status', 'active')
+            ->whereNotNull('disbursed_at')
             ->get();
 
         foreach ($loans as $loan) {
@@ -52,7 +61,7 @@ class LoanRepaymentService
                 ->where('loan_id', $loan->id)
                 ->delete();
 
-            if (! $this->isDue($loan, $periodDate)) {
+            if (! $this->isDue($loan, $periodDate) || $this->alreadyDeductedThisPeriod($loan, $run)) {
                 continue;
             }
 
@@ -106,7 +115,9 @@ class LoanRepaymentService
                 ->where('payroll_id', $payroll->id)
                 ->exists();
 
-            if ($alreadyRecorded) {
+            // Never take a second repayment for the same month (e.g. two payroll runs for one period).
+            $run = PayrollRun::find($payroll->payroll_run_id);
+            if ($alreadyRecorded || ! $loan->isDisbursed() || ($run && $this->alreadyDeductedThisPeriod($loan, $run, false))) {
                 continue;
             }
 
@@ -141,6 +152,22 @@ class LoanRepaymentService
         }
 
         Loan::syncEmployeeCache($payroll->employee_id);
+    }
+
+    /**
+     * Has this loan already been repaid from (or claimed by) another payroll for the same month?
+     * Another run that is still being prepared counts too, so two drafts can't both deduct.
+     */
+    public function alreadyDeductedThisPeriod(Loan $loan, PayrollRun $run, bool $countDrafts = true): bool
+    {
+        $sameMonth = PayrollRun::query()->where('id', '!=', $run->id)->where('period', $run->period)->pluck('id');
+        if ($sameMonth->isEmpty()) {
+            return false;
+        }
+
+        return LoanPayment::where('loan_id', $loan->id)->where('type', 'deduction')
+                ->whereIn('payroll_id', Payroll::whereIn('payroll_run_id', $sameMonth)->select('id'))->exists()
+            || ($countDrafts && PayrollRunAdjustment::where('loan_id', $loan->id)->whereIn('payroll_run_id', $sameMonth)->exists());
     }
 
     private function isDue(Loan $loan, Carbon $periodDate): bool

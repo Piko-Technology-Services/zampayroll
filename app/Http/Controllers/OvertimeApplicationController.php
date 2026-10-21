@@ -25,7 +25,7 @@ class OvertimeApplicationController extends Controller
             'date'       => 'required|date',
             'start_time' => 'required|date_format:H:i',
             'end_time'   => 'required|date_format:H:i',
-            'type'       => 'required|in:' . implode(',', array_keys(OvertimeRequest::TYPES)),
+            'type'       => 'required|string|max:40',
             'comment'    => 'nullable|string|max:1000',
         ]);
 
@@ -42,39 +42,12 @@ class OvertimeApplicationController extends Controller
         // Everything below (holidays, notifications...) is scoped to the employee's company.
         \App\Support\Tenancy::setCompanyId((int) $employee->company_id);
 
-        $start = Carbon::createFromFormat('H:i', $validated['start_time']);
-        $end = Carbon::createFromFormat('H:i', $validated['end_time']);
-
-        if ($end->lte($start)) {
-            return back()->withInput()->withErrors(['end_time' => 'End time must be after start time.']);
-        }
-
-        $hours = round($end->diffInMinutes($start) / 60, 2);
-
-        $multiplier = OvertimeRequest::TYPES[$validated['type']]['multiplier'];
-        $basicPay = $employee->salary ?? 0;
-        $dailyRate = round($basicPay / $employee->working_days_per_month, 2);
-        // Normal OT = (DailyRate / 8) x 1.5 x Hours | Double OT = (DailyRate / 8) x 2 x Hours
-        $amount = round(($dailyRate / 8) * $multiplier * $hours, 2);
-
-        
-
-        $overtimeRequest = OvertimeRequest::create([
-            'employee_id'     => $employee->id,
-            'company_email'   => $validated['email'],
-            'date'            => $validated['date'],
-            'start_time'      => $validated['start_time'],
-            'end_time'        => $validated['end_time'],
-            'hours'           => $hours,
-            'type'            => $validated['type'],
-            'rate_multiplier' => $multiplier,
-            'daily_rate'      => $dailyRate,
-            'amount'          => $amount,
-            'comment'         => $validated['comment'] ?? null,
-            'status'          => 'pending',
+        // Same rules as the portal: breaks, overnight shifts, company rates, overlaps, approvers.
+        $overtimeRequest = app(\App\Services\Overtime\OvertimeService::class)->apply($employee, [
+            'date' => $validated['date'], 'start_time' => $validated['start_time'], 'end_time' => $validated['end_time'],
+            'break_minutes' => (int) $request->input('break_minutes', 0), 'type' => $validated['type'],
+            'comment' => $validated['comment'] ?? null, 'company_email' => $validated['email'],
         ]);
-
-        $this->notifyHr($overtimeRequest);
 
         return view('overtime.applied', ['overtimeRequest' => $overtimeRequest]);
     }

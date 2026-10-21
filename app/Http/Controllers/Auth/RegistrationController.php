@@ -42,7 +42,9 @@ class RegistrationController extends Controller
     {
         abort_if(Tenancy::isDedicated(), 404);
 
-        $dedicated = $this->isDedicatedRange($request->input('employee_count_range'));
+        // Every company starts on the shared workspace. Larger companies can ask for
+        // a private sub-domain later (Settings → Billing), which ZamPayroll approves.
+        $dedicated = false;
 
         $request->merge([
             'email' => Str::lower(trim((string) $request->input('email'))),

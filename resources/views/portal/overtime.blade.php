@@ -2,11 +2,15 @@
 @section('title', 'Overtime')
 
 @php
+    $fmtH = fn ($n) => rtrim(rtrim(number_format((float) $n, 2), '0'), '.');
     $items = $requests->map(fn ($r) => [
-        'title' => ($types[$r->type]['label'] ?? 'Overtime') . ' — K' . number_format((float) $r->amount, 2),
-        'detail' => $r->date->format('D d M Y') . ', ' . substr($r->start_time, 0, 5) . '–' . substr($r->end_time, 0, 5) . ' (' . rtrim(rtrim((string) $r->hours, '0'), '.') . ' hrs)',
+        'title' => $r->typeLabel() . ' — K' . number_format((float) $r->amount, 2),
+        'detail' => $r->date->format('D d M Y') . ', ' . substr($r->start_time, 0, 5) . '–' . substr($r->end_time, 0, 5)
+            . ($r->break_minutes ? ' less ' . $r->break_minutes . ' min break' : '') . ' (' . $fmtH($r->hours) . ' hrs)'
+            . ($r->payroll_run_id && $r->payrollRun ? ' · in ' . $r->payrollRun->displayName() : ''),
         'status' => $r->status,
-        'note' => $r->hr_comment,
+        'label' => $r->statusLabel(),
+        'note' => $r->hr_comment ?: $r->cancel_reason,
         'cancelUrl' => route('portal.overtime.cancel', $r),
     ]);
 @endphp
@@ -42,15 +46,22 @@
                 </div>
             </div>
             <div class="zp-field">
+                <label class="zp-label" for="break_minutes">Breaks <small>(minutes, not paid)</small></label>
+                <input class="zp-input @error('break_minutes') is-invalid @enderror" type="number" min="0" max="720" step="5" name="break_minutes" id="break_minutes" value="{{ old('break_minutes', 0) }}">
+                @error('break_minutes')<div class="zp-error">{{ $message }}</div>@enderror
+                <div class="zp-hint" id="otOvernight" hidden>Ends after midnight — counted as one shift.</div>
+            </div>
+            <div class="zp-field">
                 <span class="zp-label">Rate</span>
-                <div class="ob-tiles" style="grid-template-columns:1fr 1fr">
+                <div class="ob-tiles" style="grid-template-columns:repeat({{ min(3, count($types)) }}, 1fr)">
                     @foreach($types as $k => $t)
                         <div class="ob-tile">
-                            <input type="radio" name="type" id="ot-{{ $k }}" value="{{ $k }}" data-mult="{{ $t['multiplier'] }}" @checked(old('type', 'normal') === $k)>
-                            <label for="ot-{{ $k }}"><span class="t">{{ $t['label'] }} ({{ $t['multiplier'] }}×)</span><span class="s">{{ $t['tooltip'] }}</span></label>
+                            <input type="radio" name="type" id="ot-{{ $k }}" value="{{ $k }}" data-mult="{{ $t['multiplier'] }}" @checked(old('type', array_key_first($types)) === $k)>
+                            <label for="ot-{{ $k }}"><span class="t">{{ $t['label'] }} ({{ $fmtH($t['multiplier']) }}×)</span><span class="s">{{ $t['hint'] }}</span></label>
                         </div>
                     @endforeach
                 </div>
+                @error('type')<div class="zp-error">{{ $message }}</div>@enderror
             </div>
 
             <div class="pt-estimate">
@@ -59,11 +70,13 @@
             </div>
 
             <div class="zp-field">
-                <label class="zp-label" for="comment">What did you work on? <small>(optional)</small></label>
-                <textarea class="zp-textarea" name="comment" id="comment" rows="3">{{ old('comment') }}</textarea>
+                <label class="zp-label" for="comment">What was it for? @unless($settings['require_reason'])<small>(optional)</small>@endunless</label>
+                <textarea class="zp-textarea @error('comment') is-invalid @enderror" name="comment" id="comment" rows="3" placeholder="e.g. Month-end stock count">{{ old('comment') }}</textarea>
+                @error('comment')<div class="zp-error">{{ $message }}</div>@enderror
+                @error('start_time')<div class="zp-error">{{ $message }}</div>@enderror
             </div>
             <button class="zp-btn zp-btn-primary zp-btn-block" type="submit"><i class="bi bi-send"></i> Send for approval</button>
-            <p class="zp-hint mt-2">The estimate uses your basic salary ÷ {{ $employee->working_days_per_month }} working days ÷ 8 hours. HR confirms the final amount.</p>
+            <p class="zp-hint mt-2">The estimate uses your {{ $settings['base'] === 'gross' ? 'salary with regular allowances' : 'basic salary' }} ÷ {{ $employee->working_days_per_month }} working days ÷ {{ $fmtH($settings['hours_per_day']) }} hours. HR confirms the final amount.</p>
         </form>
     </div>
 
@@ -80,14 +93,18 @@
     const rate = {{ $hourlyRate }};
     const st = document.getElementById('start_time'), et = document.getElementById('end_time');
     function upd() {
-        const [a, b] = [st.value, et.value].map(v => { const [h, m] = (v || '0:0').split(':'); return +h * 60 + +m; });
-        const hrs = Math.max(0, (b - a) / 60);
-        const mult = +document.querySelector('input[name=type]:checked').dataset.mult;
+        let [a, b] = [st.value, et.value].map(v => { const [h, m] = (v || '0:0').split(':'); return +h * 60 + +m; });
+        const overnight = st.value && et.value && b <= a;
+        if (overnight) b += 1440;
+        const brk = Math.max(0, +document.getElementById('break_minutes').value || 0);
+        const hrs = Math.max(0, (b - a - brk) / 60);
+        const mult = +(document.querySelector('input[name=type]:checked') || { dataset: { mult: 1 } }).dataset.mult;
+        document.getElementById('otOvernight').hidden = !overnight;
         document.getElementById('otHours').textContent = hrs.toFixed(2).replace(/\.?0+$/, '');
         document.getElementById('otMult').textContent = mult;
         document.getElementById('otAmount').textContent = (rate * mult * hrs).toLocaleString('en-ZM', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
-    document.querySelectorAll('#start_time,#end_time,input[name=type]').forEach(el => el.addEventListener('input', upd));
+    document.querySelectorAll('#start_time,#end_time,#break_minutes,input[name=type]').forEach(el => el.addEventListener('input', upd));
     upd();
 })();
 </script>

@@ -10,6 +10,7 @@
                 ['employees.index', 'All employees', 'bi-people', ['employees.index', 'employees.show', 'employees.edit'], 'employees.view'],
                 ['employees.create', 'Add employee', 'bi-person-plus', ['employees.create'], 'employees.manage'],
                 ['employees.import.wizard', 'Import a list', 'bi-upload', ['employees.import.wizard'], 'employees.import'],
+                ['employees.changes.index', 'Change requests' . (($n = $can('employees.manage') ? \App\Models\EmployeeChangeRequest::where('status', 'pending')->count() : 0) ? " ({$n})" : ''), 'bi-shield-check', ['employees.changes.*'], 'employees.manage'],
             ],
             'actions' => [
                 ['ai' => 'I want to add employees. I will paste or attach the list.', 'label' => 'Add with AI', 'icon' => 'bi-stars', 'perm' => 'employees.manage'],
@@ -31,6 +32,7 @@
             'tabs' => [
                 ['leave.dashboard', 'Requests', 'bi-inbox', ['leave.dashboard'], 'leave.view'],
                 ['leave.years', 'Leave sheet', 'bi-table', ['leave.years', 'leave.sheet'], 'leave.view'],
+                ['leave.types.index', 'Leave types & rules', 'bi-sliders', ['leave.types.*'], 'leave.approve'],
             ],
             'actions' => [
                 ['ai' => 'Show me pending leave requests so I can approve them.', 'label' => 'Approve with AI', 'icon' => 'bi-stars', 'perm' => 'leave.approve'],
@@ -51,12 +53,13 @@
             ],
         ],
         'settings' => [
-            'match' => ['company.*', 'bank-templates.*', 'profile.*', 'team.*', 'payroll-approvals.*'],
+            'match' => ['company.*', 'bank-templates.*', 'profile.*', 'team.*', 'payroll-approvals.*', 'billing.*'],
             'title' => 'Settings',
             'tabs' => array_values(([
                 ['company.settings', 'Company', 'bi-building', ['company.settings'], 'settings.company'],
                 ['team.index', 'Team & roles', 'bi-shield-lock', ['team.*'], 'team.manage'],
                 ['payroll-approvals.index', 'Payroll approvals', 'bi-diagram-3', ['payroll-approvals.*'], 'payroll.finalize'],
+                ['billing.index', 'Billing', 'bi-credit-card', ['billing.*'], 'billing.manage'],
                 ['bank-templates.index', 'Bank files', 'bi-bank', ['bank-templates.*'], 'settings.company'],
                 ['profile.index', 'My profile', 'bi-person-circle', ['profile.*'], null],
             ])),

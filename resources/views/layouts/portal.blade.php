@@ -9,7 +9,10 @@
         ['portal.leave', 'bi-calendar2-heart', 'Leave'],
         ['portal.overtime', 'bi-alarm', 'Overtime'],
         ['portal.loans', 'bi-cash-coin', 'Loans'],
+        ['portal.attendance', 'bi-calendar-check', 'Attendance'],
     ];
+    // The phone bar has room for five; attendance lives in the account menu there.
+    $mobileNav = array_values(array_filter($nav, fn ($n) => $n[0] !== 'portal.attendance'));
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -55,6 +58,7 @@
                 </li>
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="{{ route('portal.profile') }}"><i class="bi bi-person me-2"></i>My profile</a></li>
+                <li><a class="dropdown-item" href="{{ route('portal.attendance') }}"><i class="bi bi-calendar-check me-2"></i>My attendance</a></li>
                 <li><a class="dropdown-item" href="{{ route('portal.password.edit') }}"><i class="bi bi-key me-2"></i>Change password</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li>
@@ -79,7 +83,7 @@
 </main>
 
 <nav class="pt-tabbar" aria-label="Portal">
-    @foreach($nav as [$route, $icon, $label])
+    @foreach($mobileNav as [$route, $icon, $label])
         <a href="{{ route($route) }}" class="{{ request()->routeIs($route . '*') ? 'active' : '' }}"><i class="bi {{ $icon }}"></i>{{ $label }}</a>
     @endforeach
 </nav>

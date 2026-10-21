@@ -11,6 +11,9 @@ class Company extends Model
     use HasFactory;
 
     protected $fillable = [
+        'leave_hr_confirm',
+        'leave_allow_negative',
+        'overtime_settings',
         'name',
         'email',
         'phone',
@@ -45,6 +48,20 @@ class Company extends Model
         'heard_about_us',
         'onboarding_completed_at',
         'provisioned_at',
+
+        // ZamPayroll subscription (managed by App\Services\Billing\Subscriptions)
+        'plan',
+        'billing_type',
+        'billing_cycle',
+        'subscription_status',
+        'trial_ends_at',
+        'paid_until',
+        'billing_anchor',
+        'last_billed_at',
+        'billing_email',
+        'subdomain_requested_at',
+        'requested_subdomain',
+        'billing_notes',
     ];
 
     public const MODE_SHARED = 'shared';
@@ -113,6 +130,9 @@ class Company extends Model
     ];
 
     protected $casts = [
+        'leave_hr_confirm' => 'boolean',
+        'overtime_settings' => 'array',
+        'leave_allow_negative' => 'boolean',
         'access_code_active' => 'boolean',
         'work_days' => 'array',
         'working_days_per_month' => 'integer',
@@ -120,7 +140,24 @@ class Company extends Model
         'pay_day' => 'integer',
         'onboarding_completed_at' => 'datetime',
         'provisioned_at' => 'datetime',
+        'trial_ends_at' => 'datetime',
+        'paid_until' => 'datetime',
+        'billing_anchor' => 'date',
+        'last_billed_at' => 'datetime',
+        'subdomain_requested_at' => 'datetime',
+        'payroll_allow_self_approval' => 'boolean',
     ];
+
+    /** Every new company starts with a free trial. */
+    protected static function booted(): void
+    {
+        static::creating(function (Company $company) {
+            if (! $company->trial_ends_at) {
+                $company->trial_ends_at = now()->addDays((int) \App\Services\Billing\PlatformSettings::get('trial_days'));
+                $company->subscription_status = $company->subscription_status ?: 'trialing';
+            }
+        });
+    }
 
     /**
      * Short, readable code staff type at sign-in, e.g. "PIK-4821".

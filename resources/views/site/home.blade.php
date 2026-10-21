@@ -4,7 +4,7 @@
         ['Does it calculate PAYE, NAPSA and NHIMA correctly?', 'ZamPayroll applies the ZRA PAYE bands, NAPSA (with its ceiling) and NHIMA automatically on every payslip, and produces the returns and bank payment files you need each month. Rates are kept up to date when the national budget changes them.'],
         ['We already use Excel or another payroll system. Is it hard to move?', 'No. Upload your employee list as Excel or CSV — ZamPayroll recognises common column names from other systems — or paste it into AI mode. Anything missing (like an NRC or NAPSA number) can be completed later.'],
         ['Can my staff see their own payslips?', 'Yes. With one click HR creates a self-service portal for each employee. They sign in on their phone to download payslips and apply for leave, overtime and loans.'],
-        ['Can different people in our company have different access?', 'Yes. Everyone signs in with your company code, their email and password. Your administrator decides what each role can do — for example a manager can approve leave but not see salaries.'],
+        ['Can different people in our company have different access?', 'Yes. Everyone signs in with their own email and password. Your administrator decides what each role can do — for example a manager can approve leave but not see salaries.'],
         ['Does it work in other languages?', 'Yes. The whole system can be shown in Chinese, French, Portuguese, Somali, Arabic, Hindi, Gujarati, Urdu, Swahili, Nyanja and more using automatic translation.'],
         ['What happens when we grow beyond 10 employees?', 'Larger companies get a dedicated workspace with their own web address (yourcompany.zampayroll.com) and their own database. Talk to us for pricing.'],
     ];
@@ -257,7 +257,6 @@
         <div>
             <div class="login-mock" aria-hidden="true">
                 <b style="font-family:var(--s-display);font-size:1.3rem">Sign in</b>
-                <label>Company code</label><div class="f code" translate="no">KAF-4821</div>
                 <label>Email</label><div class="f">payroll@kafueagro.co.zm</div>
                 <label>Password</label><div class="f">••••••••••</div>
                 <div class="roles-mini"><span>Administrator</span><span>HR Officer</span><span>Payroll Officer</span><span>Manager</span><span>Viewer</span><span>+ your own</span></div>
@@ -266,7 +265,7 @@
         <div>
             <span class="kicker">Your team, your rules — in your language</span>
             <h2>Everyone gets exactly the access they need.</h2>
-            <p class="lead">Your team signs in with your company code. The administrator decides what each role can do — a manager approves leave without seeing salaries; an auditor gets read-only access.</p>
+            <p class="lead">Your team signs in with just their email and password. The administrator decides what each role can do — a manager approves leave without seeing salaries; an auditor gets read-only access.</p>
             <p class="lead" style="margin-bottom:.4rem">And the whole system speaks your team's language:</p>
             <div class="langs" translate="no">
                 <span>English</span><span>中文</span><span>Français</span><span>Português</span><span>Soomaali</span><span>العربية</span><span>हिन्दी</span><span>ગુજરાતી</span><span>اردو</span><span>Kiswahili</span><span>Chinyanja</span>

@@ -15,7 +15,7 @@
             <tr><td style="padding:6px 0; color:#7A8595;">Date</td><td style="padding:6px 0; text-align:right;">{{ $overtimeRequest->date->format('d M Y') }}</td></tr>
             <tr><td style="padding:6px 0; color:#7A8595;">Time</td><td style="padding:6px 0; text-align:right;">{{ \Carbon\Carbon::parse($overtimeRequest->start_time)->format('H:i') }} &rarr; {{ \Carbon\Carbon::parse($overtimeRequest->end_time)->format('H:i') }}</td></tr>
             <tr><td style="padding:6px 0; color:#7A8595;">Hours</td><td style="padding:6px 0; text-align:right; font-weight:700;">{{ $overtimeRequest->hours }}</td></tr>
-            <tr><td style="padding:6px 0; color:#7A8595;">Type</td><td style="padding:6px 0; text-align:right;">{{ \App\Models\OvertimeRequest::TYPES[$overtimeRequest->type]['label'] ?? $overtimeRequest->type }} ({{ $overtimeRequest->rate_multiplier }}x)</td></tr>
+            <tr><td style="padding:6px 0; color:#7A8595;">Type</td><td style="padding:6px 0; text-align:right;">{{ $overtimeRequest->typeLabel() }} ({{ $overtimeRequest->rate_multiplier }}x)</td></tr>
             @if($overtimeRequest->amount)
             <tr><td style="padding:6px 0; color:#7A8595;">Estimated Amount</td><td style="padding:6px 0; text-align:right; font-weight:700;">K {{ number_format($overtimeRequest->amount, 2) }}</td></tr>
             @endif

@@ -30,7 +30,7 @@ class PortalController extends Controller
         $latestPayslip = $this->payslipQuery($employee->id)->first();
 
         $pending = [
-            'leave'    => LeaveRequest::where('employee_id', $employee->id)->where('status', 'pending')->count(),
+            'leave'    => LeaveRequest::where('employee_id', $employee->id)->whereIn('status', LeaveRequest::OPEN)->count(),
             'overtime' => OvertimeRequest::where('employee_id', $employee->id)->where('status', 'pending')->count(),
             'loans'    => LoanRequest::where('employee_id', $employee->id)->where('status', 'pending')->count(),
         ];
@@ -44,7 +44,7 @@ class PortalController extends Controller
                 'status' => $r->status, 'at' => $r->created_at, 'url' => route('portal.leave'),
             ]))
             ->merge(OvertimeRequest::where('employee_id', $employee->id)->latest()->take(5)->get()->map(fn ($r) => [
-                'type' => 'Overtime', 'icon' => 'bi-alarm', 'title' => (OvertimeRequest::TYPES[$r->type]['label'] ?? 'Overtime'),
+                'type' => 'Overtime', 'icon' => 'bi-alarm', 'title' => $r->typeLabel(),
                 'detail' => $r->date->format('d M Y') . ' · ' . rtrim(rtrim((string) $r->hours, '0'), '.') . ' hrs · K' . number_format((float) $r->amount, 2),
                 'status' => $r->status, 'at' => $r->created_at, 'url' => route('portal.overtime'),
             ]))
@@ -135,9 +135,13 @@ class PortalController extends Controller
 
     public function profile(Request $request)
     {
+        $employee = $request->user()->employee;
+
         return view('portal.profile', [
-            'employee' => $request->user()->employee,
+            'employee' => $employee,
             'user'     => $request->user(),
+            'changes'  => \App\Models\EmployeeChangeRequest::query()->where('employee_id', $employee->id)->latest()->take(5)->get(),
+            'banks'    => \App\Models\Bank::query()->where('is_active', true)->orderBy('name')->pluck('name')->all(),
         ]);
     }
 
@@ -159,10 +163,102 @@ class PortalController extends Controller
             'next_of_kin_address'    => 'nullable|string|max:1000',
         ]);
 
-        $request->user()->employee->update($data);
+        $employee = $request->user()->employee;
+        $before = $employee->only(array_keys($data));
+        $employee->update($data);
         $request->user()->forceFill(['phone' => $data['primary_phone']])->save();
 
+        $changes = collect($data)->filter(fn ($v, $k) => (string) ($before[$k] ?? '') !== (string) ($v ?? ''))
+            ->map(fn ($v, $k) => ['from' => $before[$k] ?? null, 'to' => $v])->all();
+        if ($changes) {
+            \App\Support\Audit::record('employee.self_updated', $employee, $employee->full_name . ' updated their contact details: ' . implode(', ', array_keys($changes)), $changes);
+        }
+
         return back()->with('success', 'Your details have been updated. ✅');
+    }
+
+    /** My attendance for a month. */
+    public function attendance(Request $request)
+    {
+        $employee = $request->user()->employee;
+        $month = $request->query('month') && preg_match('/^\d{4}-\d{2}$/', $request->query('month'))
+            ? \Carbon\Carbon::parse($request->query('month') . '-01') : now()->startOfMonth();
+        $records = \App\Models\Attendance::query()->where('employee_id', $employee->id)
+            ->whereBetween('date', [$month->copy()->startOfMonth()->toDateString(), $month->copy()->endOfMonth()->toDateString()])
+            ->get()->keyBy(fn ($a) => $a->date->toDateString());
+        $calc = new \App\Services\LeaveDayCalculator($employee);
+
+        $days = [];
+        for ($d = $month->copy()->startOfMonth(); $d->lte($month->copy()->endOfMonth()); $d->addDay()) {
+            $rec = $records->get($d->toDateString());
+            $days[] = ['date' => $d->copy(), 'record' => $rec, 'working' => $calc->isWorkingDay($d), 'future' => $d->isAfter(today())];
+        }
+
+        return view('portal.attendance', [
+            'employee' => $employee,
+            'month' => $month,
+            'days' => array_reverse($days), // newest first
+            'counts' => $records->countBy('status')->all(),
+            'hours' => (float) $records->sum('hours_worked'),
+        ]);
+    }
+
+    /** Ask HR to change the bank account salary is paid into. HR approves before anything changes. */
+    public function requestBankChange(Request $request)
+    {
+        $employee = $request->user()->employee;
+        $data = $request->validate([
+            'bank_name' => 'required|string|max:120',
+            'bank_branch' => 'nullable|string|max:120',
+            'bank_account_no' => ['required', 'string', 'max:40', 'regex:/^[0-9 \-]{6,40}$/'],
+            'bank_account_no_confirmation' => 'required|same:bank_account_no',
+            'note' => 'nullable|string|max:500',
+            'document' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+        ], [
+            'bank_account_no.regex' => 'Use numbers only for the account number.',
+            'bank_account_no_confirmation.same' => 'The two account numbers don\'t match.',
+        ]);
+
+        if (\App\Models\EmployeeChangeRequest::query()->where('employee_id', $employee->id)->where('status', 'pending')->exists()) {
+            return back()->withErrors(['bank_name' => 'You already have a change waiting for HR. Cancel it first to send a new one.']);
+        }
+
+        $changes = ['bank_name' => trim($data['bank_name']), 'bank_branch' => $data['bank_branch'] ?? null, 'bank_account_no' => preg_replace('/\D/', '', $data['bank_account_no'])];
+        $change = \App\Models\EmployeeChangeRequest::create([
+            'employee_id' => $employee->id, 'type' => 'bank', 'changes' => $changes,
+            'previous' => $employee->only(array_keys($changes)), 'note' => $data['note'] ?? null,
+            'documents' => $request->hasFile('document') ? [['name' => $request->file('document')->getClientOriginalName(), 'path' => $request->file('document')->store('employee-changes/' . $employee->company_id, 'local')]] : null,
+            'status' => 'pending', 'requested_by' => $request->user()->id,
+        ]);
+        \App\Support\Audit::record('employee.bank_change_requested', $change, $employee->full_name . ' asked to change their bank account (to ' . $changes['bank_name'] . ' ••••' . substr($changes['bank_account_no'], -4) . ')');
+
+        $this->mailQuietly([$request->user()->email], new \App\Mail\ChangeRequestMail($change, 'requested'));
+        $this->mailQuietly(\App\Support\TeamScope::approverEmails($employee, 'employees.manage', true), new \App\Mail\ChangeRequestMail($change, 'hr'));
+
+        return back()->with('success', 'Sent to HR. Your salary keeps going to your current account until they approve the change.');
+    }
+
+    public function cancelChange(Request $request, \App\Models\EmployeeChangeRequest $change)
+    {
+        abort_unless((int) $change->employee_id === (int) $request->user()->employee_id, 404);
+        abort_unless($change->status === 'pending', 422, 'Only waiting requests can be cancelled.');
+        $change->update(['status' => 'cancelled']);
+        \App\Support\Audit::record('employee.change_cancelled', $change, $change->employee->full_name . ' cancelled their ' . strtolower($change->typeLabel()) . ' change');
+
+        return back()->with('success', 'Change request cancelled.');
+    }
+
+    private function mailQuietly(array $to, $mailable): void
+    {
+        $to = array_values(array_filter($to));
+        if (! $to) {
+            return;
+        }
+        try {
+            \Illuminate\Support\Facades\Mail::to($to)->send($mailable);
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     public function editPassword(Request $request)

@@ -14,9 +14,9 @@
                     @endif
                 </span>
                 <span class="d-flex flex-column align-items-end gap-1">
-                    <span class="pt-status {{ $item['status'] }}">{{ $item['status'] }}</span>
-                    @if($item['status'] === 'pending' && !empty($item['cancelUrl']))
-                        <form method="POST" action="{{ $item['cancelUrl'] }}" onsubmit="return confirm('Cancel this request?')">
+                    <span class="pt-status {{ $item['status'] }}">{{ $item['label'] ?? str_replace('_', ' ', $item['status']) }}</span>
+                    @if(($item['canCancel'] ?? $item['status'] === 'pending') && !empty($item['cancelUrl']))
+                        <form method="POST" action="{{ $item['cancelUrl'] }}" onsubmit="return confirm({{ \Illuminate\Support\Js::from($item['cancelConfirm'] ?? 'Cancel this request?') }})">
                             @csrf @method('DELETE')
                             <button class="zp-btn-link small" style="border:0;background:none;font-size:.78rem;color:var(--zp-red)">Cancel</button>
                         </form>

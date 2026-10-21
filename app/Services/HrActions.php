@@ -28,75 +28,39 @@ class HrActions
     /*  Leave / overtime / loan decisions                                   */
     /* ------------------------------------------------------------------ */
 
+    /** Shared with AI mode — the rules live in LeaveService (balance, approval steps, attendance, audit). */
     public function decideLeave(LeaveRequest $leave, string $status, ?string $comment, ?User $by): void
     {
-        DB::transaction(function () use ($leave, $status, $comment, $by) {
-            $leave->update([
-                'status'      => $status,
-                'hr_comment'  => $comment,
-                'reviewed_by' => $by?->id,
-                'reviewed_at' => now(),
-            ]);
+        $service = app(\App\Services\Leave\LeaveService::class);
+        $by ??= auth()->user();
+        abort_unless($by, 403);
 
-            if ($status === 'approved') {
-                // The full day-count is attributed to the month the leave starts in.
-                $employee = $leave->employee;
-
-                $record = LeaveRecord::firstOrNew([
-                    'employee_id' => $employee->id,
-                    'year'        => $leave->start_date->year,
-                    'month'       => $leave->start_date->month,
-                ]);
-                $record->days_taken = (float) ($record->days_taken ?? 0) + (float) $leave->days;
-                $record->save();
-
-                if ($employee->leave_days_balance !== null) {
-                    $employee->decrement('leave_days_balance', $leave->days);
-                }
-            }
-        });
-
-        $this->mailEmployee($leave->employee, new LeaveDecided($leave));
+        $status === 'approved' ? $service->approve($leave, $by, $comment) : $service->reject($leave, $by, $comment);
     }
 
+    /** Shared with AI mode — the rules live in OvertimeService. */
     public function decideOvertime(OvertimeRequest $overtime, string $status, ?string $comment, ?User $by): void
     {
-        $overtime->update([
-            'status'      => $status,
-            'hr_comment'  => $comment,
-            'reviewed_by' => $by?->id,
-            'reviewed_at' => now(),
-        ]);
+        $service = app(\App\Services\Overtime\OvertimeService::class);
+        $by ??= auth()->user();
+        abort_unless($by, 403);
 
-        $this->mailEmployee($overtime->employee, new OvertimeDecided($overtime));
+        $status === 'approved' ? $service->approve($overtime, $by, $comment) : $service->reject($overtime, $by, $comment);
     }
 
     /**
-     * Loan decisions keep going through the loan dashboard (it can create the ledger entry);
-     * this only records the status for AI-mode rejections/approvals.
+     * AI mode loan decisions: approving creates the ledger entry as "approved — not paid
+     * out yet" (LoanService); the payout is recorded separately by someone allowed to.
      */
     public function decideLoan(LoanRequest $loan, string $status, ?string $comment, ?User $by): void
     {
-        $loan->update([
-            'status'      => $status,
-            'hr_comment'  => $comment,
-            'reviewed_by' => $by?->id,
-            'reviewed_at' => now(),
-        ]);
+        $service = app(\App\Services\Loans\LoanService::class);
+        $by ??= auth()->user();
+        abort_unless($by, 403);
 
-        if (class_exists(\App\Mail\LoanDecided::class)) {
-            $this->mailEmployee($loan->employee, new \App\Mail\LoanDecided($loan));
-        }
+        $status === 'approved' ? $service->approve($loan, $by, [], $comment) : $service->reject($loan, $by, $comment);
     }
 
-    /* ------------------------------------------------------------------ */
-    /*  Payroll                                                             */
-    /* ------------------------------------------------------------------ */
-
-    /**
-     * Create (or refresh) the run for a month and calculate every active employee.
-     * Returns the run. Finalised runs are never touched.
-     */
     public function preparePayroll(string $period, ?string $alias, ?User $by): PayrollRun
     {
         $month = Carbon::createFromFormat('Y-m', $period)->startOfMonth();
@@ -174,41 +138,12 @@ class HrActions
     }
 
     /**
-     * Approved overtime dated inside the run's month becomes a taxable earning.
-     * Idempotent: rewritten on every recalculation.
+     * Approved, unpaid overtime becomes a taxable earning — see OvertimeService::syncIntoPayroll
+     * (late approvals from earlier months included, never paid twice). Idempotent.
      */
     public function syncOvertime(PayrollRun $run, int $employeeId): void
     {
-        PayrollRunAdjustment::where('payroll_run_id', $run->id)
-            ->where('employee_id', $employeeId)
-            ->whereNotNull('overtime_request_id')
-            ->delete();
-
-        if (! $run->include_overtime || ! $run->period_date) {
-            return;
-        }
-
-        $items = OvertimeRequest::where('employee_id', $employeeId)
-            ->where('status', 'approved')
-            ->whereBetween('date', [$run->period_date->copy()->startOfMonth()->toDateString(), $run->period_date->copy()->endOfMonth()->toDateString()])
-            ->get();
-
-        foreach ($items as $ot) {
-            if ((float) $ot->amount <= 0) {
-                continue;
-            }
-            PayrollRunAdjustment::create([
-                'payroll_run_id'      => $run->id,
-                'employee_id'         => $employeeId,
-                'overtime_request_id' => $ot->id,
-                'name'                => 'Overtime · ' . $ot->date->format('j M') . ' (' . rtrim(rtrim(number_format((float) $ot->hours, 2), '0'), '.') . 'h)',
-                'type'                => 'earning',
-                'formula_type'        => 'fixed',
-                'value'               => $ot->amount,
-                'tax_profile'         => 'taxable',
-                'active'              => true,
-            ]);
-        }
+        app(\App\Services\Overtime\OvertimeService::class)->syncIntoPayroll($run, $employeeId);
     }
 
     /* ------------------------------------------------------------------ */

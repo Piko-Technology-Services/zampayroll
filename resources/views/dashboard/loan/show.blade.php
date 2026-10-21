@@ -8,12 +8,45 @@
         <a href="{{ route('loan.ledger.index') }}" class="lls-back"><i class="bi bi-arrow-left"></i> Loan Ledger</a>
         <div class="lls-eyebrow">Loan Management</div>
         <h1 class="lls-title">{{ $loan->employee->first_name }} {{ $loan->employee->last_name }}</h1>
-        <span class="lls-status lls-status-{{ $loan->status }}">{{ \App\Models\Loan::STATUSES[$loan->status] ?? $loan->status }}</span>
+        <span class="lls-status lls-status-{{ $loan->status }}">{{ $loan->statusLabel() }}</span>
     </div>
 
     @if(session('success'))
         <div class="lls-alert"><i class="bi bi-check-circle"></i> {{ session('success') }}</div>
     @endif
+
+    @if($errors->any())
+        <div class="lls-alert" style="background:#FDECEF;color:#C42926;border-color:#F4C6CC"><i class="bi bi-exclamation-triangle"></i> {{ $errors->first() }}</div>
+    @endif
+
+    {{-- ===== PAYOUT (approval and payout are separate steps) ===== --}}
+    @php $svc = app(\App\Services\Loans\LoanService::class); @endphp
+    <div class="lls-card" style="margin-bottom:1rem;{{ $loan->status === 'pending_disbursement' ? 'border-color:#c9d6f5;background:#F7F9FF' : '' }}">
+        <div class="lls-section-label">Approval &amp; payout</div>
+        <div style="display:flex;gap:1.5rem;flex-wrap:wrap;font-size:.84rem">
+            <div><b>Approved</b><br>{{ $loan->approvedBy?->name ?? $loan->createdBy?->name ?? '—' }} · {{ optional($loan->approved_at ?? $loan->created_at)->format('j M Y') }}</div>
+            @if($loan->isDisbursed())
+                <div><b>Paid out</b><br>{{ $loan->disbursed_at->format('j M Y') }} · {{ \App\Models\Loan::DISBURSEMENT_METHODS[$loan->disbursement_method] ?? 'recorded before payouts were tracked' }}{{ $loan->disbursement_reference ? ' · ref ' . $loan->disbursement_reference : '' }}{{ $loan->disbursedBy ? ' · by ' . $loan->disbursedBy->name : '' }}</div>
+                <div><b>Repayments</b><br>{{ $loan->status === 'active' ? 'next: ' . optional($loan->next_deduction_date)->format('F Y') . ' payroll' : strtolower($loan->statusLabel()) }}</div>
+            @elseif($loan->status === 'pending_disbursement')
+                <div><b>Not paid out yet</b><br>Nothing is deducted from pay until the payout is recorded.</div>
+            @elseif($loan->status === 'cancelled')
+                <div><b>Cancelled</b><br>{{ optional($loan->cancelled_at)->format('j M Y') }}{{ $loan->cancel_reason ? ' — ' . $loan->cancel_reason : '' }}</div>
+            @endif
+        </div>
+        @if($svc->canDisburse(auth()->user(), $loan))
+            <form method="POST" action="{{ route('loan.disburse', $loan) }}" class="lls-grid" style="margin-top:.9rem">
+                @csrf
+                <div class="lls-field"><label class="lls-label">Date paid</label><input type="date" name="date" class="lls-input" value="{{ today()->toDateString() }}" max="{{ today()->toDateString() }}" required></div>
+                <div class="lls-field"><label class="lls-label">How</label><select name="method" class="lls-input">@foreach(\App\Models\Loan::DISBURSEMENT_METHODS as $m => $label)<option value="{{ $m }}">{{ $label }}</option>@endforeach</select></div>
+                <div class="lls-field"><label class="lls-label">Reference</label><input type="text" name="reference" class="lls-input" maxlength="120"></div>
+                <div class="lls-field"><label class="lls-label">First repayment</label><input type="month" name="first_deduction" class="lls-input" value="{{ optional($loan->next_deduction_date)->format('Y-m') }}" min="{{ now()->format('Y-m') }}"></div>
+                <div class="lls-field" style="align-self:end"><button class="lls-btn lls-btn-primary"><i class="bi bi-cash-coin"></i> Record payout</button></div>
+            </form>
+        @elseif($loan->status === 'pending_disbursement')
+            <p style="font-size:.8rem;color:#58687D;margin:.7rem 0 0">{{ auth()->user()->hasPermission('loans.disburse') ? 'Someone other than the approver needs to record the payout.' : 'Someone with permission to record payouts (e.g. the Payroll Officer) records it.' }}</p>
+        @endif
+    </div>
 
     <div class="lls-layout">
 
@@ -53,8 +86,8 @@
                         <div class="lls-field">
                             <label class="lls-label">Status</label>
                             <select name="status" class="lls-input">
-                                @foreach(\App\Models\Loan::STATUSES as $key => $label)
-                                    <option value="{{ $key }}" {{ $loan->status === $key ? 'selected' : '' }}>{{ $label }}</option>
+                                @foreach(($loan->isDisbursed() && in_array($loan->status, ['active', 'paused'], true) ? ['active', 'paused'] : [$loan->status]) as $key)
+                                    <option value="{{ $key }}" {{ $loan->status === $key ? 'selected' : '' }}>{{ \App\Models\Loan::STATUSES[$key] ?? $key }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -171,6 +204,8 @@
 .lls-status-completed { background: #EAEEF4; color: #35507A; }
 .lls-status-paused { background: var(--sick-bg); color: var(--sick); }
 .lls-status-written_off { background: var(--warn-bg); color: var(--warn); }
+.lls-status-pending_disbursement { background: #EEF3FF; color: #2E4C9A; }
+.lls-status-cancelled { background: #EEF0F2; color: #4B5563; }
 
 .lls-alert { border-radius: 6px; font-size: .84rem; padding: .7rem 1rem; margin-bottom: 1rem; background: var(--active-bg); color: var(--active); border: 1px solid var(--line); }
 

@@ -23,14 +23,13 @@ class RolesSiteTest extends TestCase
         $code = $admin->company->company_code;
         $this->assertMatchesRegularExpression('/^[A-Z]{3}-\d{4}$/', $code);
 
-        $this->post('http://localhost/login', ['email' => 'admin@pikozm.com', 'password' => 'password123'])->assertSessionHasErrors('company_code');
-        $this->post('http://localhost/login', ['company_code' => 'XXX-0000', 'email' => 'admin@pikozm.com', 'password' => 'password123'])->assertSessionHasErrors('company_code');
-        // right email + password, but the other company's code
+        // No company code needed; a stray or other company's code is simply ignored
         $other = Company::where('name', 'Second Co')->value('company_code');
-        $this->post('http://localhost/login', ['company_code' => $other, 'email' => 'admin@pikozm.com', 'password' => 'password123'])->assertSessionHasErrors('email');
+        $this->post('http://localhost/login', ['company_code' => $other, 'email' => 'admin@pikozm.com', 'password' => 'wrong-pass'])->assertSessionHasErrors('email');
         $this->assertGuest();
-        $this->post('http://localhost/login', ['company_code' => strtolower($code), 'email' => 'admin@pikozm.com', 'password' => 'password123'])
+        $this->post('http://localhost/login', ['email' => 'admin@pikozm.com', 'password' => 'password123'])
             ->assertRedirect(route('dashboard'))->assertCookie('zp_company_code');
+        $this->assertAuthenticatedAs($admin);
         $this->get('http://localhost/company-code')->assertRedirect(); // guest-only page
     }
 
@@ -82,7 +81,7 @@ class RolesSiteTest extends TestCase
         }
         $this->get('http://localhost/sitemap.xml')->assertOk()->assertHeader('content-type', 'application/xml; charset=UTF-8')
             ->assertSee('<loc>https://zampayroll.com/pricing</loc>', false);
-        $this->get('http://localhost/login')->assertOk()->assertSee('Company code')->assertSee('zh-CN', false);
+        $this->get('http://localhost/login')->assertOk()->assertSee('Email address')->assertSee('zh-CN', false);
         $this->post('http://localhost/demo-request', ['full_name' => 'A', 'email' => 'a@b.zm', 'company_name' => 'C'])->assertRedirect('http://localhost#demo');
     }
 }
