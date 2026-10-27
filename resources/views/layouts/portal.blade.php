@@ -3,14 +3,16 @@
     $portalEmployee = $portalUser->employee;
     $portalCompany = \App\Support\Tenancy::company();
     $initials = collect(explode(' ', $portalUser->name))->map(fn ($p) => mb_substr($p, 0, 1))->take(2)->implode('');
-    $nav = [
+    $isBoard = (bool) $portalEmployee?->isBoardMember();
+    $canSwitch = $portalUser->canSwitchDashboards();
+    $nav = array_values(array_filter([
         ['portal.dashboard', 'bi-house-door', 'Home'],
         ['portal.payslips', 'bi-receipt', 'Payslips'],
-        ['portal.leave', 'bi-calendar2-heart', 'Leave'],
-        ['portal.overtime', 'bi-alarm', 'Overtime'],
+        $isBoard ? null : ['portal.leave', 'bi-calendar2-heart', 'Leave'],
+        $isBoard ? null : ['portal.overtime', 'bi-alarm', 'Overtime'],
         ['portal.loans', 'bi-cash-coin', 'Loans'],
-        ['portal.attendance', 'bi-calendar-check', 'Attendance'],
-    ];
+        $isBoard ? null : ['portal.attendance', 'bi-calendar-check', 'Attendance'],
+    ]));
     // The phone bar has room for five; attendance lives in the account menu there.
     $mobileNav = array_values(array_filter($nav, fn ($n) => $n[0] !== 'portal.attendance'));
 @endphp
@@ -27,6 +29,11 @@
     <link rel="stylesheet" href="{{ asset('assets/css/bootstrap.min.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/vendors/bootstrap-icons/bootstrap-icons.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/zp-brand.css') }}">
+    <style>
+    .pt-switch { margin-left: auto; display: inline-flex; align-items: center; gap: .45rem; padding: .45rem .85rem; border-radius: 999px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.25); color: #fff; font-size: .82rem; font-weight: 600; text-decoration: none; white-space: nowrap; }
+    .pt-switch:hover { background: rgba(255,255,255,.22); color: #fff; }
+    @media (max-width: 640px) { .pt-switch span { display: none; } }
+    </style>
     @stack('styles')
 </head>
 <body class="zp-body">
@@ -47,7 +54,12 @@
             @endforeach
         </nav>
 
-        <div style="margin-left:auto">@include('partials.translate', ['variant' => 'dark'])</div>
+        @if($canSwitch)
+            <a href="{{ route('dashboard') }}" class="pt-switch" title="Back to your {{ $portalUser->roleName() }} dashboard">
+                <i class="bi bi-briefcase"></i><span>{{ $portalUser->roleName() }} view</span>
+            </a>
+        @endif
+        <div style="margin-left:{{ $canSwitch ? '.6rem' : 'auto' }}">@include('partials.translate', ['variant' => 'dark'])</div>
 
         <div class="pt-user dropdown" style="margin-left:.6rem">
             <button class="pt-avatar" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Account menu">{{ $initials }}</button>
@@ -57,8 +69,12 @@
                     <div class="small text-muted">{{ $portalEmployee?->position }}</div>
                 </li>
                 <li><hr class="dropdown-divider"></li>
+                @if($canSwitch)
+                    <li><a class="dropdown-item" href="{{ route('dashboard') }}"><i class="bi bi-briefcase me-2"></i>Switch to {{ $portalUser->roleName() }} dashboard</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                @endif
                 <li><a class="dropdown-item" href="{{ route('portal.profile') }}"><i class="bi bi-person me-2"></i>My profile</a></li>
-                <li><a class="dropdown-item" href="{{ route('portal.attendance') }}"><i class="bi bi-calendar-check me-2"></i>My attendance</a></li>
+                @unless($isBoard)<li><a class="dropdown-item" href="{{ route('portal.attendance') }}"><i class="bi bi-calendar-check me-2"></i>My attendance</a></li>@endunless
                 <li><a class="dropdown-item" href="{{ route('portal.password.edit') }}"><i class="bi bi-key me-2"></i>Change password</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li>

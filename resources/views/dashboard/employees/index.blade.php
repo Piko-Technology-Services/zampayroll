@@ -1,901 +1,345 @@
 @extends('layouts.app')
 
-@section('content')
-
-{{-- =====================================================================
-     EMPLOYEES — Personnel Registry
-     Structural layout: left "registry rail" holds the primary action,
-     filters, view switch and overview counts. Right column is pure
-     content — a search bar sitting directly above the ledger/index
-     cards. Same dossier visual language, different anatomy.
-====================================================================== --}}
-
-<div class="emp">
-
-    <div class="emp-shell">
-
-        {{-- ===== LEFT RAIL ===== --}}
-        <aside class="emp-rail">
-
-            <a href="{{ route('employees.create') }}" class="emp-rail-cta">
-                <i class="bi bi-plus-lg"></i> New Employee
-            </a>
-
-            @if(auth()->user()->hasPermission('employees.import'))
-            <a class="emp-rail-secondary" href="{{ route('employees.import.wizard') }}" style="display:flex;align-items:center;justify-content:center;gap:.45rem;text-decoration:none">
-                <i class="bi bi-upload"></i> Import a list
-            </a>
-            @endif
-
-            @php $withoutPortal = $employees->filter(fn ($e) => ! $e->user && $e->portal_email && strcasecmp((string) $e->employment_status, 'Active') === 0)->count(); @endphp
-            <form method="POST" action="{{ route('employees.portal.bulk') }}"
-                  onsubmit="return confirm('Create self-service portals for {{ $withoutPortal }} employee(s)? Each will receive an email with login details.')">
-                @csrf
-                <button class="emp-rail-secondary" type="submit" @disabled($withoutPortal === 0)
-                        title="Active employees with an email address and no portal yet">
-                    <i class="bi bi-phone"></i> Create portals ({{ $withoutPortal }})
-                </button>
-            </form>
-
-            <div class="emp-rail-divider"></div>
-
-            <div class="emp-rail-section">
-                <div class="emp-rail-label">Department</div>
-                <select id="empDeptFilter" class="emp-select" onchange="empFilter()">
-                    <option value="">All Departments</option>
-                    @foreach($employees->pluck('department')->filter()->unique()->sort() as $dept)
-                        <option value="{{ $dept }}">{{ $dept }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="emp-rail-section">
-                <div class="emp-rail-label">Status</div>
-                <select id="empStatusFilter" class="emp-select" onchange="empFilter()">
-                    <option value="">All Statuses</option>
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                </select>
-            </div>
-
-            <div class="emp-rail-divider"></div>
-
-            <div class="emp-rail-section">
-                <div class="emp-rail-label">View</div>
-                <div class="emp-view-stack">
-                    <button id="btnTable" class="emp-view-btn active" onclick="empShowView('table')">
-                        <i class="bi bi-list-ul"></i> Table
-                    </button>
-                    <button id="btnCard" class="emp-view-btn" onclick="empShowView('card')">
-                        <i class="bi bi-grid"></i> Cards
-                    </button>
-                </div>
-            </div>
-
-            <div class="emp-rail-divider"></div>
-
-            <div class="emp-rail-section">
-                <div class="emp-rail-label">Overview</div>
-
-                <div class="emp-rail-stats">
-                    <div class="emp-rail-stat-row">
-                        <span class="emp-rail-stat-dot"></span>
-                        <span class="emp-rail-stat-label">Total Employees</span>
-                        <span class="emp-rail-stat-value">{{ $employees->count() }}</span>
-                    </div>
-                    <div class="emp-rail-stat-row">
-                        <span class="emp-rail-stat-dot emp-dot-green"></span>
-                        <span class="emp-rail-stat-label">Active</span>
-                        <span class="emp-rail-stat-value emp-stat-green">
-                            {{ $employees->where('employment_status', 'Active')->count() }}
-                        </span>
-                    </div>
-                    <div class="emp-rail-stat-row">
-                        <span class="emp-rail-stat-dot"></span>
-                        <span class="emp-rail-stat-label">Departments</span>
-                        <span class="emp-rail-stat-value">
-                            {{ $employees->pluck('department')->filter()->unique()->count() }}
-                        </span>
-                    </div>
-                    
-                </div>
-            </div>
-
-        </aside>
-
-        {{-- ===== MAIN CONTENT ===== --}}
-        <div class="emp-main">
-
-            <div class="emp-main-head">
-                <div>
-                    <div class="emp-eyebrow">Personnel Registry</div>
-                    <h1 class="emp-title">Employees</h1>
-                </div>
-            </div>
-
-            @if($employees->isEmpty())
-            <div class="pp"><div class="pp-card pp-empty-team">
-                <div class="pp-done-badge" style="animation:none"><i class="bi bi-people-fill"></i></div>
-                <h2 style="font-family:var(--zp-font-display)">Let's bring your team in</h2>
-                <p class="pp-muted">Pick whichever is easiest — you can mix and match.</p>
-                <div class="opts">
-                    <a class="opt" href="{{ route('employees.import.wizard') }}"><i class="bi bi-file-earmark-spreadsheet"></i><b>Import a spreadsheet</b><small>Excel or CSV from your old payroll. Best for 5+ people.</small></a>
-                    <a class="opt" href="{{ route('employees.create') }}"><i class="bi bi-person-plus"></i><b>Add one person</b><small>A quick step-by-step journey.</small></a>
-                    <button type="button" class="opt" data-ai-prompt="I want to add employees. I will paste or attach the list."><i class="bi bi-stars"></i><b>Paste into AI mode</b><small>Paste a list in any shape — AI mode reads it.</small></button>
-                </div>
-            </div></div>
-            @endif
-
-            <div class="emp-toolbar" @if($employees->isEmpty()) hidden @endif>
-                <div class="emp-search-wrap">
-                    <i class="bi bi-search emp-search-icon"></i>
-                    <input type="text"
-                           id="empSearch"
-                           class="emp-search-input"
-                           placeholder="Search name, ID, position…"
-                           oninput="empFilter()">
-                </div>
-            </div>
-
-            {{-- ===== TABLE VIEW ===== --}}
-            <div class="emp-card emp-table-card" id="empTableView" @if($employees->isEmpty()) hidden @endif>
-
-                <table class="emp-table" id="empTable">
-
-                    <thead>
-                        <tr>
-                            <th>EIN</th>
-                            <th>Name</th>
-                            <th>Department</th>
-                            <th>Branch</th>
-                            <th>Phone</th>
-                            <th>Status</th>
-                            <th>Portal</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        @foreach($employees as $employee)
-
-                        @php
-
-                            $contractEndingSoon = $employee->contract_end
-                                && \Carbon\Carbon::parse($employee->contract_end)->isFuture()
-                                && \Carbon\Carbon::parse($employee->contract_end)->diffInDays(now()) <= 60;
-
-                        @endphp
-
-                        <tr class="emp-row"
-                            data-dept="{{ $employee->department }}"
-                            data-status="{{ $employee->employment_status }}"
-                            data-search="{{ strtolower($employee->first_name . ' ' . $employee->last_name . ' ' . $employee->employee_id . ' ' . $employee->position . ' ' . $employee->department . ' ' . $employee->branch) }}"
-                            onclick="window.location='{{ route('employees.show', $employee->id) }}'">
-
-                            <td class="emp-td-id">
-                                <i class="bi bi-hash"></i>{{ $employee->employee_id }}
-                            </td>
-
-                            <td>
-                                <div class="emp-name-cell">
-                                    <div class="emp-avatar">
-                                        @if($employee->photo_url)
-                                            <img src="{{ $employee->photo_url }}" alt="">
-                                        @else
-                                            <span>{{ $employee->initials }}</span>
-                                        @endif
-                                    </div>
-                                    <div>
-                                        <div class="emp-name">{{ $employee->first_name }} {{ $employee->last_name }}</div>
-                                        <div class="emp-pos">
-                                            <i class="bi bi-briefcase"></i> {{ $employee->position ?: 'No job title yet' }}
-                                        </div>
-                                        @php $pct = $employee->profileCompleteness()['percent']; @endphp
-                                        @if($pct < 100)
-                                            <div class="pp-mini-meter" title="Profile {{ $pct }}% complete"><i style="--w: {{ $pct }}%"></i>{{ $pct }}%</div>
-                                        @endif
-                                    </div>
-                                </div>
-                            </td>
-
-                            <td>
-                                <span class="emp-dept-badge emp-dept-{{ Str::slug($employee->department ?? 'default') }}">
-                                    {{ $employee->department ?? '—' }}
-                                </span>
-                            </td>
-
-                            <td>
-                                <span class="emp-branch">{{ $employee->branch ?? '—' }}</span>
-                            </td>
-
-                            <td class="emp-td-muted">
-                                <i class="bi bi-telephone"></i> {{ $employee->primary_phone ?? '—' }}
-                            </td>
-
-                            <td>
-                                <span class="emp-status-badge emp-status-{{ strtolower($employee->employment_status) }}">
-                                    {{ $employee->employment_status }}
-                                </span>
-                            </td>
-
-                            <td>
-                                @if($employee->user)
-                                    <span class="zp-portal-pill" title="Last seen {{ optional($employee->user->last_login_at)->diffForHumans() ?? 'never' }}"><i class="bi bi-check2"></i> Active</span>
-                                @else
-                                    <span class="zp-portal-pill off">None</span>
-                                @endif
-                            </td>
-
-                            <td onclick="event.stopPropagation()" class="emp-actions-cell">
-                                <div class="emp-row-actions">
-                                    <a href="{{ route('employees.show', $employee->id) }}"
-                                       class="emp-action-btn" title="View">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
-                                    <a href="{{ route('employees.edit', $employee->id) }}"
-                                       class="emp-action-btn" title="Edit">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                </div>
-                            </td>
-
-                        </tr>
-
-                        @endforeach
-                    </tbody>
-
-                </table>
-
-                <div id="empTableEmpty" class="emp-empty-state" style="display:none;">
-                    <i class="bi bi-search"></i>
-                    <div>No employees match your search or filters.</div>
-                </div>
-
-            </div>
-
-            {{-- ===== CARD VIEW ===== --}}
-            <div id="empCardView" style="display:none;">
-
-                @foreach($employees->groupBy('department') as $department => $group)
-
-                <div class="emp-dept-group" data-dept-group="{{ $department }}">
-
-                    <div class="emp-dept-group-label">
-                        {{ $department ?? 'Unassigned' }}
-                        <span class="emp-dept-count">{{ $group->count() }}</span>
-                    </div>
-
-                    <div class="emp-card-grid" id="cardGroup-{{ Str::slug($department ?? 'unassigned') }}">
-
-                        @foreach($group as $employee)
-
-                        @php
-                            $contractEndingSoon = $employee->contract_end
-                                && \Carbon\Carbon::parse($employee->contract_end)->isFuture()
-                                && \Carbon\Carbon::parse($employee->contract_end)->diffInDays(now()) <= 30;
-                        @endphp
-
-                        <div class="emp-card-col"
-                             data-dept="{{ $employee->department }}"
-                             data-status="{{ $employee->employment_status }}"
-                             data-search="{{ strtolower($employee->first_name . ' ' . $employee->last_name . ' ' . $employee->employee_id . ' ' . $employee->position . ' ' . $employee->department) }}">
-
-                            <div class="emp-person-card" onclick="window.location='{{ route('employees.show', $employee->id) }}'">
-
-                                <div class="emp-card-top">
-
-                                    <div class="emp-avatar emp-avatar-lg">
-                                        @if($employee->passport_photo)
-                                            <img src="{{ asset('storage/' . $employee->passport_photo) }}"
-                                                 alt="{{ $employee->first_name }}">
-                                        @else
-                                            <span>{{ strtoupper(substr($employee->first_name, 0, 1)) }}{{ strtoupper(substr($employee->last_name, 0, 1)) }}</span>
-                                        @endif
-                                    </div>
-
-                                    <div class="flex-grow-1 min-width-0">
-                                        <div class="emp-card-name">
-                                            {{ $employee->first_name }} {{ $employee->last_name }}
-                                        </div>
-                                        <div class="emp-card-pos">{{ $employee->position }}</div>
-                                        <div class="emp-card-id">
-                                            <i class="bi bi-hash"></i>{{ $employee->employee_id }}
-                                        </div>
-                                    </div>
-
-                                    <span class="emp-status-badge emp-status-{{ strtolower($employee->employment_status) }}">
-                                        {{ $employee->employment_status }}
-                                    </span>
-
-                                </div>
-
-                                @if($employee->primary_phone)
-                                <div class="emp-card-detail">
-                                    <i class="bi bi-telephone"></i> {{ $employee->primary_phone }}
-                                </div>
-                                @endif
-
-                                @if($contractEndingSoon)
-                                <div class="emp-card-warn">
-                                    <i class="bi bi-exclamation-triangle-fill"></i>
-                                    Contract ending soon ({{ $employee->contract_end->format('Y-m-d') }})
-                                </div>
-                                @endif
-
-                                <div class="emp-card-footer">
-                                    <span class="emp-dept-badge emp-dept-{{ Str::slug($employee->department ?? 'default') }}">
-                                        {{ $employee->department ?? 'Unassigned' }}
-                                    </span>
-                                    <div class="emp-card-actions" onclick="event.stopPropagation()">
-                                        <a href="{{ route('employees.show', $employee->id) }}" class="emp-action-btn" title="View">
-                                            <i class="bi bi-eye"></i>
-                                        </a>
-                                        <a href="{{ route('employees.edit', $employee->id) }}" class="emp-action-btn" title="Edit">
-                                            <i class="bi bi-pencil"></i>
-                                        </a>
-                                    </div>
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                        @endforeach
-
-                    </div>
-
-                </div>
-
-                @endforeach
-
-                <div id="empCardEmpty" class="emp-empty-state" style="display:none;">
-                    <i class="bi bi-search"></i>
-                    <div>No employees match your search or filters.</div>
-                </div>
-
-            </div>
-
-        </div>{{-- end main --}}
-
-    </div>{{-- end shell --}}
-
-</div>
-
+@section('title', 'People · ZamPayroll')
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('assets/css/zp-people.css') }}">
+<link rel="stylesheet" href="{{ asset('assets/css/zp-org.css') }}">
 @endpush
 
-{{-- ===== STYLES ===== --}}
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+@php
+    $u = auth()->user();
+    $canManage = $u?->hasPermission('employees.manage');
+    $withoutPortal = $employees->filter(fn ($e) => ! $e->user && $e->portal_email && strcasecmp((string) $e->employment_status, 'Active') === 0)->count();
+    $statusOpts = ['active' => 'Active', 'away' => 'On leave today', 'inactive' => 'Inactive'];
+    $flagOpts = ['missing' => 'Missing details', 'new' => 'Joined in the last 30 days', 'noportal' => 'No portal yet', 'portal' => 'Has portal'];
+@endphp
 
-.emp * { box-sizing: border-box; }
+@section('content')
+<div class="em" id="em" data-preset="{{ json_encode($preset) }}">
 
-.emp {
-    --paper: #ffffff;
-    --ink: #00742E;
-    --ink-soft: #58687D;
-    --ink-faint: #93A0B2;
-    --brass: #00742E;
-    --brass-soft: #cdffcf;
-    --line: #f3f3f3;
-    --active: #2F6F4E;
-    --active-bg: #EAF3EC;
-    --inactive: #029508;
-    --inactive-bg: #F0EEE7;
-    --warn: #cf1c00;
-    --warn-bg: #F7E7E2;
+    {{-- ===== header ===== --}}
+    <div class="em-head">
+        <div>
+            <h1>People</h1>
+            <p class="em-sub">
+                <span><b>{{ $stats->active }}</b> active</span>
+                <span><b>{{ $departments->count() }}</b> {{ \Illuminate\Support\Str::plural('department', $departments->count()) }}</span>
+                @if($stats->board)<span><b>{{ $stats->board }}</b> board {{ $stats->board === 1 ? 'member' : 'members' }}</span>@endif
+                @if($stats->away)<span><b>{{ $stats->away }}</b> on leave today</span>@endif
+                @if($stats->new)<span><b>{{ $stats->new }}</b> new this month</span>@endif
+            </p>
+        </div>
+        @if($people->isNotEmpty())
+        <div class="em-actions">
+            @if($canManage)
+                <a href="{{ route('employees.create') }}" class="pp-btn pp-btn-primary"><i class="bi bi-person-plus"></i> Add employee</a>
+            @endif
+            <div class="em-menu">
+                <button type="button" class="em-iconbtn" data-em-pop aria-label="More actions" title="More"><i class="bi bi-three-dots"></i></button>
+                <div class="em-pop">
+                    @if($u?->hasPermission('employees.import'))
+                        <a href="{{ route('employees.import.wizard') }}"><i class="bi bi-upload"></i><div>Import a list<small>Excel, CSV or pasted text</small></div></a>
+                    @endif
+                    @if($canManage)
+                        <button type="button" class="it" data-ai-prompt="I want to add employees. I will paste or attach the list."><i class="bi bi-stars"></i><div>Add with AI<small>Paste a list in any shape</small></div></button>
+                    @endif
+                    <a href="{{ route('departments.index') }}"><i class="bi bi-diagram-3"></i><div>Departments<small>Create and manage departments</small></div></a>
+                    <button type="button" class="it" id="emExport"><i class="bi bi-filetype-csv"></i><div>Export this view<small>The people shown, as a CSV file</small></div></button>
+                    @if($u?->hasPermission('portal.manage') && $withoutPortal)
+                        <hr>
+                        <form method="POST" action="{{ route('employees.portal.bulk') }}" onsubmit="return confirm('Create self-service portals for {{ $withoutPortal }} employee(s)? Each will receive an email with login details.')">
+                            @csrf
+                            <button class="it"><i class="bi bi-phone"></i><div>Create portals ({{ $withoutPortal }})<small>Active people with an email and no portal</small></div></button>
+                        </form>
+                    @endif
+                </div>
+            </div>
+        </div>
+        @endif
+    </div>
 
-    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-    color: var(--ink);
-    background: var(--paper);
-    padding: 1.5rem 0 2.5rem;
-}
+    @if($people->isEmpty())
+        <div class="pp"><div class="pp-card pp-empty-team">
+            <div class="pp-done-badge" style="animation:none"><i class="bi bi-people-fill"></i></div>
+            <h2 style="font-family:var(--zp-font-display)">Let's bring your team in</h2>
+            <p class="pp-muted">Pick whichever is easiest — you can mix and match.</p>
+            <div class="opts">
+                <a class="opt" href="{{ route('employees.import.wizard') }}"><i class="bi bi-file-earmark-spreadsheet"></i><b>Import a spreadsheet</b><small>Excel or CSV from your old payroll. Best for 5+ people.</small></a>
+                <a class="opt" href="{{ route('employees.create') }}"><i class="bi bi-person-plus"></i><b>Add one person</b><small>A quick step-by-step journey.</small></a>
+                <button type="button" class="opt" data-ai-prompt="I want to add employees. I will paste or attach the list."><i class="bi bi-stars"></i><b>Paste into AI mode</b><small>Paste a list in any shape — AI mode reads it.</small></button>
+            </div>
+        </div></div>
+    @else
 
-/* ---- Shell: rail + main ---- */
-.emp-shell {
-    display: flex;
-    align-items: flex-start;
-    gap: 1.25rem;
-}
+    {{-- ===== toolbar ===== --}}
+    <div class="em-bar" role="search">
+        <label class="em-search">
+            <i class="bi bi-search"></i>
+            <input type="search" id="emQ" placeholder="Search by name, job, number, phone or email" autocomplete="off" aria-label="Search people">
+            <kbd>/</kbd>
+        </label>
 
-/* ---- Rail ---- */
-.emp-rail {
-    width: 236px;
-    flex-shrink: 0;
-    background: #fff;
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    padding: 1.25rem 1.1rem;
-    position: sticky;
-    top: 1.25rem;
-}
+        <div class="em-menu">
+            <button type="button" class="em-filter" data-em-pop data-filter-btn="status"><i class="bi bi-circle-half"></i> Status <em hidden></em></button>
+            <div class="em-pop left">
+                @foreach($statusOpts as $v => $l)
+                    <label class="em-check"><input type="checkbox" data-f="status" value="{{ $v }}"> {{ $l }} <span class="n" data-n-status="{{ $v }}"></span></label>
+                @endforeach
+            </div>
+        </div>
 
-.emp-rail-cta {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: .45rem;
-    width: 100%;
-    font-size: .82rem;
-    font-weight: 700;
-    padding: .7rem .9rem;
-    border-radius: 6px;
-    background: var(--ink);
-    color: #fff;
-    text-decoration: none;
-    border: 1px solid var(--ink);
-    transition: background .18s;
-}
-.emp-rail-cta:hover { background: #029508; color: #fff; }
+        <div class="em-menu">
+            <button type="button" class="em-filter" data-em-pop data-filter-btn="nature"><i class="bi bi-briefcase"></i> Type <em hidden></em></button>
+            <div class="em-pop left">
+                @foreach($natures as $v => $l)
+                    <label class="em-check"><input type="checkbox" data-f="nature" value="{{ $v }}"> {{ $l }} <span class="n" data-n-nature="{{ $v }}"></span></label>
+                @endforeach
+            </div>
+        </div>
 
-.emp-rail-secondary {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: .45rem;
-    width: 100%;
-    font-size: .78rem;
-    font-weight: 600;
-    padding: .6rem .9rem;
-    border-radius: 6px;
-    background: #fff;
-    color: var(--ink-soft);
-    border: 1px dashed #f0f0f0;
-    cursor: pointer;
-    margin-top: .55rem;
-    transition: border-color .15s, color .15s;
-}
-.emp-rail-secondary:hover { border-color: var(--brass); color: var(--brass); }
+        <div class="em-menu">
+            <button type="button" class="em-filter" data-em-pop data-filter-btn="flag"><i class="bi bi-funnel"></i> More <em hidden></em></button>
+            <div class="em-pop left">
+                @foreach($flagOpts as $v => $l)
+                    <label class="em-check"><input type="checkbox" data-f="flag" value="{{ $v }}"> {{ $l }} <span class="n" data-n-flag="{{ $v }}"></span></label>
+                @endforeach
+            </div>
+        </div>
 
-.emp-rail-divider { border-top: 1px solid var(--line); margin: 1.1rem 0; }
+        <div class="em-menu">
+            <button type="button" class="em-filter" data-em-pop><i class="bi bi-sort-down"></i> <span id="emSortLabel">A–Z</span></button>
+            <div class="em-pop">
+                @foreach(['name' => 'Name A–Z', 'recent' => 'Newest first', 'dept' => 'Department', 'complete' => 'Least complete first'] as $v => $l)
+                    <button type="button" class="it" data-sort="{{ $v }}"><i class="bi bi-check2" style="visibility:hidden"></i> {{ $l }}</button>
+                @endforeach
+            </div>
+        </div>
 
-.emp-rail-label {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        <div class="em-seg" role="group" aria-label="View">
+            <button type="button" data-view="cards" class="on" title="Cards" aria-label="Cards"><i class="bi bi-grid-3x2-gap"></i></button>
+            <button type="button" data-view="list" title="List" aria-label="List"><i class="bi bi-list-ul"></i></button>
+        </div>
+    </div>
 
-    font-size: .64rem;
-    font-weight: 600;
-    letter-spacing: .09em;
-    text-transform: uppercase;
-    color: var(--brass);
-    margin-bottom: .5rem;
-}
-.emp-rail-section + .emp-rail-section { margin-top: 1rem; }
+    {{-- department chips --}}
+    <div class="em-depts" role="group" aria-label="Departments">
+        <button type="button" class="em-chip on" data-dept-chip=""><i class="bi bi-people"></i> Everyone <small>{{ $stats->total }}</small></button>
+        @foreach($departments as $d)
+            <button type="button" class="em-chip" data-dept-chip="{{ $d->name }}" style="--c: {{ $d->color }}"><span class="em-dot" style="--c: {{ $d->color }}"></span>{{ $d->name }} <small>{{ $d->count }}</small></button>
+        @endforeach
+        @if($unassigned)
+            <button type="button" class="em-chip" data-dept-chip="__none" style="--c:#7B877F"><span class="em-dot" style="--c:#7B877F"></span>No department <small>{{ $unassigned }}</small></button>
+        @endif
+    </div>
 
-.emp-select {
-    width: 100%;
-    font-size: .8rem;
-    padding: .5rem .65rem;
-    border: 1px solid var(--line);
-    border-radius: 5px;
-    background: #fafafa;
-    color: var(--ink-soft);
-    outline: none;
-    cursor: pointer;
-}
-.emp-select:focus { border-color: var(--brass); }
+    <div class="em-tokens" id="emTokens"></div>
+    <p class="em-count" id="emCount" aria-live="polite"></p>
 
-/* ---- Vertical view stack ---- */
-.emp-view-stack {
-    display: flex;
-    flex-direction: column;
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    overflow: hidden;
-}
-.emp-view-btn {
-    display: flex;
-    align-items: center;
-    gap: .45rem;
-    padding: .55rem .8rem;
-    border: none;
-    border-bottom: 1px solid var(--line);
-    background: #fff;
-    cursor: pointer;
-    font-size: .78rem;
-    font-weight: 600;
-    color: var(--ink-faint);
-    transition: background .15s, color .15s;
-}
-.emp-view-btn:last-child { border-bottom: none; }
-.emp-view-btn.active { background: var(--brass-soft); color: var(--ink); }
+    {{-- ===== cards ===== --}}
+    <div class="em-grid" id="emCards">
+        @foreach($people as $p)
+            @php $e = $p->model; @endphp
+            <a class="em-card {{ $p->active ? '' : 'muted' }}" href="{{ route('employees.show', $e->id) }}" style="--c: {{ $p->color }}"
+               data-id="{{ $e->id }}" data-name="{{ $p->name }}" data-dept="{{ $p->dept }}" data-nature="{{ $p->nature }}"
+               data-status="{{ ! $p->active ? 'inactive' : ($p->away ? 'away active' : 'active') }}"
+               data-flags="{{ trim(($p->complete < 100 ? 'missing ' : '') . ($p->new ? 'new ' : '') . ($p->portal ? 'portal' : 'noportal')) }}"
+               data-since="{{ optional($p->since)->format('Y-m-d') }}" data-complete="{{ $p->complete }}"
+               data-search="{{ mb_strtolower($p->name . ' ' . $e->middle_name . ' ' . $e->employee_id . ' ' . $e->position . ' ' . $p->dept . ' ' . $e->branch . ' ' . $e->primary_phone . ' ' . $e->company_email . ' ' . $e->personal_email . ' ' . $e->nrc_no) }}"
+               data-csv="{{ json_encode([$e->employee_id, $p->name, $e->position, $p->dept, $e->branch, $e->employment_status, $e->employment_nature, optional($p->since)->format('Y-m-d'), $e->primary_phone, $p->email]) }}">
+                <div class="em-quick">
+                    @if($canManage)<object><a href="{{ route('employees.edit', $e->id) }}" title="Edit" aria-label="Edit {{ $p->name }}"><i class="bi bi-pencil"></i></a></object>@endif
+                    @if($p->phone)<object><a href="tel:{{ preg_replace('/\s+/', '', $p->phone) }}" title="Call" aria-label="Call {{ $p->name }}"><i class="bi bi-telephone"></i></a></object>@endif
+                    @if($p->email)<object><a href="mailto:{{ $p->email }}" title="Email" aria-label="Email {{ $p->name }}"><i class="bi bi-envelope"></i></a></object>@endif
+                </div>
+                <div class="em-card-top">
+                    @if($e->photo_url)
+                        <img class="em-avatar" src="{{ $e->photo_url }}" alt="" style="--c: {{ $p->color }}">
+                    @else
+                        <span class="em-avatar" style="--c: {{ $p->color }}">{{ $e->initials ?: '?' }}</span>
+                    @endif
+                    <div class="who">
+                        <span class="em-name">{{ $p->name ?: 'Unnamed' }}</span>
+                        <span class="em-role">{{ $e->position ?: 'No job title yet' }}</span>
+                    </div>
+                </div>
+                <div class="em-tags">
+                    @if($p->dept)<span class="em-tag dept"><span class="em-dot"></span>{{ $p->dept }}</span>@endif
+                    @if(! $p->active)<span class="em-tag off">{{ $e->employment_status ?: 'Inactive' }}</span>
+                    @elseif($p->away)<span class="em-tag leave"><i class="bi bi-airplane"></i> On leave</span>@endif
+                    @if($p->nature === 'BOARD')<span class="em-tag board"><i class="bi bi-bank2"></i> Board</span>@endif
+                    @if($p->new)<span class="em-tag new">New</span>@endif
+                    @if($p->bday)<span class="em-tag bday">🎂 {{ $p->bday->isToday() ? 'Today' : $p->bday->format('D j M') }}</span>@endif
+                </div>
+                <div class="em-meta">
+                    <span><i class="bi bi-hash"></i>{{ $e->employee_id ?: '—' }}{{ $e->branch ? ' · ' . $e->branch : '' }}</span>
+                    <span><i class="bi bi-calendar-check"></i>{{ $p->since ? 'Joined ' . $p->since->format('M Y') : 'Start date not set' }}</span>
+                </div>
+                <div class="em-foot">
+                    <div class="em-prog {{ $p->complete < 60 ? 'low' : '' }}" title="Profile {{ $p->complete }}% complete"><i style="width: {{ $p->complete }}%"></i></div>
+                    <small>{{ $p->complete }}%</small>
+                    <i class="bi bi-phone em-portal {{ $p->portal ? 'on' : '' }}" title="{{ $p->portal ? 'Has the self-service portal' : 'No portal yet' }}"></i>
+                </div>
+            </a>
+        @endforeach
+    </div>
 
-/* ---- Rail stats ---- */
-.emp-rail-stats { display: flex; flex-direction: column; gap: .55rem; }
-.emp-rail-stat-row {
-    display: flex;
-    align-items: center;
-    gap: .5rem;
-}
-.emp-rail-stat-dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--ink-faint);
-    flex-shrink: 0;
-}
-.emp-dot-green { background: var(--active); }
-.emp-dot-red { background: var(--warn); }
-.emp-rail-stat-label {
-    font-size: .74rem;
-    color: var(--ink-soft);
-    flex: 1;
-}
-.emp-rail-stat-value {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: .84rem;
-    font-weight: 600;
-    color: var(--ink);
-}
-.emp-stat-green { color: var(--active); }
-.emp-stat-red   { color: var(--warn); }
+    {{-- ===== list ===== --}}
+    <div class="em-list" id="emList" hidden>
+        <div class="em-row hd"><span>Name</span><span>Department</span><span>Status</span><span>Joined</span><span>Profile</span><span></span></div>
+        @foreach($people as $p)
+            @php $e = $p->model; @endphp
+            <a class="em-row {{ $p->active ? '' : 'muted' }}" href="{{ route('employees.show', $e->id) }}" style="--c: {{ $p->color }}" data-id="{{ $e->id }}">
+                <span class="who">
+                    @if($e->photo_url)<img class="em-avatar sm" src="{{ $e->photo_url }}" alt="" style="--c: {{ $p->color }}">@else<span class="em-avatar sm" style="--c: {{ $p->color }}">{{ $e->initials ?: '?' }}</span>@endif
+                    <span><b>{{ $p->name ?: 'Unnamed' }}</b><small>{{ $e->position ?: '—' }} · {{ $e->employee_id }}</small></span>
+                </span>
+                <span>@if($p->dept)<span class="em-tag dept"><span class="em-dot"></span>{{ $p->dept }}</span>@else<span class="pp-muted">—</span>@endif</span>
+                <span class="em-status {{ ! $p->active ? 'off' : ($p->away ? 'away' : '') }}"><span class="em-dot"></span>{{ ! $p->active ? ($e->employment_status ?: 'Inactive') : ($p->away ? 'On leave' : 'Active') }}</span>
+                <span>{{ $p->since ? $p->since->format('j M Y') : '—' }}</span>
+                <span><span class="em-prog {{ $p->complete < 60 ? 'low' : '' }}" style="display:block;width:70px"><i style="width: {{ $p->complete }}%"></i></span></span>
+                <span><i class="bi bi-chevron-right pp-muted"></i></span>
+            </a>
+        @endforeach
+    </div>
 
-/* ---- Main ---- */
-.emp-main { flex: 1; min-width: 0; }
-
-.emp-main-head { margin-bottom: 1rem; }
-.emp-eyebrow {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    font-size: .68rem;
-    font-weight: 600;
-    letter-spacing: .14em;
-    text-transform: uppercase;
-    color: var(--brass);
-    margin-bottom: .2rem;
-}
-.emp-title {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    font-size: 1.5rem;
-    font-weight: 700;
-    margin: 0;
-    color: var(--ink);
-}
-
-/* ---- Toolbar (search only, full width) ---- */
-.emp-toolbar { margin-bottom: 1rem; }
-.emp-search-wrap { position: relative; }
-.emp-search-icon {
-    position: absolute;
-    left: 14px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--ink-faint);
-    font-size: .84rem;
-    pointer-events: none;
-}
-.emp-search-input {
-    width: 100%;
-    padding: .75rem 1rem .75rem 2.4rem;
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    font-size: .88rem;
-    outline: none;
-    background: #fff;
-    color: var(--ink);
-    transition: border-color .15s, box-shadow .15s;
-}
-.emp-search-input:focus { border-color: var(--brass); box-shadow: 0 0 0 3px var(--brass-soft); }
-
-/* ---- Base card ---- */
-.emp-card {
-    background: #fff;
-    border: 1px solid var(--line);
-    border-radius: 6px;
-}
-
-/* ---- Table (ledger) ---- */
-.emp-table-card { padding: 0; overflow: hidden; }
-.emp-table { width: 100%; border-collapse: collapse; font-size: .84rem; }
-.emp-table thead th {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-
-    font-size: .66rem;
-    font-weight: 600;
-    color: var(--ink-faint);
-    text-transform: uppercase;
-    letter-spacing: .07em;
-    padding: .85rem 1rem;
-    border-bottom: 2px solid var(--ink);
-    text-align: left;
-    white-space: nowrap;
-    background: #FCFBF8;
-}
-.emp-row {
-    border-bottom: 1px solid var(--line);
-    cursor: pointer;
-    transition: background .15s;
-}
-.emp-row:nth-child(even) { background: #FCFBF8; }
-.emp-row:last-child { border-bottom: none; }
-.emp-row:hover { background: var(--brass-soft); }
-.emp-row td { padding: .7rem 1rem; vertical-align: middle; }
-
-.emp-td-id { font-family: 'IBM Plex Mono', monospace; font-size: .72rem; color: var(--ink-faint); white-space: nowrap; }
-.emp-td-muted { color: var(--ink-faint); font-size: .78rem; }
-
-/* ---- Avatar (ID-badge frame) ---- */
-.emp-avatar {
-    width: 36px; height: 36px;
-    border-radius: 6px;
-    border: 1px solid var(--ink);
-    display: flex; align-items: center; justify-content: center;
-    font-size: .72rem;
-    font-weight: 700;
-    flex-shrink: 0;
-    overflow: hidden;
-    background: var(--brass-soft);
-    color: var(--brass);
-}
-.emp-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.emp-avatar-lg { width: 46px; height: 46px; font-size: .82rem; }
-
-/* Department badge palette — ink-toned dossier tags */
-.emp-dept-it          { background: #EAEEF4; color: #029508; }
-.emp-dept-finance     { background: var(--active-bg); color: var(--active); }
-.emp-dept-hr          { background: #F7E7E2; color: #029508; }
-.emp-dept-operations  { background: #F5EFDD; color: #029508; }
-.emp-dept-default     { background: var(--inactive-bg); color: var(--inactive); }
-
-/* ---- Name cell ---- */
-.emp-name-cell { display: flex; align-items: center; gap: .7rem; }
-.emp-name { font-weight: 600; font-size: .84rem; color: var(--ink); }
-.emp-pos { font-size: .72rem; color: var(--ink-faint); margin-top: .05rem; }
-
-/* ---- Badges ---- */
-.emp-dept-badge {
-    display: inline-block;
-    font-size: .7rem;
-    font-weight: 600;
-    padding: .18rem .65rem;
-    border-radius: 4px;
-    white-space: nowrap;
-}
-.emp-status-badge {
-    display: inline-block;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: .64rem;
-    font-weight: 600;
-    letter-spacing: .04em;
-    text-transform: uppercase;
-    padding: .2rem .6rem;
-    border-radius: 3px;
-    white-space: nowrap;
-    transform: rotate(-1deg);
-}
-.emp-status-active   { background: var(--active-bg); color: var(--active); border: 1px solid #C7E0CD; }
-.emp-status-inactive { background: var(--inactive-bg); color: var(--inactive); border: 1px solid #DEDACD; }
-.emp-branch { font-size: .78rem; color: var(--ink-soft); }
-
-/* ---- Contract ---- */
-.emp-contract { font-size: .74rem; color: var(--ink-faint); white-space: nowrap; font-family: 'IBM Plex Mono', monospace; }
-.emp-contract-warn { color: var(--warn); font-weight: 600; }
-.emp-soon-label {
-    display: inline-block;
-    margin-left: .3rem;
-    background: var(--warn-bg);
-    color: var(--warn);
-    font-family: 'IBM Plex Sans', sans-serif;
-    font-size: .64rem;
-    font-weight: 700;
-    padding: .08rem .45rem;
-    border-radius: 4px;
-}
-
-/* ---- Row actions ---- */
-.emp-actions-cell { text-align: right; }
-.emp-row-actions {
-    display: flex;
-    gap: .3rem;
-    justify-content: flex-end;
-    opacity: 0;
-    transition: opacity .15s;
-}
-.emp-row:hover .emp-row-actions,
-.emp-card-actions { opacity: 1; }
-
-.emp-action-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 30px; height: 30px;
-    border: 1px solid var(--line);
-    border-radius: 5px;
-    color: var(--ink-soft);
-    text-decoration: none;
-    background: #fff;
-    font-size: .8rem;
-    transition: background .15s, color .15s, border-color .15s;
-}
-.emp-action-btn:hover { background: var(--brass-soft); color: var(--ink); border-color: var(--brass); }
-
-/* ---- Empty state ---- */
-.emp-empty-state {
-    text-align: center;
-    padding: 3rem 1.5rem;
-    color: var(--ink-faint);
-    font-size: .85rem;
-}
-.emp-empty-state i { font-size: 1.8rem; display: block; margin-bottom: .6rem; color: var(--ink-faint); }
-
-/* ---- Card view (index cards) ---- */
-.emp-dept-group { margin-bottom: 1.75rem; }
-.emp-dept-group-label {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    font-size: .74rem;
-    font-weight: 700;
-    color: #fff;
-    background: var(--ink);
-    display: inline-flex;
-    align-items: center;
-    gap: .5rem;
-    padding: .4rem .9rem;
-    border-radius: 0 6px 6px 0;
-    margin-bottom: .85rem;
-    text-transform: uppercase;
-    letter-spacing: .04em;
-}
-.emp-dept-count {
-    background: var(--brass);
-    color: #fff;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: .64rem;
-    font-weight: 600;
-    padding: .08rem .45rem;
-    border-radius: 20px;
-}
-
-.emp-card-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-}
-@media (max-width: 1200px) { .emp-card-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 640px)  { .emp-card-grid { grid-template-columns: 1fr; } }
-
-.emp-person-card {
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    padding: 1.1rem 1.2rem;
-    background: #fff;
-    cursor: pointer;
-    height: 100%;
-    position: relative;
-    transition: box-shadow .2s ease, border-color .2s ease, transform .2s ease;
-}
-.emp-person-card::before {
-    content: "";
-    position: absolute;
-    top: 0; left: 18px;
-    width: 42px; height: 5px;
-    background: var(--brass);
-    border-radius: 0 0 3px 3px;
-}
-.emp-person-card:hover {
-    box-shadow: 0 12px 26px -16px rgba(23,38,58,.32);
-    border-color: var(--brass);
-    transform: translateY(-3px);
-}
-.emp-card-top { display: flex; align-items: flex-start; gap: .7rem; margin-bottom: .7rem; margin-top: .3rem; }
-.emp-card-name {
-    font-weight: 700;
-    font-size: .88rem;
-    color: var(--ink);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.emp-card-pos { font-size: .74rem; color: var(--ink-faint); margin-top: .05rem; }
-.emp-card-id { font-family: 'IBM Plex Mono', monospace; font-size: .68rem; color: var(--ink-faint); margin-top: .15rem; }
-.emp-card-detail { font-size: .78rem; color: var(--ink-soft); margin-bottom: .3rem; }
-.emp-card-warn { font-size: .72rem; color: var(--warn); font-weight: 600; margin-bottom: .3rem; }
-
-.emp-card-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: .8rem;
-    padding-top: .8rem;
-    border-top: 1px solid var(--line);
-}
-.emp-card-actions { display: flex; gap: .3rem; }
-
-.min-width-0 { min-width: 0; }
-
-/* ---- Print ---- */
-@media print {
-    .emp-rail, .emp-row-actions, .emp-card-actions { display: none !important; }
-    .emp-shell { display: block; }
-}
-
-/* ---- Responsive ---- */
-@media (max-width: 900px) {
-    .emp-shell { flex-direction: column; }
-    .emp-rail {
-        width: 100%;
-        position: static;
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: .9rem 1.2rem;
-        align-items: start;
-    }
-    .emp-rail-cta, .emp-rail-secondary { grid-column: 1 / -1; }
-    .emp-rail-divider { grid-column: 1 / -1; margin: .2rem 0; }
-}
-@media (max-width: 560px) {
-    .emp-rail { grid-template-columns: 1fr; }
-    .emp-table thead th:nth-child(4), .emp-table tbody td:nth-child(4),
-    .emp-table thead th:nth-child(5), .emp-table tbody td:nth-child(5) { display: none; }
-}
-</style>
-
-
-{{-- ===== SCRIPTS ===== --}}
-<script>
-function empFilter() {
-    const search = document.getElementById('empSearch').value.toLowerCase().trim();
-    const dept   = document.getElementById('empDeptFilter').value;
-    const status = document.getElementById('empStatusFilter').value;
-
-    const rows = document.querySelectorAll('#empTable tbody .emp-row');
-    let tableVisible = 0;
-
-    rows.forEach(row => {
-        const matchSearch = !search || row.dataset.search.includes(search);
-        const matchDept   = !dept   || row.dataset.dept   === dept;
-        const matchStatus = !status || row.dataset.status === status;
-        const show = matchSearch && matchDept && matchStatus;
-        row.style.display = show ? '' : 'none';
-        if (show) tableVisible++;
-    });
-
-    document.getElementById('empTableEmpty').style.display = tableVisible === 0 ? 'block' : 'none';
-
-    const cols = document.querySelectorAll('.emp-card-col');
-    let cardVisible = 0;
-
-    cols.forEach(col => {
-        const matchSearch = !search || col.dataset.search.includes(search);
-        const matchDept   = !dept   || col.dataset.dept   === dept;
-        const matchStatus = !status || col.dataset.status === status;
-        const show = matchSearch && matchDept && matchStatus;
-        col.style.display = show ? '' : 'none';
-        if (show) cardVisible++;
-    });
-
-    document.querySelectorAll('.emp-dept-group').forEach(group => {
-        const visibleInGroup = group.querySelectorAll('.emp-card-col:not([style*="display: none"])').length;
-        group.style.display = visibleInGroup === 0 ? 'none' : '';
-    });
-
-    document.getElementById('empCardEmpty').style.display = cardVisible === 0 ? 'block' : 'none';
-}
-
-function empShowView(view) {
-    const tableView = document.getElementById('empTableView');
-    const cardView  = document.getElementById('empCardView');
-    const btnTable  = document.getElementById('btnTable');
-    const btnCard   = document.getElementById('btnCard');
-
-    if (view === 'table') {
-        tableView.style.display = 'block';
-        cardView.style.display  = 'none';
-        btnTable.classList.add('active');
-        btnCard.classList.remove('active');
-    } else {
-        tableView.style.display = 'none';
-        cardView.style.display  = 'block';
-        btnTable.classList.remove('active');
-        btnCard.classList.add('active');
-    }
-}
-
-(function () {
-    const saved = sessionStorage.getItem('empView');
-    if (saved === 'card') empShowView('card');
-})();
-
-document.getElementById('btnTable').addEventListener('click', () => sessionStorage.setItem('empView', 'table'));
-document.getElementById('btnCard').addEventListener('click',  () => sessionStorage.setItem('empView', 'card'));
-</script>
-
+    <div class="em-empty" id="emNone" hidden>
+        <i class="bi bi-search big"></i>
+        <h3>No one matches</h3>
+        <p>Try a different name or remove a filter.</p>
+        <button type="button" class="pp-btn pp-btn-ghost" data-clear-all>Clear search and filters</button>
+    </div>
+    <div class="em-more" id="emMoreWrap" hidden><button type="button" class="pp-btn pp-btn-ghost" id="emMore">Show more</button></div>
+    @endif
+</div>
 @endsection
+
+@push('scripts')
+<script>
+(function () {
+    const root = document.getElementById('em');
+    if (!root) return;
+
+    /* ----- popovers ----- */
+    document.querySelectorAll('[data-em-pop]').forEach(b => b.addEventListener('click', e => {
+        e.stopPropagation();
+        const pop = b.nextElementSibling, open = pop.classList.contains('open');
+        document.querySelectorAll('.em-pop.open').forEach(p => p.classList.remove('open'));
+        if (!open) pop.classList.add('open');
+    }));
+    document.querySelectorAll('.em-pop').forEach(p => p.addEventListener('click', e => { if (e.target.closest('label')) e.stopPropagation(); }));
+    document.addEventListener('click', () => document.querySelectorAll('.em-pop.open').forEach(p => p.classList.remove('open')));
+
+    const cardsBox = document.getElementById('emCards');
+    if (!cardsBox) return;
+    const cards = [...cardsBox.children];
+    const rows = Object.fromEntries([...document.querySelectorAll('#emList .em-row[data-id]')].map(r => [r.dataset.id, r]));
+    const listBox = document.getElementById('emList');
+    const q = document.getElementById('emQ');
+    const PAGE = 48;
+    const store = { get: k => { try { return localStorage.getItem('zp.people.' + k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem('zp.people.' + k, v); } catch (e) {} } };
+    const state = { q: '', dept: '', status: new Set(), nature: new Set(), flag: new Set(), sort: store.get('sort') || 'name', view: store.get('view') || 'cards', limit: PAGE };
+
+    const preset = JSON.parse(root.dataset.preset || '{}');
+    if (preset.department) state.dept = preset.department;
+    if (preset.q) { state.q = preset.q.toLowerCase(); q.value = preset.q; }
+    if (preset.status) state.status.add(preset.status);
+
+    const labels = {
+        status: Object.fromEntries([...document.querySelectorAll('[data-f=status]')].map(i => [i.value, i.parentElement.textContent.trim()])),
+        nature: Object.fromEntries([...document.querySelectorAll('[data-f=nature]')].map(i => [i.value, i.parentElement.textContent.trim()])),
+        flag: Object.fromEntries([...document.querySelectorAll('[data-f=flag]')].map(i => [i.value, i.parentElement.textContent.trim()])),
+    };
+
+    function matches(c, skip) {
+        const d = c.dataset;
+        if (state.q && !state.q.split(/\s+/).every(w => d.search.includes(w))) return false;
+        if (skip !== 'dept' && state.dept && (state.dept === '__none' ? d.dept !== '' : d.dept !== state.dept)) return false;
+        if (skip !== 'status' && state.status.size && ![...state.status].some(s => d.status.split(' ').includes(s))) return false;
+        if (skip !== 'nature' && state.nature.size && !state.nature.has(d.nature)) return false;
+        if (skip !== 'flag' && state.flag.size && ![...state.flag].every(f => d.flags.split(' ').includes(f))) return false;
+        return true;
+    }
+
+    const sorters = {
+        name: (a, b) => a.dataset.name.localeCompare(b.dataset.name),
+        recent: (a, b) => (b.dataset.since || '').localeCompare(a.dataset.since || ''),
+        dept: (a, b) => (a.dataset.dept || '~').localeCompare(b.dataset.dept || '~') || a.dataset.name.localeCompare(b.dataset.name),
+        complete: (a, b) => (+a.dataset.complete - +b.dataset.complete) || a.dataset.name.localeCompare(b.dataset.name),
+    };
+    const sortNames = { name: 'A–Z', recent: 'Newest', dept: 'Department', complete: 'Least complete' };
+
+    function render() {
+        const shown = cards.filter(c => matches(c)).sort(sorters[state.sort]);
+        const visible = shown.slice(0, state.limit);
+        cards.forEach(c => c.hidden = true);
+        Object.values(rows).forEach(r => r.hidden = true);
+        visible.forEach(c => { c.hidden = false; cardsBox.appendChild(c); const r = rows[c.dataset.id]; if (r) { r.hidden = false; listBox.appendChild(r); } });
+
+        cardsBox.hidden = state.view !== 'cards' || !shown.length;
+        listBox.hidden = state.view !== 'list' || !shown.length;
+        document.getElementById('emNone').hidden = !!shown.length;
+        document.getElementById('emMoreWrap').hidden = shown.length <= state.limit;
+        document.getElementById('emMore').textContent = `Show ${Math.min(PAGE, shown.length - state.limit)} more`;
+        const filtered = state.q || state.dept || state.status.size || state.nature.size || state.flag.size;
+        document.getElementById('emCount').textContent = filtered ? `Showing ${shown.length} of ${cards.length} ${cards.length === 1 ? 'person' : 'people'}` : '';
+
+        // counts next to each option, given the other filters
+        ['status', 'nature', 'flag'].forEach(k => document.querySelectorAll(`[data-n-${k}]`).forEach(el => {
+            const v = el.getAttribute(`data-n-${k}`);
+            el.textContent = cards.filter(c => matches(c, k) && (k === 'status' ? c.dataset.status.split(' ').includes(v) : k === 'nature' ? c.dataset.nature === v : c.dataset.flags.split(' ').includes(v))).length;
+        }));
+        document.querySelectorAll('[data-dept-chip]').forEach(ch => ch.classList.toggle('on', ch.dataset.deptChip === state.dept));
+        document.querySelectorAll('[data-filter-btn]').forEach(b => {
+            const n = state[b.dataset.filterBtn].size, em = b.querySelector('em');
+            b.classList.toggle('on', n > 0); em.hidden = !n; em.textContent = n;
+        });
+        document.querySelectorAll('[data-f]').forEach(i => i.checked = state[i.dataset.f].has(i.value));
+        document.querySelectorAll('[data-sort]').forEach(b => b.querySelector('i').style.visibility = b.dataset.sort === state.sort ? 'visible' : 'hidden');
+        document.getElementById('emSortLabel').textContent = sortNames[state.sort];
+        document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('on', b.dataset.view === state.view));
+
+        // tokens
+        const tokens = [];
+        if (state.dept) tokens.push(['dept', '', state.dept === '__none' ? 'No department' : state.dept]);
+        ['status', 'nature', 'flag'].forEach(k => state[k].forEach(v => tokens.push([k, v, labels[k][v] || v])));
+        const box = document.getElementById('emTokens');
+        box.innerHTML = '';
+        tokens.forEach(([k, v, l]) => {
+            const t = document.createElement('span'); t.className = 'em-token'; t.textContent = l;
+            const x = document.createElement('button'); x.type = 'button'; x.innerHTML = '&times;'; x.setAttribute('aria-label', 'Remove ' + l);
+            x.onclick = () => { if (k === 'dept') state.dept = ''; else state[k].delete(v); state.limit = PAGE; render(); };
+            t.appendChild(x); box.appendChild(t);
+        });
+        if (tokens.length > 1) { const c = document.createElement('button'); c.className = 'em-clear'; c.type = 'button'; c.textContent = 'Clear all'; c.onclick = clearAll; box.appendChild(c); }
+    }
+
+    function clearAll() { state.q = ''; q.value = ''; state.dept = ''; ['status', 'nature', 'flag'].forEach(k => state[k].clear()); state.limit = PAGE; render(); }
+
+    let t; q.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { state.q = q.value.trim().toLowerCase(); state.limit = PAGE; render(); }, 120); });
+    document.addEventListener('keydown', e => {
+        if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) { e.preventDefault(); q.focus(); }
+        if (e.key === 'Escape' && document.activeElement === q) { q.value = ''; state.q = ''; render(); }
+    });
+    document.querySelectorAll('[data-f]').forEach(i => i.addEventListener('change', () => { state[i.dataset.f][i.checked ? 'add' : 'delete'](i.value); state.limit = PAGE; render(); }));
+    document.querySelectorAll('[data-dept-chip]').forEach(ch => ch.addEventListener('click', () => { state.dept = state.dept === ch.dataset.deptChip ? '' : ch.dataset.deptChip; state.limit = PAGE; render(); }));
+    document.querySelectorAll('[data-sort]').forEach(b => b.addEventListener('click', () => { state.sort = b.dataset.sort; store.set('sort', state.sort); render(); }));
+    document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => { state.view = b.dataset.view; store.set('view', state.view); render(); }));
+    document.querySelectorAll('[data-clear-all]').forEach(b => b.addEventListener('click', clearAll));
+    document.getElementById('emMore').addEventListener('click', () => { state.limit += PAGE; render(); });
+    // Quick-action links inside a card shouldn't open the profile
+    document.querySelectorAll('.em-quick a').forEach(a => a.addEventListener('click', e => e.stopPropagation()));
+
+    document.getElementById('emExport')?.addEventListener('click', () => {
+        const head = ['Employee number', 'Name', 'Job title', 'Department', 'Branch', 'Status', 'Type', 'Start date', 'Phone', 'Email'];
+        const esc = v => { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+        const lines = [head].concat(cards.filter(c => matches(c)).sort(sorters[state.sort]).map(c => JSON.parse(c.dataset.csv)));
+        const blob = new Blob(['﻿' + lines.map(r => r.map(esc).join(',')).join('\r\n')], { type: 'text/csv' });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'people-' + new Date().toISOString().slice(0, 10) + '.csv'; a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    });
+
+    render();
+})();
+</script>
+@endpush

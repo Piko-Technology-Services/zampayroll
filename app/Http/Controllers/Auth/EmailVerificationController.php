@@ -61,6 +61,10 @@ class EmailVerificationController extends Controller
             $request->session()->forget('registered_email');
             $user->forceFill(['last_login_at' => now()])->saveQuietly();
 
+            if ($user->isPartner()) {
+                return redirect()->route('partner.dashboard')->with('success', '🎉 Email confirmed — welcome to the ZamPayroll partner programme!');
+            }
+
             return redirect()->route($user->homeRoute())
                 ->with('celebrate', true)
                 ->with('success', '🎉 Email confirmed — your ZamPayroll workspace is ready! Your company code is '

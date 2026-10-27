@@ -32,6 +32,8 @@
                         <tr>
                             <td>
                                 <b>{{ $m->name }}</b> @if($m->id === $me->id)<span class="zp-portal-pill">You</span>@endif
+                                @if($m->isBoardMember())<span class="tm-tag board"><i class="bi bi-bank2"></i> Board</span>@endif
+                                @if($m->employee)<a class="tm-tag" href="{{ route('employees.show', $m->employee) }}" title="Also an employee — has the self-service portal"><i class="bi bi-person-badge"></i> Employee</a>@endif
                                 <div class="tm-muted">{{ $m->email }}@if($m->position) · {{ $m->position }}@endif</div>
                             </td>
                             <td>
@@ -48,7 +50,7 @@
                             <td class="tm-muted">{{ $m->last_login_at?->diffForHumans() ?? 'Never' }}</td>
                             <td class="text-end">
                                 @if($m->id !== $me->id)
-                                    <form method="POST" action="{{ route('team.members.destroy', $m) }}" onsubmit="return confirm('Remove {{ addslashes($m->name) }}\'s access?')">
+                                    <form method="POST" action="{{ route('team.members.destroy', $m) }}" onsubmit="return confirm('{{ $m->employee ? 'Remove ' . addslashes($m->name) . '\'s team access? They keep their employee portal.' : 'Remove ' . addslashes($m->name) . '\'s access?' }}')">
                                         @csrf @method('DELETE')
                                         <button class="tm-icon" title="Remove access" aria-label="Remove access"><i class="bi bi-person-x"></i></button>
                                     </form>
@@ -59,14 +61,45 @@
                     </tbody>
                 </table>
             </div>
-            <p class="tm-muted mt-2 mb-0"><i class="bi bi-info-circle"></i> Employees with a self-service portal are managed from their employee file, not here.</p>
+            <p class="tm-muted mt-2 mb-0"><i class="bi bi-info-circle"></i> People tagged <b>Employee</b> also have the self-service portal and switch between dashboards from the top bar. Removing their team access keeps their portal.</p>
         </div>
     </div>
 
-    {{-- Invite --}}
     <div class="col-xl-5">
-        <div class="tm-card">
-            <div class="tm-card-head"><h2>Invite someone</h2></div>
+        {{-- Give an employee a role --}}
+        <div class="tm-card" style="height:auto;margin-bottom:1.5rem" id="grant">
+            <div class="tm-card-head"><div><h2>Give an employee access</h2><p class="tm-muted mb-0">They keep their employee portal and can switch to the dashboard for their role.</p></div></div>
+            @if($candidates->isEmpty())
+                <p class="tm-muted mb-0">Every active employee already has team access, or there are no employees yet.</p>
+            @else
+            <form method="POST" action="{{ route('team.employee-access.store') }}">
+                @csrf
+                <div class="zp-field">
+                    <label class="zp-label" for="ga_emp">Employee</label>
+                    <select class="zp-select" id="ga_emp" name="employee_id" required>
+                        <option value="">Choose an employee…</option>
+                        @foreach($candidates as $c)
+                            <option value="{{ $c->id }}" @selected(old('employee_id') == $c->id)>{{ $c->full_name }}{{ $c->position ? ' — ' . $c->position : '' }}{{ $c->user ? ' (has portal)' : ($c->portal_email ? '' : ' (no email on file)') }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="zp-field">
+                    <label class="zp-label" for="ga_role">Role</label>
+                    <select class="zp-select" id="ga_role" name="role" required>
+                        @foreach($roles as $r)
+                            <option value="{{ $r->key }}" @selected(old('role', 'manager') === $r->key)>{{ $r->name }}</option>
+                        @endforeach
+                    </select>
+                    <div class="tm-muted mt-1" id="ga_hint"></div>
+                </div>
+                <button class="zp-btn zp-btn-primary zp-btn-block"><i class="bi bi-person-check"></i> Give access</button>
+            </form>
+            @endif
+        </div>
+
+        {{-- Invite --}}
+        <div class="tm-card" style="height:auto">
+            <div class="tm-card-head"><div><h2>Invite someone else</h2><p class="tm-muted mb-0">For people who aren't employees — an outside accountant, auditor or board member.</p></div></div>
             <form method="POST" action="{{ route('invitations.store') }}">
                 @csrf
                 <div class="zp-field">
@@ -172,8 +205,24 @@
     @endforeach
 </div>
 
+@php $roleHints = $roles->pluck('description', 'key')->all(); @endphp
+@push('scripts')
+<script>
+(function () {
+    const role = document.getElementById('ga_role'), hint = document.getElementById('ga_hint');
+    if (! role) return;
+    const text = {!! json_encode($roleHints, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!};
+    const show = () => { hint.textContent = (text[role.value] || '') + (role.value === 'board_member' ? ' Their employee record will be marked “Board member”.' : ''); };
+    role.addEventListener('change', show); show();
+})();
+</script>
+@endpush
+
 @push('styles')
 <style>
+.tm-tag { display:inline-flex; align-items:center; gap:.25rem; font-size:.7rem; font-weight:700; padding:.15rem .5rem; border-radius:999px; background:var(--zp-mist); color:var(--zp-ink-2); margin-left:.25rem; text-decoration:none; vertical-align:middle; }
+.tm-tag.board { background:#1F2A24; color:#fff; }
+a.tm-tag:hover { color:var(--zp-green); }
 .tm-code { display:flex; justify-content:space-between; gap:1.5rem; align-items:center; flex-wrap:wrap; background:var(--zp-forest); color:#DCEDE2; border-radius:20px; padding:1.4rem 1.6rem; margin-bottom:1.5rem; position:relative; overflow:hidden; }
 .tm-code::after { content:""; position:absolute; left:0; right:0; bottom:0; height:4px; background:linear-gradient(90deg,#00742D 0 70%,#C42926 70% 80%,#101512 80% 90%,#C8742B 90%); }
 .tm-code-label { font-size:.85rem; color:#A9C8B5; font-weight:600; }

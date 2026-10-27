@@ -123,7 +123,7 @@ class AuthController extends Controller
             }
             $matches[] = [
                 'company_id' => $user->company_id ? (int) $user->company_id : null,
-                'company'    => $company?->name ?? 'ZamPayroll administration',
+                'company'    => $company?->name ?? ($user->isPartner() ? 'Partner dashboard' : 'ZamPayroll administration'),
                 'user_id'    => (int) $user->id,
                 'dedicated'  => false,
                 'role'       => $user->roleName(),

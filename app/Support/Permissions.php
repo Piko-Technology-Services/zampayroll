@@ -19,7 +19,7 @@ class Permissions
         ],
         'Attendance' => [
             'attendance.view'   => 'See attendance',
-            'attendance.manage' => 'Mark attendance, working days & holidays',
+            'attendance.manage' => 'Mark attendance, set shift rotas (own team for managers), working days & holidays',
         ],
         'Leave' => [
             'leave.view'    => 'See leave requests and the leave sheet',
@@ -78,6 +78,11 @@ class Permissions
             'description' => 'Read-only access to records, payroll and reports.',
             'permissions' => ['employees.view', 'attendance.view', 'leave.view', 'loans.view', 'payroll.view', 'reports.view', 'reports.statutory'],
         ],
+        'board_member' => [
+            'name' => 'Board member',
+            'description' => 'Same rights as an administrator. Not counted as staff: no attendance or leave, but can be paid through payroll and take loans.',
+            'permissions' => ['*'],
+        ],
     ];
 
     /** Older role names map onto the new roles. */
@@ -99,8 +104,14 @@ class Permissions
         'employees.update'             => 'employees.manage',
         'employees.destroy'            => 'employees.manage',
         'employees.*'                  => 'employees.view',
+        'departments.store'            => 'employees.manage',
+        'departments.update'           => 'employees.manage',
+        'departments.destroy'          => 'employees.manage',
         'departments.*'                => 'employees.view',
 
+        'attendance.rota'              => 'attendance.view',
+        'attendance.rota.*'            => 'attendance.manage',
+        'attendance.shifts*'           => 'settings.company',
         'attendance.calendar'          => 'attendance.view',
         'attendance.day'               => 'attendance.view',
         'attendance.report*'           => 'attendance.view',
@@ -125,7 +136,9 @@ class Permissions
         'loan.*'                       => 'loans.manage',
 
         'payroll.runs.finalize'        => 'payroll.finalize',
+        'payroll.runs.unlock'          => 'payroll.finalize',
         'payroll.rules.*'              => 'payroll.rules',
+        'payroll.reports.returns.*'    => 'reports.statutory',
         'payroll.reports.napsa.*'      => 'reports.statutory',
         'payroll.reports.zra.*'        => 'reports.statutory',
         'payroll.reports.nhima.*'      => 'reports.statutory',
@@ -139,6 +152,7 @@ class Permissions
         'payroll.runs.index'           => 'payroll.view',
         'payroll.runs.show'            => 'payroll.view',
         'payroll.runs.payslips'        => 'payroll.view',
+        'payroll.runs.payslips.pdf'    => 'payroll.view',
         'payroll.runs.hidden'          => 'payroll.view',
         'payroll.runs.trash'           => 'payroll.view',
         'payroll.runs.employee.summary' => 'payroll.view',
@@ -212,6 +226,9 @@ class Permissions
     /**
      * Create the standard roles for a company (missing ones only).
      */
+    /** Roles that always have every permission. */
+    public const ADMIN_ROLES = ['company_admin', 'board_member'];
+
     public static function seedDefaultRoles(int $companyId): void
     {
         $db = DB::connection();

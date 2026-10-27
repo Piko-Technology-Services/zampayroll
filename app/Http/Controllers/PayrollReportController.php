@@ -170,60 +170,11 @@ class PayrollReportController extends Controller
     | kept for compatibility with the existing NAPSA upload format.
     |
     */
-    public function exportNapsaCsv(PayrollRun $run)
+    public function exportNapsaCsv(Request $request, PayrollRun $run)
     {
-        $run->load(['payrolls.employee', 'payrolls.items']);
-
-        [$year, $month] = $this->parsePeriod($run->period);
-
-        $filename = "napsa-returns-{$run->period}.csv";
-        $companyNapsaNumber = auth()->user()?->company?->napsa_employer_number ?? '';
-
-        return response()->streamDownload(function () use ($run, $year, $month, $companyNapsaNumber) {
-
-            $handle = fopen('php://output', 'w');
-
-            // Header row
-            fputcsv($handle, [
-                'company napsa number', 'year', 'month', 'ssn', 'nrc',
-                'lastName', 'first name', 'middle name', 'dob',
-                'gross', 'employee tax payable', 'company tax payable', '',
-            ]);
-
-            foreach ($run->payrolls as $payroll) {
-                $employee = $payroll->employee;
-            
-
-                $napsaAmount = $payroll->items
-                    ->whereIn('code', ['D02', 'NAPSA'])
-                    ->sum('amount');
-
-                fputcsv($handle, [
-                    $companyNapsaNumber,
-                    $year,
-                    $month,
-                    // Force as string to prevent Excel/PHP casting long SSNs
-                    // to scientific notation (e.g. 5.56704E+13) — this exact
-                    // bug is visible in one of the reference files.
-                    (string) ($employee->ssn ?? ''),
-                    $employee->nrc_no ?? '',
-                    $employee->last_name,
-                    $employee->first_name,
-                    $employee->middle_name ?? '',
-                    $employee->date_of_birth ? \Carbon\Carbon::parse($employee->date_of_birth)->format('d/m/Y') : '',
-                    number_format($payroll->total_income, 2, '.', ''),
-                    number_format($napsaAmount, 2, '.', ''),
-                    number_format($napsaAmount, 2, '.', ''), // employer matches employee contribution
-                    'I',
-                ]);
-            }
-
-            fclose($handle);
-
-        }, $filename, [
-            'Content-Type' => 'text/csv',
-        ]);
+        return app(\App\Services\Statutory\StatutoryReturns::class)->download('napsa', $run, $request->input('scope', 'run'));
     }
+
 
     /*
     |==========================================================================
@@ -236,36 +187,11 @@ class PayrollReportController extends Controller
     |   chargeableEmoluments, totalTaxCredit, taxDeducted, taxAdjusted
     |
     */
-    public function exportZraExcel(PayrollRun $run)
+    public function exportZraExcel(Request $request, PayrollRun $run)
     {
-        $run->load(['payrolls.employee', 'payrolls.items']);
-
-        $rows = $run->payrolls->map(function ($payroll) {
-            $employee = $payroll->employee;
-
-            $paye = $payroll->items
-                ->whereIn('code', ['D00', 'PAYE'])
-                ->sum('amount');
-
-            return [
-                'tpin'                 => $employee->tpin ?? '',
-                'fullName'             => strtoupper($employee->first_name . ' ' . $employee->last_name),
-                'employmentNature'     => $employee->employment_nature ?? 'PERMANENT',
-                'grossEmoluments'      => round($payroll->total_income, 2),
-                'chargeableEmoluments' => round($payroll->total_income, 2),
-                'totalTaxCredit'       => 0,
-                'taxDeducted'          => round($paye, 2),
-                'taxAdjusted'          => 0,
-            ];
-        });
-
-        return $this->downloadXlsx(
-            $rows,
-            ['tpin', 'fullName', 'employmentNature', 'grossEmoluments', 'chargeableEmoluments', 'totalTaxCredit', 'taxDeducted', 'taxAdjusted'],
-            "zra-paye-{$run->period}.xlsx",
-            'PayeeEmployeeDetails'
-        );
+        return app(\App\Services\Statutory\StatutoryReturns::class)->download('zra', $run, $request->input('scope', 'run'));
     }
+
 
     /*
     |==========================================================================
@@ -280,55 +206,10 @@ class PayrollReportController extends Controller
     */
     public function exportNhimaCsv(Request $request, PayrollRun $run)
     {
-        $run->load(['payrolls.employee', 'payrolls.items']);
-
-        [$year, $month] = $this->parsePeriod($run->period);
-        $includeHeader = $request->boolean('with_header', false);
-
-        $filename = "nhima-returns-{$run->period}.csv";
-
-        return response()->streamDownload(function () use ($run, $year, $month, $includeHeader) {
-
-            $handle = fopen('php://output', 'w');
-
-            if ($includeHeader) {
-                fputcsv($handle, [
-                    'nhima employer number', 'year', 'month', 'ssn', 'nrc',
-                    'lastName', 'first name', 'middle name', 'dob',
-                    'gross', 'employee contribution', 'company contribution', '',
-                ]);
-            }
-
-            foreach ($run->payrolls as $payroll) {
-                $employee = $payroll->employee;
-
-                $nhimaAmount = $payroll->items
-                    ->whereIn('code', ['D11', 'NHIS', 'NHIMA'])
-                    ->sum('amount');
-
-                fputcsv($handle, [
-                    $employee->nhima_no ?? '',
-                    $year,
-                    $month,
-                    (string) ($employee->ssn ?? ''),
-                    $employee->nrc_no ?? '',
-                    $employee->last_name,
-                    $employee->first_name,
-                    $employee->middle_name ?? '',
-                    $employee->date_of_birth ? \Carbon\Carbon::parse($employee->date_of_birth)->format('d/m/Y') : '',
-                    number_format($payroll->total_income, 2, '.', ''),
-                    number_format($nhimaAmount, 2, '.', ''),
-                    number_format($nhimaAmount, 2, '.', ''),
-                    'I',
-                ]);
-            }
-
-            fclose($handle);
-
-        }, $filename, [
-            'Content-Type' => 'text/csv',
-        ]);
+        return app(\App\Services\Statutory\StatutoryReturns::class)->download('nhima', $run, $request->input('scope', 'run'),
+            $request->has('with_header') ? $request->boolean('with_header') : null);
     }
+
 
     /*
     |==========================================================================

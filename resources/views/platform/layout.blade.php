@@ -11,10 +11,12 @@
 @php
     $openTickets = \App\Models\SupportTicket::query()->where('status', 'open')->count();
     $requests = \App\Models\Company::on(\App\Support\Tenancy::landlordConnection())->whereNotNull('requested_subdomain')->count();
+    $partnerApps = \App\Models\Partner::query()->where('status', 'pending')->count();
     $nav = [
         ['platform.dashboard', 'bi-speedometer2', 'Overview', null, 'platform.dashboard'],
         ['platform.companies', 'bi-buildings', 'Companies', $requests ?: null, 'platform.companies*'],
         ['platform.invoices', 'bi-receipt', 'Billing', null, 'platform.invoices*'],
+        ['platform.partners', 'bi-person-badge', 'Partners', $partnerApps ?: null, 'platform.partners*'],
         ['platform.tickets', 'bi-life-preserver', 'Tickets', $openTickets ?: null, 'platform.tickets*'],
         ['platform.audit', 'bi-journal-text', 'Audit log', null, 'platform.audit'],
         ['platform.settings', 'bi-sliders', 'Settings', null, 'platform.settings*'],

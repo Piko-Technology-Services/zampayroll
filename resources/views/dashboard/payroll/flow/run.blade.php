@@ -49,7 +49,7 @@
         <div>
             <h1>{{ $run->displayName() }} <span class="pr-pill {{ $run->statusTone() }}" style="vertical-align:middle;font-family:var(--zp-font)">{{ $run->statusLabel() }}</span></h1>
             <p>
-                {{ $totals['people'] }} people
+                {{ $run->typeLabel() }} · {{ $run->coverageSummary() }} · {{ $totals['people'] }} people
                 @if($run->creator) · started by {{ $run->creator->name }}@endif
                 @if($ev = $run->events->where('action', 'calculated')->last()) · calculated {{ $ev->created_at->diffForHumans() }}@endif
             </p>
@@ -58,6 +58,7 @@
             @if($canEdit)
                 <a class="pp-btn pp-btn-ghost pp-btn-sm" href="{{ route('payroll.runs.editor', $run) }}" title="Line-by-line editor, bulk adjustments and imports"><i class="bi bi-sliders"></i> Advanced editor</a>
             @endif
+            <button type="button" class="pp-btn pp-btn-ghost pp-btn-sm" data-walkthrough="{{ $stage - 1 }}"><i class="bi bi-play-circle"></i> How this works</button>
             <button type="button" class="pp-btn pp-btn-dark pp-btn-sm" data-ai-prompt="Explain the {{ $run->period }} payroll: totals, biggest changes and anything unusual."><i class="bi bi-stars"></i> Ask AI</button>
         </div>
     </div>
@@ -72,6 +73,9 @@
                     <div class="eyebrow">Step 2 of 5 · Check</div>
                     <h2>{{ $fixes ? $fixes . ' ' . ($fixes === 1 ? 'thing needs' : 'things need') . ' fixing' : 'Looks good — ready for approval' }}</h2>
                     <p>{{ $fixes ? 'Fix them on the employee profile and press Recalculate — or submit anyway if you know why.' : 'Glance through the highlights and the people list below, then send it for approval.' }}</p>
+                    @if($run->unlocked_at && ($ue = $run->events->where('action', 'unlocked')->last()))
+                        <p style="margin-top:.6rem"><i class="bi bi-unlock"></i> Unlocked by {{ $ue->user?->name ?? 'an approver' }} {{ $ue->created_at->diffForHumans() }} — “{{ $ue->comment }}”. Loan repayments were taken off the ledger and payslips hidden until it's approved again.</p>
+                    @endif
                 </div>
                 @if($canPrepare)
                     <div class="pr-next-actions">
@@ -141,9 +145,7 @@
             <div class="pr-next-actions" style="margin-top:1rem">
                 <a class="pp-btn pp-btn-light" href="{{ route('payroll.runs.payslips', $run) }}"><i class="bi bi-receipt"></i> Payslips</a>
                 @if($canPrepare)
-                    <form method="POST" action="{{ route('payroll.email.bulk', $run) }}" onsubmit="event.stopPropagation(); return confirm('Email every payslip in this payroll now?')">@csrf
-                        <button class="pp-btn pp-btn-ghost"><i class="bi bi-envelope"></i> Email all payslips</button>
-                    </form>
+                    <a class="pp-btn pp-btn-ghost" href="{{ route('payroll.runs.payslips.share', $run) }}"><i class="bi bi-send"></i> Share payslips</a>
                 @endif
                 @if(auth()->user()->hasPermission('reports.view'))
                     <a class="pp-btn pp-btn-ghost" href="{{ route('payroll.reports.bank_payments.preview', $run) }}"><i class="bi bi-bank"></i> Bank file</a>
@@ -153,6 +155,9 @@
                     <form method="POST" action="{{ route('payroll.runs.paid', $run) }}" onsubmit="event.stopPropagation(); return confirm('Mark this payroll as paid?')">@csrf
                         <button class="pp-btn pp-btn-ghost"><i class="bi bi-check2-all"></i> Mark as paid</button>
                     </form>
+                @endif
+                @if($canUnlock)
+                    <button type="button" class="pp-btn pp-btn-ghost" data-unlock-open><i class="bi bi-unlock"></i> Unlock to edit</button>
                 @endif
             </div>
         </section>
@@ -336,7 +341,7 @@
                     <ul class="pr-history">
                         @foreach($run->events->sortByDesc('id')->take(10) as $ev)
                             <li class="{{ $ev->action }}">
-                                <i class="bi {{ ['calculated' => 'bi-calculator', 'submitted' => 'bi-send', 'approved' => 'bi-check-circle', 'sent_back' => 'bi-arrow-return-left', 'recalled' => 'bi-arrow-counterclockwise', 'locked' => 'bi-lock-fill', 'paid' => 'bi-check2-all'][$ev->action] ?? 'bi-dot' }}"></i>
+                                <i class="bi {{ ['calculated' => 'bi-calculator', 'submitted' => 'bi-send', 'approved' => 'bi-check-circle', 'sent_back' => 'bi-arrow-return-left', 'recalled' => 'bi-arrow-counterclockwise', 'locked' => 'bi-lock-fill', 'paid' => 'bi-check2-all', 'unlocked' => 'bi-unlock'][$ev->action] ?? 'bi-dot' }}"></i>
                                 <div>
                                     <b>{{ \App\Models\PayrollRunEvent::LABELS[$ev->action] ?? $ev->action }}</b>{{ $ev->step_name ? ' · ' . $ev->step_name : '' }}
                                     <small>{{ $ev->user?->name ?? 'System' }} · {{ $ev->created_at->diffForHumans() }}@if(isset($ev->snapshot['net_pay'])) · {{ $k($ev->snapshot['net_pay']) }}@endif</small>
@@ -355,7 +360,32 @@
     </div>
 </div>
 
+@include('dashboard.payroll.flow._walkthrough')
 @push('modals')
+@if($canUnlock)
+<div class="pr pp">
+<div class="pr-modal-bg {{ $errors->has('reason') ? 'open' : '' }}" id="prUnlock" role="dialog" aria-modal="true" aria-labelledby="prUnlockT">
+    <form class="pr-modal" method="POST" action="{{ route('payroll.runs.unlock', $run) }}">
+        @csrf
+        <h3 id="prUnlockT"><i class="bi bi-unlock"></i> Unlock {{ $run->displayName() }}?</h3>
+        <p>It goes back to <b>Ready to check</b> so you can correct it, then it needs approving again.</p>
+        <ul>
+            <li>Loan repayments posted by this run come off the loan ledger.</li>
+            <li>Payslips are hidden from the employee portal until it's re-approved.</li>
+            @if($run->status === \App\Models\PayrollRun::PAID)<li><b>It's marked as paid.</b> If money already left the bank, correct it with a supplementary run instead.</li>@endif
+            <li>Who unlocked it and why is kept in the history and audit log.</li>
+        </ul>
+        <label for="unlockReason" style="font-weight:700;font-size:.85rem">Why are you unlocking it?</label>
+        <textarea id="unlockReason" name="reason" required minlength="5" placeholder="e.g. Chanda's housing allowance was missed">{{ old('reason') }}</textarea>
+        @error('reason')<div class="pp-error" style="margin:.4rem 0 0">{{ $message }}</div>@enderror
+        <div class="pr-modal-actions">
+            <button type="button" class="pp-btn pp-btn-ghost" data-unlock-close>Cancel</button>
+            <button class="pp-btn pp-btn-primary"><i class="bi bi-unlock"></i> Unlock</button>
+        </div>
+    </form>
+</div>
+</div>
+@endif
 {{-- ================= DRAWER (outside the animated page wrapper so position:fixed works) ================= --}}
 <div class="pr pp">
 <div class="pr-drawer-bg" id="prDrawerBg"></div>
@@ -398,6 +428,15 @@
 
 @push('scripts')
 <script src="{{ asset('assets/js/zp-people.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const m = document.getElementById('prUnlock');
+    if (! m) return;
+    document.querySelectorAll('[data-unlock-open]').forEach(b => b.addEventListener('click', () => { m.classList.add('open'); m.querySelector('textarea').focus(); }));
+    m.addEventListener('click', e => { if (e.target === m || e.target.closest('[data-unlock-close]')) m.classList.remove('open'); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') m.classList.remove('open'); });
+});
+</script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const DATA = @json($drawerRows);

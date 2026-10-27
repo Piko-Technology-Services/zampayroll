@@ -27,7 +27,7 @@ class LeaveApplicationController extends Controller
     {
         $request->validate(['email' => 'required|email']);
 
-        $employee = Employee::where('employment_status', 'Active')
+        $employee = Employee::workforce()->where('employment_status', 'Active')
             ->where('company_email', $request->query('email'))
             ->first();
 
@@ -69,7 +69,7 @@ class LeaveApplicationController extends Controller
         // ── Identity check: the email must match a company_email already
         //    on file for an active employee. This is the only gate — no
         //    login required, but a stranger can't submit for someone else.
-        $employee = Employee::where('employment_status', 'Active')
+        $employee = Employee::workforce()->where('employment_status', 'Active')
             ->where('company_email', $validated['email'])
             ->first();
 

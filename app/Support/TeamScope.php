@@ -49,6 +49,23 @@ class TeamScope
         }));
     }
 
+    /** Limit an Employee query to the people this user looks after (everyone for HR). */
+    public static function restrictEmployees($query, User $user)
+    {
+        if (self::isHr($user) || ! $user->employee) {
+            return $query;
+        }
+        $me = $user->employee;
+        $names = array_values(array_filter([$user->name, $user->email, $me->full_name]));
+
+        return $query->where(function ($w) use ($me, $names) {
+            if ($me->department) {
+                $w->orWhere('department', $me->department);
+            }
+            $w->orWhereIn('supervisor', $names);
+        });
+    }
+
     /** Email addresses of staff with a permission who look after this employee. */
     public static function approverEmails(Employee $employee, string $permission, bool $hrOnly = false): array
     {

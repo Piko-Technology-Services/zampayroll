@@ -39,7 +39,11 @@ class EmployeePortalAccessController extends Controller
 
     public function destroy(Employee $employee)
     {
-        $this->portal->revoke($employee);
+        try {
+            $this->portal->revoke($employee);
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return back()->with('success', "Portal access removed for {$employee->full_name}.");
     }

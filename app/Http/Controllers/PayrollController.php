@@ -81,42 +81,31 @@ class PayrollController extends Controller
 
     public function show(Payroll $payroll)
     {
-        $payroll->load(['employee', 'items']);
+        $payslips = app(\App\Services\Payslips\Payslips::class);
+        $payroll->load(['employee', 'items', 'run']);
+        $name = trim($payroll->employee->first_name . ' ' . $payroll->employee->last_name);
 
-        $run = $payroll->run;
-        $run->setRelation('payrolls', collect([$payroll]));
-
-        $companyName = (\App\Support\Tenancy::company()?->name ?? 'ZAMPAYROLL');
-        $companyLogo = 'http://misc.zampayroll.com/logo.png';
-
-        return view('dashboard.payroll.runs.payslip_single', compact('run', 'companyName', 'companyLogo', 'payroll'));
+        return view('payslips.document', [
+            'slips'   => collect([$payslips->data($payroll)]),
+            'mode'    => 'screen',
+            'toolbar' => [
+                'back'     => $payroll->run ? route('payroll.runs.payslips', $payroll->run) : url()->previous(),
+                'title'    => 'Payslip — ' . $name,
+                'subtitle' => ($payroll->run?->displayName() ?? $payroll->pay_period),
+                'actions'  => array_values(array_filter([
+                    ['href' => route('payroll.pdf', $payroll), 'label' => 'Download PDF'],
+                    $payroll->run?->isLocked() && auth()->user()?->hasPermission('payroll.run')
+                        ? ['href' => route('payroll.runs.payslips.share', ['run' => $payroll->run, 'only' => [$payroll->id]]), 'label' => 'Share…', 'class' => 'primary'] : null,
+                ])),
+            ],
+        ]);
     }
 
-     public function downloadPdf(Payroll $payroll)
+    public function downloadPdf(Payroll $payroll)
     {
-        $payroll->load(['employee', 'items']);
- 
-        $run = $this->buildSingleEmployeeRun($payroll);
- 
-        $pdf = Pdf::loadView('dashboard.payroll.runs.payslip_pdf', [
-            'run'         => $run,
-            'companyName' => (\App\Support\Tenancy::company()?->name ?? 'ZAMPAYROLL'),
-            'companyLogo' => 'http://misc.zampayroll.com/logo.png',
-            'payroll' => $payroll
-        ])->setPaper('a4', 'portrait');
- 
-        $employeeName = trim($payroll->employee->first_name . ' ' . ($payroll->employee->last_name ?? ''));
-        $employeeName = preg_replace('/[^A-Za-z0-9]+/', '-', strtolower($employeeName));
-        $employeeName = trim($employeeName, '-');
+        $payslips = app(\App\Services\Payslips\Payslips::class);
 
-        $filename = sprintf(
-            'payslip-%s-%s-%s.pdf',
-            $payroll->employee->employee_id,
-            $employeeName,
-            str_replace(' ', '-', strtolower($payroll->pay_period))
-        );
- 
-        return $pdf->download($filename);
+        return $payslips->pdf($payroll)->download($payslips->filename($payroll));
     }
 
     private function buildSingleEmployeeRun(Payroll $payroll)
@@ -233,8 +222,6 @@ class PayrollController extends Controller
     */
     public function print(Payroll $payroll)
     {
-        $payroll->load(['employee', 'items']);
-
-        return view('dashboard.payroll.runs.payslip', compact('payroll'));
+        return $this->show($payroll);
     }
 }

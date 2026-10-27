@@ -13,8 +13,9 @@ use Illuminate\Support\Facades\Schema;
 class PlatformSettings
 {
     public const EDITABLE = [
-        'trial_days'                => ['Free trial (days)', 'int'],
-        'prepaid_limit'             => ['Starter plan: up to this many employees', 'int'],
+        'free_limit'                => ['Free plan: up to this many active employees', 'int'],
+        'trial_days'                => ['Free trial once they go over the free limit (days)', 'int'],
+        'prepaid_limit'             => ['Legacy Starter plan: up to this many employees', 'int'],
         'starter_monthly'           => ['Starter: price per month (K)', 'money'],
         'starter_annual'            => ['Starter: price per year (K)', 'money'],
         'business_per_employee'     => ['Business: per employee per month (K)', 'money'],
@@ -24,6 +25,9 @@ class PlatformSettings
         'invoice_due_days'          => ['Post-paid invoices due after (days)', 'int'],
         'grace_days'                => ['Grace period before limiting access (days)', 'int'],
         'renewal_notice_days'       => ['Send renewal invoice this many days early', 'int'],
+        'partner_commission_rate'   => ['Partners: commission on referred invoices (%)', 'money'],
+        'partner_commission_months' => ['Partners: pay commission for this many months (0 = always)', 'int'],
+        'partner_auto_approve'      => ['Partners: approve applications automatically (1 = yes, 0 = review first)', 'int'],
     ];
 
     public static function get(string $key)

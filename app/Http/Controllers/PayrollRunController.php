@@ -222,14 +222,32 @@ class PayrollRunController extends Controller
     */
     public function payslips($runId)
     {
-        $run = PayrollRun::with(['payrolls.employee', 'payrolls.items'])
-            ->findOrFail($runId);
+        $run = PayrollRun::with(['payrolls.employee', 'payrolls.items'])->findOrFail($runId);
+        $payrolls = $run->payrolls->filter(fn ($p) => $p->employee)->sortBy(fn ($p) => mb_strtolower($p->employee->first_name . ' ' . $p->employee->last_name))->values();
+        $actions = [['href' => route('payroll.runs.payslips.pdf', $run), 'label' => 'Download all (PDF)']];
+        if ($run->isLocked() && auth()->user()?->hasPermission('payroll.run')) {
+            $actions[] = ['href' => route('payroll.runs.payslips.share', $run), 'label' => 'Share payslips…', 'class' => 'primary'];
+        }
 
-        $companyName = (\App\Support\Tenancy::company()?->name ?? 'ZAMPAYROLL');
-        $companyLogo = 'http://misc.zampayroll.com/logo.png';
-        
+        return view('payslips.document', [
+            'slips'   => app(\App\Services\Payslips\Payslips::class)->many($payrolls),
+            'mode'    => 'screen',
+            'toolbar' => [
+                'back'     => route('payroll.runs.show', $run),
+                'title'    => 'Payslips — ' . $run->displayName(),
+                'subtitle' => $payrolls->count() . ' ' . \Illuminate\Support\Str::plural('payslip', $payrolls->count()) . ' · ' . $run->statusLabel() . ($run->isLocked() ? '' : ' — figures can still change'),
+                'actions'  => $actions,
+            ],
+        ]);
+    }
 
-        return view('dashboard.payroll.runs.payslips', compact('run', 'companyName' ,'companyLogo'));
+    public function payslipsPdf(PayrollRun $run)
+    {
+        $run->load(['payrolls.employee', 'payrolls.items']);
+        $payrolls = $run->payrolls->filter(fn ($p) => $p->employee)->sortBy(fn ($p) => mb_strtolower($p->employee->first_name . ' ' . $p->employee->last_name))->values();
+        $name = 'payslips-' . ($run->period_date?->format('Y-m') ?? $run->period) . '-run-' . $run->id . '.pdf';
+
+        return app(\App\Services\Payslips\Payslips::class)->pdf($payrolls)->download($name);
     }
 
     /*

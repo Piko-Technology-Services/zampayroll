@@ -92,41 +92,26 @@ class PortalController extends Controller
     public function showPayslip(Request $request, Payroll $payroll)
     {
         $this->authorizePayslip($request, $payroll);
+        $payroll->load(['employee', 'items', 'run']);
 
-        $payroll->load(['employee', 'items']);
-        $run = $payroll->run;
-        $run->setRelation('payrolls', collect([$payroll]));
-
-        return view('dashboard.payroll.runs.payslip_single', [
-            'run'         => $run,
-            'payroll'     => $payroll,
-            'companyName' => Tenancy::company()?->name ?? 'ZamPayroll',
-            'companyLogo' => 'http://misc.zampayroll.com/logo.png',
-            'portalBackUrl' => route('portal.payslips'),
+        return view('payslips.document', [
+            'slips'   => collect([app(\App\Services\Payslips\Payslips::class)->data($payroll)]),
+            'mode'    => 'screen',
+            'toolbar' => [
+                'back'     => route('portal.payslips'),
+                'title'    => 'Your payslip',
+                'subtitle' => $payroll->run?->displayName() ?? $payroll->pay_period,
+                'actions'  => [['href' => route('portal.payslips.download', $payroll), 'label' => 'Download PDF']],
+            ],
         ]);
     }
 
     public function downloadPayslip(Request $request, Payroll $payroll)
     {
         $this->authorizePayslip($request, $payroll);
+        $payslips = app(\App\Services\Payslips\Payslips::class);
 
-        $payroll->load(['employee', 'items']);
-        $run = $payroll->run;
-        $run->setRelation('payrolls', collect([$payroll]));
-
-        $pdf = Pdf::loadView('dashboard.payroll.runs.payslip_pdf', [
-            'run'         => $run,
-            'payroll'     => $payroll,
-            'companyName' => Tenancy::company()?->name ?? 'ZamPayroll',
-            'companyLogo' => 'http://misc.zampayroll.com/logo.png',
-        ])->setPaper('a4', 'portrait');
-
-        $filename = sprintf('payslip-%s-%s.pdf',
-            $payroll->employee->employee_id,
-            str_replace(' ', '-', strtolower($payroll->pay_period ?: $run->period))
-        );
-
-        return $pdf->download($filename);
+        return $payslips->pdf($payroll)->download($payslips->filename($payroll));
     }
 
     /* ------------------------------------------------------------------ */
@@ -194,7 +179,11 @@ class PortalController extends Controller
             $days[] = ['date' => $d->copy(), 'record' => $rec, 'working' => $calc->isWorkingDay($d), 'future' => $d->isAfter(today())];
         }
 
+        $rota = \App\Models\ShiftAssignment::with('shift')->where('employee_id', $employee->id)
+            ->whereBetween('date', [today()->toDateString(), today()->addDays(13)->toDateString()])->orderBy('date')->get();
+
         return view('portal.attendance', [
+            'rota'     => $rota,
             'employee' => $employee,
             'month' => $month,
             'days' => array_reverse($days), // newest first
@@ -303,6 +292,7 @@ class PortalController extends Controller
         return Payroll::with('run')
             ->where('employee_id', $employeeId)
             ->whereIn('status', self::VISIBLE_STATUSES)
+            ->whereNotNull('published_at')
             ->whereHas('run', fn ($q) => $q->whereNull('deleted_at'))
             ->orderByDesc('payroll_run_id')
             ->orderByDesc('id');
@@ -313,6 +303,7 @@ class PortalController extends Controller
         abort_unless(
             (int) $payroll->employee_id === (int) $request->user()->employee_id
             && in_array($payroll->status, self::VISIBLE_STATUSES, true)
+            && $payroll->published_at !== null
             && $payroll->run !== null,
             404
         );

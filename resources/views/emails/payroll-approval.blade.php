@@ -6,9 +6,9 @@
 @endphp
 
 @section('title', $name)
-@section('preheader', $kind === 'review' ? "{$name} is waiting for your approval." : ($kind === 'sent_back' ? "{$name} was sent back with comments." : "{$name} is approved and locked."))
+@section('preheader', match ($kind) { 'review' => "{$name} is waiting for your approval.", 'sent_back' => "{$name} was sent back with comments.", 'unlocked' => "{$name} was unlocked for changes.", default => "{$name} is approved and locked." })
 @section('eyebrow', 'Payroll')
-@section('heading', $kind === 'review' ? 'A payroll needs your approval' : ($kind === 'sent_back' ? 'Changes requested' : 'Payroll approved'))
+@section('heading', match ($kind) { 'review' => 'A payroll needs your approval', 'sent_back' => 'Changes requested', 'unlocked' => 'Payroll unlocked', default => 'Payroll approved' })
 
 @section('body')
     <p style="margin:0 0 14px;">Hi {{ \Illuminate\Support\Str::before($recipient->name, ' ') }},</p>
@@ -17,6 +17,9 @@
     @elseif($kind === 'sent_back')
         <p style="margin:0 0 14px;">{{ $actor?->name ?? 'An approver' }} sent <b>{{ $name }}</b> back for changes.</p>
         @if($comment)<p style="margin:0 0 14px;padding:12px 16px;background:#FBF0E5;border-radius:10px;">“{{ $comment }}”</p>@endif
+    @elseif($kind === 'unlocked')
+        <p style="margin:0 0 14px;">{{ $actor?->name ?? 'An approver' }} unlocked <b>{{ $name }}</b> so it can be corrected. Loan repayments were taken off the ledger and payslips are hidden from the portal until it is approved again.</p>
+        @if($comment)<p style="margin:0 0 14px;padding:12px 16px;background:#F1F1F1;border-radius:10px;">Reason: “{{ $comment }}”</p>@endif
     @else
         <p style="margin:0 0 14px;"><b>{{ $name }}</b> has been fully approved and is now locked. You can send payslips and download the bank file.</p>
     @endif

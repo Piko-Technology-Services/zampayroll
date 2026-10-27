@@ -20,6 +20,7 @@
     $nav = array_filter([
         ['dashboard', 'dashboard', 'bi-house-door', 'Home', 'Today at a glance', null],
         $can('employees.view') ? ['employees.index', 'employees.*', 'bi-people', 'People', 'Employees & onboarding', null] : null,
+        $can('employees.view') ? ['departments.index', 'departments.*', 'bi-diagram-3', 'Departments', 'Teams & headcount', null] : null,
         $can('attendance.view') ? ['attendance.calendar', 'attendance.*', 'bi-clock-history', 'Attendance', 'Who is in today', null] : null,
         $can('leave.view') ? ['leave.dashboard', 'leave.*', 'bi-calendar2-heart', 'Leave', 'Requests & balances', $pendingLeave] : null,
         $payRoute ? ($can('payroll.view') || $can('reports.view')

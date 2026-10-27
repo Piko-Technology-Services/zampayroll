@@ -8,6 +8,19 @@
     $next = $month->copy()->addMonthNoOverflow();
 @endphp
 
+@push('styles')
+<style>
+.pt-rota { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .6rem; }
+.pt-shift { display: flex; flex-direction: column; gap: .35rem; padding: .7rem .8rem; border-radius: 14px; border: 1px solid #e3e8e4; border-left: 5px solid var(--c); background: #fff; }
+.pt-shift.today { box-shadow: 0 0 0 2px var(--c); }
+.pt-shift.off { background: #f6f7f6; }
+.pt-shift .d { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: #6b736e; font-weight: 700; }
+.pt-shift .d b { display: block; font-size: .95rem; text-transform: none; letter-spacing: 0; color: #13261b; }
+.pt-shift .s b { display: block; font-size: .9rem; }
+.pt-shift .s small { color: #6b736e; font-size: .78rem; }
+</style>
+@endpush
+
 @section('content')
 <div class="pt-page-head">
     <div>
@@ -22,6 +35,19 @@
 </div>
 
 <div class="pt-grid">
+    @if($rota->isNotEmpty())
+        <div class="pt-card pt-span-12">
+            <h3>My shifts · next two weeks</h3>
+            <div class="pt-rota">
+                @foreach($rota as $a)
+                    <div class="pt-shift {{ $a->date->isToday() ? 'today' : '' }} {{ $a->shift ? '' : 'off' }}" style="--c:{{ $a->shift?->color ?? '#9aa09c' }}">
+                        <span class="d">{{ $a->date->isToday() ? 'Today' : ($a->date->isTomorrow() ? 'Tomorrow' : $a->date->format('D')) }}<b>{{ $a->date->format('j M') }}</b></span>
+                        <span class="s"><b>{{ $a->shift?->name ?? 'Day off' }}</b>@if($a->shift)<small>{{ $a->shift->times() }}@if($a->shift->isOvernight()) · overnight @endif</small>@endif</span>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
     <div class="pt-card pt-span-4">
         <h3>This month</h3>
         <ul class="pt-list">

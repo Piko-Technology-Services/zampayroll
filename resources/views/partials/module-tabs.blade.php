@@ -4,11 +4,12 @@
     $can = fn ($p) => $u?->hasPermission($p);
     $modules = [
         'people' => [
-            'match' => ['employees.*'],
+            'match' => ['employees.*', 'departments.*'],
             'title' => 'People',
             'tabs' => [
                 ['employees.index', 'All employees', 'bi-people', ['employees.index', 'employees.show', 'employees.edit'], 'employees.view'],
                 ['employees.create', 'Add employee', 'bi-person-plus', ['employees.create'], 'employees.manage'],
+                ['departments.index', 'Departments', 'bi-diagram-3', ['departments.*'], 'employees.view'],
                 ['employees.import.wizard', 'Import a list', 'bi-upload', ['employees.import.wizard'], 'employees.import'],
                 ['employees.changes.index', 'Change requests' . (($n = $can('employees.manage') ? \App\Models\EmployeeChangeRequest::where('status', 'pending')->count() : 0) ? " ({$n})" : ''), 'bi-shield-check', ['employees.changes.*'], 'employees.manage'],
             ],
@@ -21,6 +22,8 @@
             'title' => 'Attendance',
             'tabs' => [
                 ['attendance.calendar', 'Calendar', 'bi-calendar3', ['attendance.calendar', 'attendance.day'], 'attendance.view'],
+                ['attendance.rota', 'Shift rota', 'bi-calendar-week', ['attendance.rota'], 'attendance.view'],
+                ['attendance.shifts', 'Shifts', 'bi-clock', ['attendance.shifts'], 'settings.company'],
                 ['attendance.report', 'Report', 'bi-graph-up', ['attendance.report'], 'attendance.view'],
                 ['attendance.settings', 'Working days & holidays', 'bi-sliders', ['attendance.settings'], 'attendance.manage'],
             ],

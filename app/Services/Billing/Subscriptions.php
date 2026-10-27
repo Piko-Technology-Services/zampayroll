@@ -15,10 +15,14 @@ use Illuminate\Support\Facades\Mail;
 /**
  * ZamPayroll's subscription rules.
  *
- *  Trial       — every company: N free days (default 7).
- *  Starter     — up to `prepaid_limit` active employees, PRE-paid monthly or yearly.
- *  Business    — more than `prepaid_limit` employees, POST-paid: invoiced every
+ *  Free        — up to `free_limit` active employees (default 10): free, no time limit.
+ *  Trial       — starts automatically (N days, default 7) the first time a company
+ *                goes over `free_limit`. Dropping back to the limit returns it to Free.
+ *  Business    — more than `free_limit` employees, POST-paid: invoiced every
  *                month for the employees actually active, due after a few days.
+ *  Starter     — legacy pre-paid plan for small teams; no longer offered (small
+ *                teams are free). Existing Starter companies return to Free when
+ *                their paid period ends.
  *  Limited     — trial over / pre-paid period over / invoice overdue past the
  *                grace period: everything stays visible but changes are blocked
  *                until the account is paid up (data is never deleted).
@@ -38,7 +42,9 @@ class Subscriptions
 
     public function activeEmployees(Company $company): int
     {
-        $count = fn () => DB::table('employees')->where('company_id', $company->id)->where('employment_status', 'Active')->count();
+        // Board members aren't staff: they're paid through payroll but don't count towards the plan.
+        $count = fn () => DB::table('employees')->where('company_id', $company->id)->where('employment_status', 'Active')
+            ->where(fn ($q) => $q->whereNull('employment_nature')->orWhereRaw('UPPER(employment_nature) <> ?', ['BOARD']))->count();
 
         if ($company->isDedicated() && $company->database_name && ! Tenancy::isDedicated()) {
             return (int) Tenancy::runInDedicated($company, $count);
@@ -47,14 +53,88 @@ class Subscriptions
         return (int) $count();
     }
 
-    /** "starter" or "business" — what this company should be on today. */
+    public function freeLimit(): int
+    {
+        return PlatformSettings::get('free_limit');
+    }
+
+    /** "free" or "business" — what this company should be on today, by its active employees. */
     public function recommendedPlan(Company $company, ?int $employees = null): string
     {
         $employees ??= $this->activeEmployees($company);
-        $limit = PlatformSettings::get('prepaid_limit');
+
+        return $employees > $this->freeLimit() ? 'business' : 'free';
+    }
+
+    /** Private sub-domains are for larger companies (actual or declared size over the free limit). */
+    public function qualifiesForPrivate(Company $company, ?int $employees = null): bool
+    {
+        $employees ??= $this->activeEmployees($company);
         $declared = (int) (config('tenancy.employee_ranges.' . $company->employee_count_range . '.max') ?? 0);
 
-        return ($employees > $limit || $declared > $limit) ? 'business' : 'starter';
+        return $company->plan === 'business' || $employees > $this->freeLimit() || $declared > $this->freeLimit();
+    }
+
+    /** True once the company has had its free trial (it can only be used once). */
+    public function trialUsed(Company $company): bool
+    {
+        return $company->trial_ends_at !== null;
+    }
+
+    /**
+     * Keep the free plan and the trial in step with the team size. Called whenever
+     * employees are added, removed or (de)activated, and by the daily run.
+     *
+     *  free     + over the limit → 7-day trial starts (only once per company)
+     *  trialing + back at/under the limit → free again (trial days already used stay used)
+     *  limited after the trial (never paid) + back at/under the limit → free again
+     *
+     * Paying companies are left alone here; they return to Free at their next bill date.
+     */
+    public function syncFreeTier(Company $company, ?int $employees = null): string
+    {
+        $company = Company::on(Tenancy::landlordConnection())->find($company->id) ?? $company;
+        $status = $company->subscription_status ?: 'free';
+        $employees ??= $this->activeEmployees($company);
+        $over = $employees > $this->freeLimit();
+        $neverPaid = ! $company->billing_type;
+
+        if ($status === 'trialing' && ! $company->trial_ends_at) {
+            // Created outside the app without a trial date: put it on the right footing.
+            $company->forceFill(['subscription_status' => 'free'])->save();
+            $status = 'free';
+        }
+
+        if ($status === 'free' && $over) {
+            if ($this->trialUsed($company)) {
+                // Trial already used: back to "trialing" with an ended trial → read-only until a plan is chosen.
+                $company->forceFill(['subscription_status' => 'trialing'])->save();
+                Audit::record('billing.free_limit_exceeded', $company, "Went over the free plan ({$employees} active employees); trial already used — plan needed", [], $company->id);
+            } else {
+                $days = PlatformSettings::get('trial_days');
+                $company->forceFill(['subscription_status' => 'trialing', 'trial_ends_at' => now()->addDays($days)])->save();
+                Audit::record('billing.trial_started', $company, "Free trial started: {$employees} active employees is over the free plan's " . $this->freeLimit(), [], $company->id);
+                $this->emailCompany($company, 'trial_started', ['days' => $days, 'employees' => $employees, 'limit' => $this->freeLimit()]);
+            }
+
+            return $company->subscription_status;
+        }
+
+        $unpaidInvoices = Invoice::withoutGlobalScopes()->where('company_id', $company->id)->where('status', 'open')->exists();
+        if (! $over && $neverPaid && ! $unpaidInvoices && in_array($status, ['trialing', 'suspended'], true)) {
+            $company->forceFill(['subscription_status' => 'free'])->save();
+            Audit::record('billing.back_to_free', $company, "Back on the free plan ({$employees} active employees)", [], $company->id);
+        }
+
+        return $company->subscription_status;
+    }
+
+    /** Return a company to the free plan (used when a paying company is back under the limit at its bill date). */
+    public function moveToFree(Company $company, string $why): void
+    {
+        $company->forceFill(['plan' => null, 'billing_type' => null, 'subscription_status' => 'free', 'billing_anchor' => null, 'last_billed_at' => null, 'paid_until' => null])->save();
+        Audit::record('billing.back_to_free', $company, $why, [], $company->id);
+        $this->emailCompany($company, 'free');
     }
 
     public function businessMonthly(int $employees): float
@@ -72,7 +152,10 @@ class Subscriptions
         $employees = $this->activeEmployees($company);
         $openInvoices = Invoice::withoutGlobalScopes()->where('company_id', $company->id)->where('status', 'open')->orderBy('due_at')->get();
         $overdue = $openInvoices->first(fn ($i) => $i->due_at && $i->due_at->copy()->endOfDay()->lt($now));
-        $status = $company->subscription_status ?: 'trialing';
+        $status = $company->subscription_status ?: 'free';
+        if ($status === 'trialing' && ! $company->trial_ends_at) {
+            $status = 'free'; // created outside the app with no trial date: treat as free
+        }
 
         $s = [
             'status'      => $status,
@@ -87,10 +170,27 @@ class Subscriptions
             'countdown_label' => null,
             'headline'    => null,
             'tone'        => 'ok',
+            'free_limit'  => $this->freeLimit(),
+            'trial_used'  => $this->trialUsed($company),
         ];
 
         if ($status === 'suspended' || $status === 'cancelled') {
             return ['limited' => true, 'tone' => 'bad', 'headline' => $status === 'cancelled' ? 'Subscription cancelled' : 'Account limited — payment needed'] + $s;
+        }
+
+        if ($status === 'free') {
+            $s['headline'] = 'Free plan';
+            $s['tone'] = $employees >= $this->freeLimit() ? 'trial' : 'ok';
+            if ($overdue) { // e.g. a final invoice from a paid plan
+                $limitAt = $overdue->due_at->copy()->addDays($grace)->endOfDay();
+                $s['tone'] = 'bad';
+                $s['headline'] = 'Invoice ' . $overdue->number . ' is overdue';
+                $s['limited'] = $limitAt->isPast();
+                $s['countdown_to'] = $limitAt;
+                $s['countdown_label'] = 'before your account is limited';
+            }
+
+            return $s;
         }
 
         if ($status === 'trialing') {
@@ -98,7 +198,7 @@ class Subscriptions
             $s['countdown_to'] = $ends;
             $s['countdown_label'] = 'left in your free trial';
             if ($ends->isPast()) {
-                return ['limited' => true, 'tone' => 'bad', 'headline' => 'Your free trial has ended', 'countdown_to' => null] + $s;
+                return ['limited' => true, 'tone' => 'bad', 'headline' => $employees > $this->freeLimit() ? 'Your free trial has ended' : 'Free trial ended', 'countdown_to' => null] + $s;
             }
             $s['tone'] = $ends->diffInDays($now, true) <= 2 ? 'warn' : 'trial';
             $s['headline'] = 'Free trial';
@@ -318,6 +418,11 @@ class Subscriptions
 
         if ($done) {
             $this->email($invoice->fresh(), 'receipt');
+            try {
+                app(\App\Services\Partners\PartnerProgramme::class)->recordCommission($invoice->fresh());
+            } catch (\Throwable $e) {
+                report($e); // never let commission bookkeeping break a payment
+            }
         }
 
         return $done;
@@ -358,6 +463,24 @@ class Subscriptions
 
         foreach (Company::on($landlord)->whereNotIn('subscription_status', ['cancelled'])->get() as $company) {
             try {
+                // Free plan ↔ trial, in case an employee change was missed
+                if ($company->subscription_status !== $this->syncFreeTier($company)) {
+                    $company->refresh();
+                }
+
+                // Paying companies back at/under the free limit on their bill date → free (no invoice)
+                $small = fn () => $this->activeEmployees($company) <= $this->freeLimit();
+                if ($company->billing_type === 'postpaid' && $company->subscription_status !== 'suspended'
+                    && $this->nextPostpaidBillDate($company)->lte(now()) && $small()) {
+                    $this->moveToFree($company, 'Back on the free plan at the bill date (' . $this->activeEmployees($company) . ' active employees)');
+                    $company->refresh();
+                }
+                if ($company->billing_type === 'prepaid' && $company->paid_until && $company->paid_until->isPast() && $small()
+                    && ! Invoice::withoutGlobalScopes()->where('company_id', $company->id)->where('status', 'open')->exists()) {
+                    $this->moveToFree($company, 'Starter period ended; back on the free plan (' . $this->activeEmployees($company) . ' active employees)');
+                    $company->refresh();
+                }
+
                 // Post-paid: bill each completed month
                 if ($company->billing_type === 'postpaid' && $company->subscription_status !== 'suspended') {
                     while (($next = $this->nextPostpaidBillDate($company))->lte(now())) {
@@ -369,8 +492,8 @@ class Subscriptions
                     }
                 }
 
-                // Pre-paid: renewal invoice a few days early
-                if ($company->billing_type === 'prepaid' && $company->paid_until
+                // Pre-paid: renewal invoice a few days early (only if the team is over the free limit)
+                if ($company->billing_type === 'prepaid' && $company->paid_until && ! $small()
                     && $company->paid_until->copy()->subDays(PlatformSettings::get('renewal_notice_days'))->isPast()
                     && ! Invoice::withoutGlobalScopes()->where('company_id', $company->id)->where('status', 'open')->where('kind', 'subscription')->exists()) {
                     $invoice = $this->prepaidInvoice($company, $company->billing_cycle ?: 'monthly');

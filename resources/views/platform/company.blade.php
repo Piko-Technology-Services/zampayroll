@@ -9,7 +9,7 @@
 </div>
 
 <div class="pl-kpis">
-    <div class="pr-kpi main"><span>Plan</span><b>{{ $company->plan ? ucfirst($company->plan) : 'Trial' }}</b><span class="pr-delta">{{ $company->billing_type ?: 'not chosen' }}{{ $company->billing_type === 'prepaid' ? ' · ' . $company->billing_cycle : '' }}</span></div>
+    <div class="pr-kpi main"><span>Plan</span><b>{{ $company->plan ? ucfirst($company->plan) : ($company->subscription_status === 'free' ? 'Free' : 'Trial') }}</b><span class="pr-delta">{{ $company->billing_type ?: 'not chosen' }}{{ $company->billing_type === 'prepaid' ? ' · ' . $company->billing_cycle : '' }}</span></div>
     <div class="pr-kpi"><span>{{ $company->subscription_status === 'trialing' ? 'Trial ends' : ($company->billing_type === 'postpaid' ? 'Next invoice' : 'Paid until') }}</span>
         <b>{{ $state['countdown_to'] ? $state['countdown_to']->format('j M Y') : '—' }}</b><span class="pr-delta">{{ $state['countdown_to'] ? $state['countdown_to']->diffForHumans() : '' }}</span></div>
     <div class="pr-kpi"><span>Open invoices</span><b>{{ $k($state['open_invoices']->sum('total')) }}</b></div>
@@ -102,7 +102,7 @@
                     <button class="pp-btn pp-btn-ghost pp-btn-sm">Set</button></form>
                 <form method="POST" action="{{ route('platform.companies.action', $company->id) }}">@csrf<input type="hidden" name="action" value="status">
                     <label>Status</label>
-                    <select class="pp-select" name="status">@foreach(['trialing', 'active', 'past_due', 'suspended', 'cancelled'] as $s)<option value="{{ $s }}" @selected($company->subscription_status === $s)>{{ str_replace('_', ' ', $s) }}</option>@endforeach</select>
+                    <select class="pp-select" name="status">@foreach(['free', 'trialing', 'active', 'past_due', 'suspended', 'cancelled'] as $s)<option value="{{ $s }}" @selected($company->subscription_status === $s)>{{ str_replace('_', ' ', $s) }}</option>@endforeach</select>
                     <button class="pp-btn pp-btn-ghost pp-btn-sm">Change</button></form>
                 <form method="POST" action="{{ route('platform.companies.action', $company->id) }}">@csrf<input type="hidden" name="action" value="invoice">
                     <label>One-off invoice (e.g. onboarding)</label>
@@ -126,6 +126,21 @@
                 </div>
                 <p class="pp-muted" style="font-size:.76rem;margin:.6rem 0 0">Copies every record to a new database, checks the counts, then removes it from the shared one. Billing and tickets stay here.</p>
             @endif
+        </section>
+
+        <section class="pr-card">
+            <div class="pr-card-head" style="margin-bottom:.6rem"><h2 style="font-size:1.05rem"><i class="bi bi-person-badge" style="color:var(--zp-copper)"></i> Partner</h2></div>
+            @php $cp = $company->partner_id ? \App\Models\Partner::query()->find($company->partner_id) : null; @endphp
+            @if($cp)
+                <p style="font-size:.85rem;margin:0 0 .6rem">Referred by <a href="{{ route('platform.partners.show', $cp) }}"><b>{{ $cp->name }}</b></a> · {{ $cp->code }}<br><small class="pp-muted">since {{ optional($company->referred_at)->format('j M Y') }}</small></p>
+            @else
+                <p class="pp-muted" style="font-size:.85rem;margin:0 0 .6rem">No partner linked.</p>
+            @endif
+            <div class="pl-actions">
+                <form method="POST" action="{{ route('platform.companies.action', $company->id) }}">@csrf<input type="hidden" name="action" value="set_partner">
+                    <label>{{ $cp ? 'Change partner code (empty to remove)' : 'Link to a partner code' }}</label>
+                    <input class="pp-input" name="partner_code" value="{{ $company->partner_code }}" placeholder="ZP-…" style="text-transform:uppercase"><button class="pp-btn pp-btn-ghost pp-btn-sm">Save</button></form>
+            </div>
         </section>
 
         <section class="pr-card">

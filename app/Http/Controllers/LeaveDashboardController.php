@@ -55,7 +55,7 @@ class LeaveDashboardController extends Controller
             'isHr' => $this->leave->isHr($user),
             'onLeaveToday' => $onLeaveToday,
             'upcoming' => $upcoming,
-            'employees' => Employee::query()->where('employment_status', 'Active')->orderBy('first_name')->get(['id', 'first_name', 'last_name', 'employee_id', 'leave_days_balance', 'department', 'supervisor'])
+            'employees' => Employee::query()->workforce()->where('employment_status', 'Active')->orderBy('first_name')->get(['id', 'first_name', 'last_name', 'employee_id', 'leave_days_balance', 'department', 'supervisor'])
                 ->filter(fn ($e) => $this->leave->canSee($user, $e))->values(),
             'hrConfirm' => (bool) $user->company?->leave_hr_confirm,
         ]);

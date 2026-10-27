@@ -169,7 +169,7 @@
                         <div class="rp-export-desc">Employee &amp; employer pension contributions (5% each)</div>
                     </div>
                 </div>
-                <a href="{{ route('payroll.reports.napsa.csv', $run->id) }}" class="btn-rp-export">Download</a>
+                <span style="display:flex;gap:.4rem"><a href="{{ route('payroll.reports.returns.preview', [$run->id, 'napsa']) }}" class="btn-rp-export">Review &amp; edit</a><a href="{{ route('payroll.reports.returns.download', [$run->id, 'napsa']) }}" class="btn-rp-export">Download</a></span>
             </div>
 
             <div class="rp-export-row">
@@ -180,7 +180,7 @@
                         <div class="rp-export-desc">Income tax deducted, per employee TPIN</div>
                     </div>
                 </div>
-                <a href="{{ route('payroll.reports.zra.excel', $run->id) }}" class="btn-rp-export">Download</a>
+                <span style="display:flex;gap:.4rem"><a href="{{ route('payroll.reports.returns.preview', [$run->id, 'zra']) }}" class="btn-rp-export">Review &amp; edit</a><a href="{{ route('payroll.reports.returns.download', [$run->id, 'zra']) }}" class="btn-rp-export">Download</a></span>
             </div>
 
             <div class="rp-export-row">
@@ -191,7 +191,7 @@
                         <div class="rp-export-desc">Employee &amp; employer health scheme contributions (1% each)</div>
                     </div>
                 </div>
-                <a href="{{ route('payroll.reports.nhima.csv', $run->id) }}" class="btn-rp-export">Download</a>
+                <span style="display:flex;gap:.4rem"><a href="{{ route('payroll.reports.returns.preview', [$run->id, 'nhima']) }}" class="btn-rp-export">Review &amp; edit</a><a href="{{ route('payroll.reports.returns.download', [$run->id, 'nhima']) }}" class="btn-rp-export">Download</a></span>
             </div>
             
         </div>

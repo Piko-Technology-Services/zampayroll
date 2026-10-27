@@ -24,18 +24,70 @@ class EmployeeController extends Controller
         'ssn', 'nhima_no', 'tpin', 'net_salary', 'leave_days_entitled', 'leave_days_balance',
     ];
 
-    public const NATURES = ['PERMANENT' => 'Permanent', 'CONTRACT' => 'Contract', 'PROBATION' => 'Probation', 'CASUAL' => 'Casual', 'INTERN' => 'Intern / attachment'];
+    public const NATURES = ['PERMANENT' => 'Permanent', 'CONTRACT' => 'Contract', 'PROBATION' => 'Probation', 'CASUAL' => 'Casual', 'INTERN' => 'Intern / attachment', 'BOARD' => 'Board member'];
 
     /*
     |--------------------------------------------------------------------------
     | LIST ALL EMPLOYEES
     |--------------------------------------------------------------------------
     */
-    public function index()
+    public function index(\Illuminate\Http\Request $request)
     {
-        $employees = Employee::with('user')->latest()->get();
+        $employees = Employee::with('user:id,employee_id,last_login_at')->orderBy('first_name')->orderBy('last_name')->get();
+        $onLeave = \App\Models\LeaveRequest::query()->where('status', 'approved')
+            ->whereDate('start_date', '<=', today())->whereDate('end_date', '>=', today())->pluck('employee_id')->flip();
+        $colours = \App\Models\Department::colours();
+        $today = today();
 
-        return view('dashboard.employees.index', compact('employees'));
+        $people = $employees->map(function (Employee $e) use ($onLeave, $colours, $today) {
+            $active = strcasecmp((string) $e->employment_status, 'Active') === 0;
+            $since = $e->contract_start ?? $e->created_at;
+            $bday = null;
+            if ($e->date_of_birth) {
+                $next = \Carbon\Carbon::parse($e->date_of_birth)->setYear($today->year);
+                if ($next->lt($today)) {
+                    $next->addYear();
+                }
+                $bday = $today->diffInDays($next) <= 7 ? $next : null;
+            }
+            $complete = $e->profileCompleteness()['percent'];
+
+            return (object) [
+                'model'    => $e,
+                'name'     => trim($e->first_name . ' ' . $e->last_name),
+                'dept'     => trim((string) $e->department),
+                'color'    => $colours[trim((string) $e->department)] ?? '#7B877F',
+                'active'   => $active,
+                'away'     => $active && isset($onLeave[$e->id]),
+                'new'      => $since && \Carbon\Carbon::parse($since)->gt(now()->subDays(30)),
+                'since'    => $since ? \Carbon\Carbon::parse($since) : null,
+                'bday'     => $bday,
+                'complete' => $complete,
+                'portal'   => (bool) $e->user,
+                'email'    => $e->company_email ?: $e->personal_email,
+                'phone'    => $e->primary_phone,
+                'nature'   => strtoupper((string) $e->employment_nature) ?: 'PERMANENT',
+            ];
+        });
+
+        $deptCounts = $people->groupBy('dept')->map->count();
+
+        return view('dashboard.employees.index', [
+            'employees'  => $employees,
+            'people'     => $people,
+            'departments' => \App\Models\Department::names()->map(fn ($n) => (object) ['name' => $n, 'color' => $colours[$n] ?? '#7B877F', 'count' => (int) ($deptCounts[$n] ?? 0)]),
+            'unassigned' => (int) ($deptCounts[''] ?? 0),
+            'natures'    => self::NATURES,
+            'preset'     => ['department' => (string) $request->query('department', ''), 'q' => (string) $request->query('q', ''), 'status' => (string) $request->query('status', '')],
+            'stats'      => (object) [
+                'total'   => $people->count(),
+                'active'  => $people->where('active', true)->where('nature', '!=', 'BOARD')->count(),
+                'board'   => $people->where('active', true)->where('nature', 'BOARD')->count(),
+                'away'    => $people->where('away', true)->count(),
+                'new'     => $people->where('new', true)->count(),
+                'missing' => $people->filter(fn ($p) => $p->complete < 100)->count(),
+            ],
+        ]);
     }
 
     /*
@@ -275,7 +327,7 @@ class EmployeeController extends Controller
 
         return [
             'employee'    => $employee,
-            'departments' => $distinct('department'),
+            'departments' => \App\Models\Department::names(),
             'branches'    => $distinct('branch'),
             'positions'   => $distinct('position'),
             'people'      => Employee::query()->when($employee->exists, fn ($q) => $q->whereKeyNot($employee->id))

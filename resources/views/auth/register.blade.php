@@ -181,6 +181,22 @@
             @error('industry')<div class="zp-error">{{ $message }}</div>@enderror
         </div>
 
+        {{-- Partner (reseller) code — optional; filled in by a partner's link --}}
+        @php $pc = old('partner_code', $partnerCode ?? ''); @endphp
+        <details class="ob-partner" @if($pc || $errors->has('partner_code')) open @endif style="margin-top:1.1rem">
+            <summary style="cursor:pointer;font-weight:600;color:var(--zp-green,#00742D)"><i class="bi bi-person-badge"></i> Have a partner or promo code?</summary>
+            <div class="zp-field" style="margin:.7rem 0 0;max-width:360px">
+                <label class="zp-label" for="partner_code">Partner / promo code <small style="font-weight:500;opacity:.7">optional</small></label>
+                <input class="zp-input @error('partner_code') is-invalid @enderror" id="partner_code" name="partner_code" value="{{ $pc }}" placeholder="e.g. ZP-CHANDA25" autocomplete="off" spellcheck="false" maxlength="20" style="text-transform:uppercase">
+                <div id="partnerMsg" aria-live="polite">
+                    @error('partner_code')<div class="zp-error">{{ $message }}</div>
+                    @else @if(! empty($partner))<div class="zp-ok" style="color:#00742D;font-size:.85rem;margin-top:.35rem"><i class="bi bi-check-circle-fill"></i> Linked to partner: {{ $partner->publicName() }}</div>@endif
+                    @enderror
+                </div>
+                <small style="display:block;margin-top:.35rem;opacity:.75">The HR consultant or partner who introduced you will be able to help you set up.</small>
+            </div>
+        </details>
+
         {{-- Mandatory info done --}}
         <div class="ob-milestone" id="milestone">
             <h4>That's everything we need 🎉</h4>
@@ -616,6 +632,32 @@
     if (val('email')) form.elements.email.dispatchEvent(new Event('input'));
     syncTenancy();
     show(step);
+})();
+</script>
+@endpush
+
+@push('scripts')
+<script>
+(function () {
+    const input = document.getElementById('partner_code'), box = document.getElementById('partnerMsg');
+    if (!input || !box) return;
+    let t;
+    input.addEventListener('input', () => {
+        clearTimeout(t);
+        const v = input.value.trim().toUpperCase();
+        if (!v) { box.innerHTML = ''; return; }
+        t = setTimeout(async () => {
+            try {
+                const r = await fetch(@json(route('partners.check')) + '?code=' + encodeURIComponent(v), { headers: { Accept: 'application/json' } });
+                const j = await r.json();
+                box.innerHTML = '';
+                const d = document.createElement('div');
+                d.style.cssText = 'font-size:.85rem;margin-top:.35rem;color:' + (j.valid ? '#00742D' : '#C42926');
+                d.textContent = (j.valid ? '✓ ' : '') + j.message;
+                box.appendChild(d);
+            } catch (e) {}
+        }, 350);
+    });
 })();
 </script>
 @endpush

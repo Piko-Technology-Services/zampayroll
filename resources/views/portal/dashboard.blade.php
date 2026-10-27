@@ -8,15 +8,17 @@
     $circ = 2 * M_PI * 46;
     $loanBalance = $activeLoans->sum('balance');
     $fmt = fn ($n) => number_format((float) $n, 2);
+    $isBoard = $employee->isBoardMember();
 @endphp
 
 @section('content')
 <section class="pt-hero">
     <div class="pt-hello">
         <h1>{{ $greeting }}, {{ strtok($employee->first_name ?: auth()->user()->name, ' ') }}.</h1>
-        <p>Everything about your pay and time off at {{ $company?->name }}, in one place. Requests you send here go straight to HR.</p>
+        <p>{{ $isBoard ? 'Your board fees, payslips and loans at ' . $company?->name . ', in one place.' : 'Everything about your pay and time off at ' . $company?->name . ', in one place. Requests you send here go straight to HR.' }}</p>
 
         <div class="pt-actions">
+            @unless($isBoard)
             <a class="pt-action leave" href="{{ route('portal.leave') }}#apply">
                 <i class="bi bi-calendar2-heart"></i>
                 <div><b>Request leave</b><br><span>Working days counted for you</span></div>
@@ -25,6 +27,13 @@
                 <i class="bi bi-alarm"></i>
                 <div><b>Log overtime</b><br><span>See the payout before you send</span></div>
             </a>
+            @endunless
+            @if($isBoard)
+            <a class="pt-action" href="{{ route('portal.payslips') }}">
+                <i class="bi bi-receipt"></i>
+                <div><b>My payslips</b><br><span>View or download</span></div>
+            </a>
+            @endif
             <a class="pt-action loan" href="{{ route('portal.loans') }}#apply">
                 <i class="bi bi-cash-coin"></i>
                 <div><b>Ask for a loan</b><br><span>Choose how it's repaid</span></div>
@@ -63,6 +72,7 @@
 </section>
 
 <div class="pt-grid">
+    @unless($isBoard)
     <div class="pt-card pt-span-4">
         <h3>Leave balance <a href="{{ route('portal.leave') }}">History</a></h3>
         @if($balance !== null)
@@ -81,12 +91,15 @@
             <div class="pt-empty"><i class="bi bi-calendar2"></i>HR hasn't set your leave balance yet.</div>
         @endif
     </div>
+    @endunless
 
     <div class="pt-card pt-span-4">
         <h3>Waiting for HR</h3>
         <ul class="pt-list">
+            @unless($isBoard)
             <li><span class="ic"><i class="bi bi-calendar2-heart"></i></span><span class="tx"><b>Leave requests</b><span>Pending review</span></span><span class="pt-status {{ $pending['leave'] ? 'pending' : 'approved' }}">{{ $pending['leave'] ?: 'None' }}</span></li>
             <li><span class="ic"><i class="bi bi-alarm"></i></span><span class="tx"><b>Overtime claims</b><span>Pending review</span></span><span class="pt-status {{ $pending['overtime'] ? 'pending' : 'approved' }}">{{ $pending['overtime'] ?: 'None' }}</span></li>
+            @endunless
             <li><span class="ic"><i class="bi bi-cash-coin"></i></span><span class="tx"><b>Loan requests</b><span>Pending review</span></span><span class="pt-status {{ $pending['loans'] ? 'pending' : 'approved' }}">{{ $pending['loans'] ?: 'None' }}</span></li>
         </ul>
     </div>

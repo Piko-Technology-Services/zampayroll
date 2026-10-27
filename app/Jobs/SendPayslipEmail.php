@@ -24,6 +24,7 @@ class SendPayslipEmail implements ShouldQueue
     private int $payrollId;
     private string $companyName;
     private ?string $companyLogo;
+    private array $recipients;
 
     /*
     | Store the ID, not the model — Payroll is re-fetched fresh inside
@@ -31,11 +32,12 @@ class SendPayslipEmail implements ShouldQueue
     | and always emails the latest payslip data, not a stale snapshot
     | taken at dispatch time.
     */
-    public function __construct(int $payrollId, string $companyName, ?string $companyLogo = null)
+    public function __construct(int $payrollId, string $companyName, ?string $companyLogo = null, array $recipients = [])
     {
         $this->payrollId   = $payrollId;
         $this->companyName = $companyName;
-        $this->companyLogo = CompanyLogoResolver::resolve(); 
+        $this->companyLogo = null; // the payslip template embeds the company (or ZamPayroll) logo itself
+        $this->recipients  = $recipients;
     }
 
     public function handle(): void
@@ -48,19 +50,21 @@ class SendPayslipEmail implements ShouldQueue
         }
 
         $employee = $payroll->employee;
+        $to = $this->recipients ?: array_values(array_filter([$employee?->personal_email ?: $employee?->company_email]));
 
-        if (!$employee || empty($employee->personal_email)) {
+        if (!$employee || ! $to) {
             Log::warning("SendPayslipEmail: Employee for payroll {$this->payrollId} has no email — skipped.", [
                 'employee_id' => $employee->id ?? null,
             ]);
             return;
         }
 
-        Mail::to($employee->personal_email)->send(
-            new PayslipMail($payroll, $this->companyName, $this->companyLogo)
-        );
+        // One email per address so an employee's personal and work inboxes never see each other.
+        foreach ($to as $address) {
+            Mail::to($address)->send(new PayslipMail($payroll, $this->companyName, $this->companyLogo));
+        }
 
-        Log::info("SendPayslipEmail: sent payslip to {$employee->personal_email}", [
+        Log::info('SendPayslipEmail: sent payslip to ' . implode(', ', $to), [
             'payroll_id'  => $payroll->id,
             'employee_id' => $employee->id,
             'period'      => $payroll->pay_period,

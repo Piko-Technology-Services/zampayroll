@@ -39,6 +39,8 @@
 .pl-filter a.on { background: var(--zp-ink); color: #fff; border-color: var(--zp-ink); }
 .pl-tag { font-size: .7rem; font-weight: 700; padding: .2rem .5rem; border-radius: 99px; background: var(--zp-mist); color: var(--zp-ink-2); white-space: nowrap; }
 .pl-tag.trialing { background: #EAF1F8; color: #2c5c8a; }
+.pl-tag.free { background: #F1F5EE; color: #3d5a45; }
+.pl-tag.pending { background: var(--zp-copper-50); color: #9a5a17; }
 .pl-tag.active { background: var(--zp-green-50); color: var(--zp-green); }
 .pl-tag.past_due { background: var(--zp-copper-50); color: #9a5a17; }
 .pl-tag.suspended, .pl-tag.cancelled { background: #FBEAEA; color: var(--zp-red); }

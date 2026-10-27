@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CompanyRole;
 use App\Models\Invitation;
 use App\Models\User;
+use App\Services\Team\TeamAccess;
 use App\Support\Permissions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -20,12 +21,15 @@ class TeamController extends Controller
         $company = $request->user()->company;
         CompanyRole::options(); // make sure default roles exist
 
+        // Everyone with a team role — including employees who were given one (they keep their portal).
+        $members = User::where('company_id', $company->id)->with('employee')->orderBy('name')->get()->filter(fn (User $u) => $u->isStaff())->values();
+
         return view('dashboard.team.index', [
             'company'     => $company,
             'roles'       => CompanyRole::orderByDesc('is_system')->orderBy('id')->get(),
-            'roleCounts'  => User::where('company_id', $company->id)->whereNull('employee_id')
-                                ->selectRaw('role, COUNT(*) c')->groupBy('role')->pluck('c', 'role'),
-            'members'     => User::where('company_id', $company->id)->whereNull('employee_id')->orderBy('name')->get(),
+            'roleCounts'  => $members->countBy(fn ($u) => $u->roleKey()),
+            'members'     => $members,
+            'candidates'  => app(TeamAccess::class)->candidates(),
             'invitations' => Invitation::where('status', 'pending')->where('expires_at', '>', now())->latest()->get(),
             'groups'      => Permissions::GROUPS,
         ]);
@@ -40,15 +44,16 @@ class TeamController extends Controller
             'position' => ['nullable', 'string', 'max:255'],
         ]);
 
-        if ($user->id === $request->user()->id && $data['role'] !== 'company_admin') {
+        if ($user->id === $request->user()->id && ! in_array($data['role'], Permissions::ADMIN_ROLES, true)) {
             return back()->with('error', 'You can\'t remove your own administrator role. Ask another administrator to do it.');
         }
 
-        if ($user->isCompanyAdmin() && $data['role'] !== 'company_admin' && $this->adminCount($user->company_id) <= 1) {
+        if ($user->role === 'company_admin' && $data['role'] !== 'company_admin' && $this->adminCount($user->company_id) <= 1) {
             return back()->with('error', 'Every company needs at least one administrator.');
         }
 
         $user->update($data);
+        app(TeamAccess::class)->syncBoard($user->fresh());
 
         return back()->with('success', "{$user->name} is now " . CompanyRole::where('key', $data['role'])->value('name') . '.');
     }
@@ -60,13 +65,33 @@ class TeamController extends Controller
         if ($user->id === $request->user()->id) {
             return back()->with('error', 'You can\'t remove yourself.');
         }
-        if ($user->isCompanyAdmin() && $this->adminCount($user->company_id) <= 1) {
+        if ($user->role === 'company_admin' && $this->adminCount($user->company_id) <= 1) {
             return back()->with('error', 'Every company needs at least one administrator.');
         }
 
-        $user->delete();
+        return back()->with('success', app(TeamAccess::class)->revoke($user));
+    }
 
-        return back()->with('success', "{$user->name} no longer has access.");
+    /** Give an employee a team role (they keep their employee portal). */
+    public function grantEmployee(Request $request, TeamAccess $access)
+    {
+        $data = $request->validate([
+            'employee_id' => ['required', 'integer'],
+            'role'        => ['required', 'string', Rule::in(CompanyRole::where('key', '!=', User::ROLE_EMPLOYEE)->pluck('key')->all())],
+        ], ['employee_id.required' => 'Pick the employee.', 'role.required' => 'Pick a role.']);
+
+        $employee = \App\Models\Employee::findOrFail($data['employee_id']);
+        $hadPortal = (bool) $employee->user;
+
+        try {
+            $user = $access->grant($employee, $data['role'], $request->user());
+        } catch (\RuntimeException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', "{$employee->full_name} now has {$user->roleName()} access" . ($hadPortal
+            ? '. We\'ve emailed them — they sign in as usual and can switch between dashboards.'
+            : " and an employee portal. Sign-in details were emailed to {$user->email}."));
     }
 
     public function storeRole(Request $request)

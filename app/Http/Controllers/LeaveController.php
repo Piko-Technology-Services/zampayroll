@@ -31,7 +31,7 @@ class LeaveController extends Controller
      */
     public function sheet(Request $request, int $year)
     {
-        $employees = Employee::where('employment_status', 'Active')
+        $employees = Employee::workforce()->where('employment_status', 'Active')
             ->when($request->query('department'), fn ($q, $d) => $q->where('department', $d))
             ->orderBy('first_name')
             ->get();
@@ -64,7 +64,7 @@ class LeaveController extends Controller
         return view('dashboard.leave.sheet', [
             'year'        => $year,
             'rows'        => $rows,
-            'departments' => Employee::where('employment_status', 'Active')
+            'departments' => Employee::workforce()->where('employment_status', 'Active')
                 ->pluck('department')->filter()->unique()->sort()->values(),
         ]);
     }

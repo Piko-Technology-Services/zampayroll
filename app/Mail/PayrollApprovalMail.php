@@ -31,6 +31,7 @@ class PayrollApprovalMail extends Mailable
         return new Envelope(subject: match ($this->kind) {
             'review'    => "Please review: {$name}",
             'sent_back' => "Changes requested: {$name}",
+            'unlocked'  => "Unlocked for changes: {$name}",
             default     => "Approved: {$name}",
         });
     }

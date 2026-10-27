@@ -192,7 +192,8 @@ class OvertimeService
 
     public function apply(Employee $employee, array $in, ?User $by = null, bool $notify = true): OvertimeRequest
     {
-        $byHr = $by && ! $by->isEmployee();
+        // Someone asking for themselves (even HR, via their own portal) is never "HR recording it".
+        $byHr = $by && ! $by->isEmployee() && (int) $by->employee_id !== (int) $employee->id;
         $c = $this->check($employee, $in, null, $byHr);
 
         $ot = DB::transaction(function () use ($employee, $in, $by, $byHr, $c) {

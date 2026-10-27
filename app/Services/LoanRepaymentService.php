@@ -155,6 +155,39 @@ class LoanRepaymentService
     }
 
     /**
+     * Undo recordDeductions() for a payroll whose run is being unlocked:
+     * the repayment comes off the ledger and the loan goes back to how it was.
+     */
+    public function reverseDeductions(Payroll $payroll): int
+    {
+        $payments = LoanPayment::where('payroll_id', $payroll->id)->where('type', 'deduction')->get();
+
+        foreach ($payments as $payment) {
+            $loan = Loan::find($payment->loan_id);
+            if ($loan) {
+                $wasCompleted = $loan->status === 'completed';
+                $loan->balance = round((float) $loan->balance + (float) $payment->amount, 2);
+                if ($wasCompleted) {
+                    $loan->status = 'active'; // the date wasn't advanced on the final repayment
+                } elseif ($loan->next_deduction_date) {
+                    $base = Carbon::parse($loan->next_deduction_date);
+                    $loan->next_deduction_date = ($loan->payment_plan === 'bi_monthly' ? $base->subMonths(2) : $base->subMonth())->toDateString();
+                }
+                $loan->save();
+            }
+            $payment->delete();
+
+            Log::info('LoanRepaymentService: deduction reversed', ['loan_id' => $payment->loan_id, 'payroll_id' => $payroll->id, 'amount' => $payment->amount]);
+        }
+
+        if ($payments->isNotEmpty()) {
+            Loan::syncEmployeeCache($payroll->employee_id);
+        }
+
+        return $payments->count();
+    }
+
+    /**
      * Has this loan already been repaid from (or claimed by) another payroll for the same month?
      * Another run that is still being prepared counts too, so two drafts can't both deduct.
      */

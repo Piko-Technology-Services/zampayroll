@@ -36,6 +36,8 @@ class Payroll extends Model
         'status',
     ];
 
+    protected $casts = ['published_at' => 'datetime', 'emailed_at' => 'datetime'];
+
     public function employee()
     {
         return $this->belongsTo(Employee::class);

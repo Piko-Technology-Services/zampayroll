@@ -20,7 +20,7 @@ class AttendanceReportController extends Controller
             'prevMonth'          => $start->copy()->subMonth()->format('Y-m'),
             'nextMonth'          => $start->copy()->addMonth()->format('Y-m'),
             'workingDaysInMonth' => $workingDaysInMonth,
-            'departments'        => Employee::where('employment_status', 'Active')
+            'departments'        => Employee::workforce()->where('employment_status', 'Active')
                 ->pluck('department')->filter()->unique()->sort()->values(),
         ]);
     }
@@ -75,7 +75,7 @@ class AttendanceReportController extends Controller
             $cursor->addDay();
         }
 
-        $employees = Employee::where('employment_status', 'Active')
+        $employees = Employee::workforce()->where('employment_status', 'Active')
             ->when($request->query('department'), fn ($q, $d) => $q->where('department', $d))
             ->orderBy('first_name')
             ->get();

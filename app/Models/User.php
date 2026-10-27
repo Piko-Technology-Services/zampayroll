@@ -29,6 +29,9 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public const ROLE_EMPLOYEE = 'employee';
 
+    /** ZamPayroll partner (reseller); no company of their own — see App\Models\Partner. */
+    public const ROLE_PARTNER = 'partner';
+
     /**
      * The attributes that are mass assignable.
      *
@@ -125,9 +128,41 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->role === 'platform_admin' && empty($this->company_id);
     }
 
+    /** Partner (reseller) account: only the partner dashboard, never a company's screens. */
+    public function isPartner(): bool
+    {
+        return $this->role === self::ROLE_PARTNER && empty($this->company_id);
+    }
+
+    public function partner()
+    {
+        return $this->hasOne(Partner::class);
+    }
+
+    /** Administrators and board members: full rights in the company. */
     public function isCompanyAdmin(): bool
     {
-        return $this->role === 'company_admin';
+        return in_array($this->role, \App\Support\Permissions::ADMIN_ROLES, true);
+    }
+
+    public function isBoardMember(): bool
+    {
+        return $this->role === 'board_member';
+    }
+
+    /**
+     * Linked to an employee record, so they also have the self-service portal
+     * (a portal-only employee, or a team member who is also an employee).
+     */
+    public function hasPortal(): bool
+    {
+        return ! empty($this->employee_id) && ! empty($this->company_id) && ! $this->isPlatformAdmin() && ! $this->isPartner();
+    }
+
+    /** Team member who is also an employee: can switch between their role's dashboard and the portal. */
+    public function canSwitchDashboards(): bool
+    {
+        return $this->isStaff() && $this->hasPortal();
     }
 
     /**
@@ -165,7 +200,8 @@ class User extends Authenticatable implements MustVerifyEmail
         $role = CompanyRole::withoutGlobalScope('company')
             ->where('company_id', $this->company_id)->where('key', $this->roleKey())->first();
 
-        if (! $role && $this->company_id && ! CompanyRole::withoutGlobalScope('company')->where('company_id', $this->company_id)->exists()) {
+        if (! $role && $this->company_id && (isset(\App\Support\Permissions::DEFAULT_ROLES[$this->roleKey()])
+                || ! CompanyRole::withoutGlobalScope('company')->where('company_id', $this->company_id)->exists())) {
             \App\Support\Permissions::seedDefaultRoles((int) $this->company_id);
             $role = CompanyRole::withoutGlobalScope('company')->where('company_id', $this->company_id)->where('key', $this->roleKey())->first();
         }
@@ -198,6 +234,10 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         if ($this->isPlatformAdmin()) {
             return 'platform.dashboard';
+        }
+
+        if ($this->isPartner()) {
+            return 'partner.dashboard';
         }
 
         return $this->isEmployee() ? 'portal.dashboard' : 'dashboard';

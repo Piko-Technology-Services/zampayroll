@@ -202,6 +202,48 @@ class PayrollApprovals
         });
     }
 
+    /**
+     * Put an approved (or paid) run back to "ready to check" so it can be corrected.
+     * Loan repayments come off the ledger and payslips leave the portal until it is approved again.
+     */
+    public function unlock(PayrollRun $run, User $by, string $reason): void
+    {
+        if (! $run->isLocked()) {
+            throw new \DomainException('Only an approved or paid payroll can be unlocked.');
+        }
+        if (! $by->hasPermission('payroll.finalize')) {
+            throw new \DomainException('Only someone who can approve payroll can unlock it.');
+        }
+
+        $reversed = 0;
+        DB::transaction(function () use ($run, $by, $reason, &$reversed) {
+            $loans = app(LoanRepaymentService::class);
+            foreach ($run->payrolls()->get() as $payroll) {
+                $reversed += $loans->reverseDeductions($payroll);
+            }
+
+            Payroll::where('payroll_run_id', $run->id)->update(['status' => 'Draft', 'published_at' => null]);
+
+            $wasPaid = $run->status === PayrollRun::PAID;
+            $run->update([
+                'status'       => PayrollRun::CALCULATED,
+                'current_step' => null,
+                'finalized_at' => null,
+                'finalized_by' => null,
+                'paid_at'      => null,
+                'paid_by'      => null,
+                'unlocked_at'  => now(),
+                'unlocked_by'  => $by->id,
+                'unlock_count' => (int) $run->unlock_count + 1,
+            ]);
+
+            $this->log($run, 'unlocked', $by, $reason);
+            \App\Support\Audit::record('payroll.unlocked', $run, "{$run->displayName()} unlocked" . ($wasPaid ? ' (was marked paid)' : '') . ": {$reason}", ['loan_repayments_reversed' => $reversed]);
+        });
+
+        $this->mail($run->submitter, $run, 'unlocked', $by, $reason);
+    }
+
     /** Final approval: payslips are locked and loan repayments are posted to the ledger. */
     protected function lock(PayrollRun $run, User $by): void
     {
@@ -222,6 +264,8 @@ class PayrollApprovals
 
             $this->log($run, 'locked', $by);
         });
+
+        app(\App\Services\Payslips\PayslipDelivery::class)->onApproved($run);
 
         $this->mail($run->submitter, $run, 'locked', $by);
     }

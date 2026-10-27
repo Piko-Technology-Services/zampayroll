@@ -8,6 +8,10 @@
 @section('body')
     <p style="margin:0 0 14px;">{{ $grantedBy }} from <strong>{{ $companyName }}</strong> has created your personal
         ZamPayroll portal. From now on you can see your payslips and send requests to HR without paperwork.</p>
+    @if($user->isStaff())
+        <p style="margin:0 0 14px;padding:12px 16px;background:#F1F4F2;border-radius:10px;">You also have <strong>{{ $user->roleName() }}</strong> access.
+            After signing in, use the switch at the top of the screen to move between your {{ $user->roleName() }} dashboard and your own portal.</p>
+    @endif
 
     {{-- Credentials card --}}
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EAF3EA;border:1px solid #CFE4D2;border-radius:14px;margin:6px 0 4px;">

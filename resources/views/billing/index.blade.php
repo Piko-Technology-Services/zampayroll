@@ -10,13 +10,13 @@
 
 @php
     $k = fn ($n) => 'K ' . number_format((float) $n, 2);
-    $limit = $prices['prepaid_limit'];
+    $limit = $prices['free_limit'];
     $onPlan = in_array($state['status'], ['active', 'past_due'], true) || ($state['status'] === 'suspended' && $company->billing_type);
     $statusLabel = [
-        'trialing' => 'Free trial', 'active' => 'Active', 'past_due' => 'Payment overdue',
+        'free' => 'Free plan', 'trialing' => 'Free trial', 'active' => 'Active', 'past_due' => 'Payment overdue',
         'suspended' => 'Limited (read-only)', 'cancelled' => 'Cancelled',
     ][$state['status']] ?? ucfirst($state['status']);
-    $planLabel = $company->plan === 'business' ? 'Business · post-paid' : ($company->plan === 'starter' ? 'Starter · pre-paid ' . ($company->billing_cycle === 'annual' ? 'yearly' : 'monthly') : 'No plan yet');
+    $planLabel = $company->plan === 'business' ? 'Business · post-paid' : ($company->plan === 'starter' ? 'Starter · pre-paid ' . ($company->billing_cycle === 'annual' ? 'yearly' : 'monthly') : ($state['status'] === 'free' ? 'Up to ' . $limit . ' employees' : 'No plan yet'));
     $tooBig = $state['employees'] > $limit;
 @endphp
 
@@ -40,8 +40,15 @@
             <p>
                 @if($state['limited'])
                     Your account is read-only — nothing has been deleted. {{ $state['open_invoices']->isNotEmpty() ? 'Pay the open invoice below to unlock everything instantly.' : 'Choose a plan below to unlock everything instantly.' }}
+                @elseif($state['status'] === 'free')
+                    You have {{ $state['employees'] }} of {{ $limit }} free employees.
+                    @if($state['trial_used'])
+                        You've already had your free trial, so adding employee {{ $limit + 1 }} means choosing the Business plan.
+                    @else
+                        Add more than {{ $limit }} and your {{ $prices['trial_days'] }}-day free trial of the Business plan starts automatically. Nothing to pay today.
+                    @endif
                 @elseif($state['status'] === 'trialing')
-                    Everything is unlocked during your trial. Pick a plan any time — your paid period starts when the trial ends, so you don't lose any free days.
+                    You have {{ $state['employees'] }} active employees — more than the free plan's {{ $limit }} — so your {{ $prices['trial_days'] }}-day free trial is running. Start the Business plan any time: your first invoice comes a month after the trial ends.
                 @elseif($company->billing_type === 'postpaid')
                     {{ $state['employees'] }} active employees · estimated next invoice <b>{{ $k($state['estimate'] ?? 0) }}</b>, due {{ $prices['invoice_due_days'] }} days after it's sent.
                 @else
@@ -91,42 +98,38 @@
     @endif
 
     {{-- ============ PLANS ============ --}}
-    @if(! $onPlan || $state['status'] === 'trialing' || $state['limited'])
+    @if(! $onPlan || in_array($state['status'], ['free', 'trialing'], true) || $state['limited'])
         <section class="pr-card">
             <div class="pr-card-head"><div><h2>Choose your plan</h2><div class="sub">You have {{ $state['employees'] }} active {{ \Illuminate\Support\Str::plural('employee', $state['employees']) }}. The plan follows your team size.</div></div></div>
             <div class="bl-plans">
-                <div class="bl-plan {{ $state['recommended'] === 'starter' ? 'rec' : '' }} {{ $tooBig ? 'off' : '' }}">
-                    @if($state['recommended'] === 'starter')<span class="badge-rec">Recommended for you</span>@endif
-                    <h3>Starter</h3>
-                    <p class="pp-muted">Up to {{ $limit }} employees · pay up front</p>
-                    <div class="bl-cycle" role="radiogroup">
-                        <label><input type="radio" name="cycle_pick" value="monthly" checked> <span><b>{{ $k($prices['starter_monthly']) }}</b> / month</span></label>
-                        <label><input type="radio" name="cycle_pick" value="annual"> <span><b>{{ $k($prices['starter_annual']) }}</b> / year
-                            @if($prices['starter_monthly'] * 12 > $prices['starter_annual'])<em>save {{ $k($prices['starter_monthly'] * 12 - $prices['starter_annual']) }}</em>@endif</span></label>
-                    </div>
+                <div class="bl-plan {{ $state['recommended'] === 'free' ? 'rec' : '' }} {{ $tooBig ? 'off' : '' }}">
+                    @if($state['status'] === 'free')<span class="badge-rec">Your plan</span>@endif
+                    <h3>Free</h3>
+                    <p class="pp-muted">Up to {{ $limit }} active employees · no time limit</p>
+                    <div class="bl-price"><b>K 0</b> / month</div>
                     <ul>
                         <li><i class="bi bi-check2"></i> Payroll with PAYE, NAPSA &amp; NHIMA</li>
                         <li><i class="bi bi-check2"></i> Employee self-service portal</li>
-                        <li><i class="bi bi-check2"></i> Leave, overtime &amp; loans</li>
-                        <li><i class="bi bi-check2"></i> Approval chain &amp; audit trail</li>
+                        <li><i class="bi bi-check2"></i> Leave, attendance, overtime &amp; loans</li>
+                        <li><i class="bi bi-check2"></i> Approval chain, audit trail &amp; AI mode</li>
                     </ul>
-                    <form method="POST" action="{{ route('billing.prepaid') }}" class="bl-plan-go">
-                        @csrf
-                        <input type="hidden" name="cycle" value="monthly" id="blCycle">
-                        <button class="pp-btn pp-btn-primary" style="width:100%" @disabled($tooBig)>
-                            {{ $tooBig ? 'You have more than ' . $limit . ' employees' : 'Choose Starter & pay' }}
-                        </button>
-                    </form>
+                    <div class="bl-plan-go">
+                        @if($tooBig)
+                            <p class="pp-muted" style="font-size:.82rem;margin:0">You have {{ $state['employees'] }} active employees. Set some to inactive to come back to the free plan.</p>
+                        @else
+                            <p class="pp-muted" style="font-size:.82rem;margin:0">Nothing to do — you're covered while you have {{ $limit }} or fewer active employees.</p>
+                        @endif
+                    </div>
                 </div>
 
                 <div class="bl-plan dark {{ $state['recommended'] === 'business' ? 'rec' : '' }}">
                     @if($state['recommended'] === 'business')<span class="badge-rec">Recommended for you</span>@endif
                     <h3>Business</h3>
-                    <p>More than {{ $limit }} employees · pay after each month</p>
+                    <p>More than {{ $limit }} employees · {{ $prices['trial_days'] }}-day free trial · pay after each month</p>
                     <div class="bl-price"><b>{{ $k($prices['business_per_employee']) }}</b> per active employee / month</div>
                     <small>Minimum {{ $k($prices['business_minimum']) }} a month · today that's about <b>{{ $k(max($prices['business_minimum'], max($state['employees'], 1) * $prices['business_per_employee'])) }}</b></small>
                     <ul>
-                        <li><i class="bi bi-check2"></i> Everything in Starter</li>
+                        <li><i class="bi bi-check2"></i> Everything in Free, for any team size</li>
                         <li><i class="bi bi-check2"></i> Only pay for people you actually paid</li>
                         <li><i class="bi bi-check2"></i> Option of your own private web address</li>
                         <li><i class="bi bi-check2"></i> Priority support</li>
@@ -180,7 +183,7 @@
                 </form>
             </section>
 
-            @if($state['recommended'] === 'business' || $company->plan === 'business' || $company->isDedicated())
+            @if(app(\App\Services\Billing\Subscriptions::class)->qualifiesForPrivate($company, $state['employees']) || $company->isDedicated())
                 <section class="pr-card">
                     <div class="pr-card-head" style="margin-bottom:.6rem"><h2 style="font-size:1.05rem"><i class="bi bi-building-lock" style="color:var(--zp-copper)"></i> Private workspace</h2></div>
                     @if($company->isDedicated())

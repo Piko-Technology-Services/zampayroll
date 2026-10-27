@@ -195,6 +195,19 @@ class Employee extends Model
     | SELF-SERVICE PORTAL
     |--------------------------------------------------------------------------
     */
+    /** Board members are paid through payroll and can take loans, but are not staff: no attendance, leave or headcount. */
+    public function isBoardMember(): bool
+    {
+        return strtoupper(trim((string) $this->employment_nature)) === 'BOARD';
+    }
+
+    /** Staff only: leaves out board members (attendance, leave, rota, headcount). */
+    public function scopeWorkforce($query)
+    {
+        return $query->where(fn ($q) => $q->whereNull($this->qualifyColumn('employment_nature'))
+            ->orWhereRaw('UPPER(' . $q->getGrammar()->wrap($this->qualifyColumn('employment_nature')) . ') <> ?', ['BOARD']));
+    }
+
     public function user()
     {
         return $this->hasOne(User::class, 'employee_id');

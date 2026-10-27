@@ -19,7 +19,7 @@ class CompanyRole extends Model
 
     public function isAdmin(): bool
     {
-        return $this->key === 'company_admin';
+        return in_array($this->key, Permissions::ADMIN_ROLES, true);
     }
 
     public function allows(string $permission): bool
@@ -41,7 +41,8 @@ class CompanyRole extends Model
     {
         $companyId = \App\Support\Tenancy::companyId();
 
-        if ($companyId && ! static::exists()) {
+        // Seeds a new company's roles, and adds built-in roles introduced later (e.g. Board member).
+        if ($companyId && static::whereIn('key', array_keys(Permissions::DEFAULT_ROLES))->count() < count(Permissions::DEFAULT_ROLES)) {
             Permissions::seedDefaultRoles($companyId);
         }
 

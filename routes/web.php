@@ -66,6 +66,18 @@ Route::get('/privacy', [\App\Http\Controllers\SiteController::class, 'privacy'])
 Route::get('/sitemap.xml', [\App\Http\Controllers\SiteController::class, 'sitemap'])->name('site.sitemap');
 Route::post('/demo-request', [DemoRequestController::class, 'store'])->name('demo.request.store');
 
+// Partner programme (resellers): public page + application, sign-up links, live code check
+Route::get('/partners', [\App\Http\Controllers\Partner\PartnerSignupController::class, 'show'])->name('partners.show');
+Route::post('/partners', [\App\Http\Controllers\Partner\PartnerSignupController::class, 'store'])->name('partners.store')->middleware(['guest', 'throttle:6,1']);
+Route::get('/join/{code}', [\App\Http\Controllers\Partner\PartnerSignupController::class, 'join'])->name('partners.join');
+Route::get('/partner-code/check', [\App\Http\Controllers\Partner\PartnerSignupController::class, 'check'])->name('partners.check')->middleware('throttle:30,1');
+
+// Partner dashboard (partner accounts only)
+Route::middleware(['auth', 'partner'])->prefix('partner')->name('partner.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Partner\PartnerDashboardController::class, 'index'])->name('dashboard');
+    Route::post('/payout', [\App\Http\Controllers\Partner\PartnerDashboardController::class, 'payout'])->name('payout');
+});
+
 Route::middleware('guest')->group(function () {
 
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -117,6 +129,9 @@ Route::middleware(['auth', 'platform'])->prefix('platform')->name('platform.')->
     Route::get('/settings', [$c, 'settings'])->name('settings');
     Route::post('/settings', [$c, 'saveSettings'])->name('settings.save');
     Route::get('/audit', [$c, 'audit'])->name('audit');
+    Route::get('/partners', [\App\Http\Controllers\Platform\PartnerAdminController::class, 'index'])->name('partners');
+    Route::get('/partners/{partner}', [\App\Http\Controllers\Platform\PartnerAdminController::class, 'show'])->name('partners.show');
+    Route::post('/partners/{partner}/action', [\App\Http\Controllers\Platform\PartnerAdminController::class, 'action'])->name('partners.action');
 });
 
 // DPO Pay: card popup return + server-to-server notification (verified with DPO, no sign-in needed)
@@ -143,7 +158,13 @@ Route::prefix('payroll/reports')->name('payroll.reports.')->group(function () {
         [PayrollReportController::class, 'exportManagementPdf'])
         ->name('management.pdf');
  
-    // Statutory submissions
+    // Statutory submissions: review, correct and export (saved edits are used by every download)
+    Route::get('/{run}/returns/{kind}', [\App\Http\Controllers\StatutoryReturnController::class, 'preview'])->name('returns.preview');
+    Route::post('/{run}/returns/{kind}', [\App\Http\Controllers\StatutoryReturnController::class, 'save'])->name('returns.save');
+    Route::post('/{run}/returns/{kind}/reset', [\App\Http\Controllers\StatutoryReturnController::class, 'reset'])->name('returns.reset');
+    Route::get('/{run}/returns/{kind}/download', [\App\Http\Controllers\StatutoryReturnController::class, 'download'])->name('returns.download');
+
+    // Statutory submissions (direct downloads)
     Route::get('/{run}/napsa/csv',
         [PayrollReportController::class, 'exportNapsaCsv'])
         ->name('napsa.csv');
@@ -258,7 +279,10 @@ Route::group([], function () { // (inside staff area)
     Route::resource('employees', EmployeeController::class);
 
     // Others
-    Route::get('/departments', [DashboardController::class, 'departments'])->name('departments.index');
+    Route::get('/departments', [\App\Http\Controllers\DepartmentController::class, 'index'])->name('departments.index');
+    Route::post('/departments', [\App\Http\Controllers\DepartmentController::class, 'store'])->name('departments.store');
+    Route::put('/departments/{department}', [\App\Http\Controllers\DepartmentController::class, 'update'])->name('departments.update');
+    Route::delete('/departments/{department}', [\App\Http\Controllers\DepartmentController::class, 'destroy'])->name('departments.destroy');
     // Route::get('/leave', [LeaveController::class, 'index'])->name('leave.index');
     
     Route::get('/payroll/runs/all', [DashboardController::class, 'payroll'])->name('payroll.index');
@@ -314,6 +338,15 @@ Route::middleware(['auth', 'staff'])->prefix('attendance')->name('attendance.')-
     Route::get('/import/sample-csv', [AttendanceController::class, 'downloadSampleCsv'])->name('import.sample');
     Route::post('/import', [AttendanceController::class, 'import'])->name('import');
  
+    // Shift rota (weekly schedule) and the company's shifts
+    Route::get('/rota', [\App\Http\Controllers\ShiftRotaController::class, 'index'])->name('rota');
+    Route::post('/rota', [\App\Http\Controllers\ShiftRotaController::class, 'save'])->name('rota.save');
+    Route::post('/rota/copy', [\App\Http\Controllers\ShiftRotaController::class, 'copy'])->name('rota.copy');
+    Route::get('/shifts', [\App\Http\Controllers\ShiftRotaController::class, 'shifts'])->name('shifts');
+    Route::post('/shifts', [\App\Http\Controllers\ShiftRotaController::class, 'storeShift'])->name('shifts.store');
+    Route::put('/shifts/{shift}', [\App\Http\Controllers\ShiftRotaController::class, 'updateShift'])->name('shifts.update');
+    Route::delete('/shifts/{shift}', [\App\Http\Controllers\ShiftRotaController::class, 'destroyShift'])->name('shifts.destroy');
+
     // Working days + holidays
     Route::get('/settings', [AttendanceSettingsController::class, 'index'])->name('settings');
     Route::put('/settings/work-days', [AttendanceSettingsController::class, 'updateWorkDays'])->name('settings.workdays');
@@ -467,6 +500,7 @@ Route::middleware(['auth', 'staff'])->prefix('payroll')->name('payroll.')->group
     Route::post('/runs/{run}/recall', [\App\Http\Controllers\PayrollFlowController::class, 'recall'])->name('runs.recall');
     Route::post('/runs/{run}/paid', [\App\Http\Controllers\PayrollFlowController::class, 'markPaid'])->name('runs.paid');
     Route::post('/runs/{run}/overtime', [\App\Http\Controllers\PayrollFlowController::class, 'overtime'])->name('runs.overtime');
+    Route::post('/runs/{run}/unlock', [\App\Http\Controllers\PayrollFlowController::class, 'unlock'])->name('runs.unlock');
 
     Route::get('/runs/{run}', [\App\Http\Controllers\PayrollFlowController::class, 'show'])->name('runs.show');
 
@@ -475,6 +509,9 @@ Route::middleware(['auth', 'staff'])->prefix('payroll')->name('payroll.')->group
     Route::post('/runs/{run}/finalize', [PayrollRunController::class, 'finalize'])->name('runs.finalize');
 
     Route::get('/runs/{run}/payslips', [PayrollRunController::class, 'payslips'])->name('runs.payslips');
+    Route::get('/runs/{run}/payslips/pdf', [PayrollRunController::class, 'payslipsPdf'])->name('runs.payslips.pdf');
+    Route::get('/runs/{run}/payslips/share', [\App\Http\Controllers\PayslipShareController::class, 'show'])->name('runs.payslips.share');
+    Route::post('/runs/{run}/payslips/share', [\App\Http\Controllers\PayslipShareController::class, 'store'])->name('runs.payslips.share.store');
 
     
     Route::get('/rules',              [PayrollRuleController::class, 'index'])->name('rules.index');
@@ -600,6 +637,7 @@ Route::middleware(['auth', 'staff'])->prefix('settings/team')->name('team.')->gr
     Route::get('/', [\App\Http\Controllers\TeamController::class, 'index'])->name('index');
     Route::put('/members/{user}', [\App\Http\Controllers\TeamController::class, 'updateMember'])->name('members.update');
     Route::delete('/members/{user}', [\App\Http\Controllers\TeamController::class, 'removeMember'])->name('members.destroy');
+    Route::post('/employee-access', [\App\Http\Controllers\TeamController::class, 'grantEmployee'])->name('employee-access.store');
     Route::post('/roles', [\App\Http\Controllers\TeamController::class, 'storeRole'])->name('roles.store');
     Route::put('/roles', [\App\Http\Controllers\TeamController::class, 'updateRoles'])->name('roles.update');
     Route::delete('/roles/{role}', [\App\Http\Controllers\TeamController::class, 'destroyRole'])->name('roles.destroy');

@@ -29,6 +29,10 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->makeQueueTenantAware();
 
+        // Free plan ↔ 7-day trial follows the number of active employees.
+        \App\Models\Employee::observe(\App\Observers\EmployeeBillingObserver::class);
+        \App\Models\Employee::observe(\App\Observers\EmployeeDepartmentObserver::class);
+
         // @can('payroll.run') / ->can(...) in Blade and code use the company's role permissions.
         \Illuminate\Support\Facades\Gate::before(function ($user, string $ability) {
             if (\App\Support\Permissions::exists($ability) && method_exists($user, 'hasPermission')) {

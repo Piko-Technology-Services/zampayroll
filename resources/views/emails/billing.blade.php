@@ -13,6 +13,8 @@
     'reminder' => 'Your invoice is overdue',
     'trial' => ($data['days_left'] ?? 0) > 0 ? 'Your free trial ends in ' . $data['days_left'] . ' days' : 'Your free trial has ended',
     'limited' => 'Your account has been limited',
+    'trial_started' => 'Your free trial has started',
+    'free' => 'You\'re back on the free plan',
     'workspace' => 'Your private workspace is ready',
     default => 'Billing update',
 })
@@ -43,6 +45,11 @@
                 Your free trial for {{ $company->name }} has ended. Your data is safe — choose a plan to carry on running payroll.
             @endif
         </p>
+    @elseif($kind === 'trial_started')
+        <p style="margin:0 0 14px;">{{ $company->name }} now has {{ $data['employees'] ?? '' }} active employees — more than the free plan's {{ $data['limit'] ?? 10 }} — so your {{ $data['days'] ?? 7 }}-day free trial of the Business plan has started. Everything keeps working as before.</p>
+        <p style="margin:0 0 14px;">Before the trial ends, start the Business plan (you pay after each month, only for active employees) or set employees you no longer pay to inactive to stay on the free plan.</p>
+    @elseif($kind === 'free')
+        <p style="margin:0 0 14px;">{{ $company->name }} has {{ \App\Services\Billing\PlatformSettings::get('free_limit') }} or fewer active employees, so you're back on the free plan. There's nothing to pay while your team stays that size.</p>
     @elseif($kind === 'limited')
         <p style="margin:0 0 14px;">We couldn't confirm payment for {{ $company->name }}, so the account is now read-only. Nothing has been deleted — pay the open invoice and everything unlocks straight away.</p>
     @endif
@@ -51,7 +58,7 @@
         <p style="margin:0 0 14px;font-size:18px;font-weight:700;color:#0A3B22;">{{ $company->workspaceHost() }}</p>
         @include('emails.partials.button', ['url' => $company->workspaceUrl('/login'), 'label' => 'Sign in to your workspace'])
     @elseif($kind !== 'receipt')
-        @include('emails.partials.button', ['url' => route('billing.index'), 'label' => $invoice ? 'Pay now' : 'Choose a plan'])
+        @include('emails.partials.button', ['url' => route('billing.index'), 'label' => $invoice ? 'Pay now' : ($kind === 'free' ? 'See your plan' : 'Choose a plan')])
     @endif
 @endsection
 

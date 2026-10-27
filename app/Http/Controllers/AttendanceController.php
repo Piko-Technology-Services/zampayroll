@@ -26,7 +26,7 @@ class AttendanceController extends Controller
         $workDays = $this->workDays($request);
         $holidays = Holiday::all();
 
-        $totalEmployees = Employee::where('employment_status', 'Active')->count();
+        $totalEmployees = Employee::workforce()->where('employment_status', 'Active')->count();
 
         $attendanceCounts = Attendance::whereBetween('date', [$start->toDateString(), $end->toDateString()])
             ->selectRaw('date, status, count(*) as c')
@@ -89,7 +89,7 @@ class AttendanceController extends Controller
         $isHoliday = (bool) $holidayMatch;
         $isWorkingDay = in_array($carbon->dayOfWeekIso, $workDays, true) && ! $isHoliday;
 
-        $employees = Employee::where('employment_status', 'Active')
+        $employees = Employee::workforce()->where('employment_status', 'Active')
             ->orderBy('first_name')
             ->get();
 

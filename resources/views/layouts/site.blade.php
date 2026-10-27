@@ -4,6 +4,7 @@
         ['site.features', 'Features'],
         ['site.ai', 'AI assistant'],
         ['site.pricing', 'Pricing'],
+        ['partners.show', 'Partners'],
         ['home', 'Contact', '#demo'],
     ];
     $shareUrl = urlencode(url()->current());
@@ -85,7 +86,7 @@
                     <li><a href="{{ route('register') }}">Create a free workspace</a></li>
                     <li><a href="{{ route('login') }}">Sign in</a></li>
                     <li><a href="{{ route('home') }}#demo">Book a demo</a></li>
-                    <li><a href="{{ route('site.pricing') }}#resellers">Become a reseller</a></li>
+                    <li><a href="{{ route('partners.show') }}">Become a partner</a></li>
                 </ul>
             </div>
             <div>

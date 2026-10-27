@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Employee;
 use App\Models\PayrollRun;
 use App\Services\HrActions;
 use App\Services\PayrollApprovals;
@@ -34,22 +35,30 @@ class PayrollFlowController extends Controller
             ->sortByDesc(fn ($r) => sprintf('%012d%010d', $r->period_date?->timestamp ?? 0, $r->id))->values();
 
         $thisMonth = now()->format('Y-m');
-        $current = $runs->first(fn ($r) => $r->period_date && $r->period_date->format('Y-m') === $thisMonth);
+        $monthRuns = $runs->filter(fn ($r) => $r->period_date && $r->period_date->format('Y-m') === $thisMonth)->sortBy('id')->values();
+        // The run that needs attention first: one being prepared, then one in approval, then the latest.
+        $current = $monthRuns->first(fn ($r) => $r->isEditable()) ?? $monthRuns->first(fn ($r) => $r->isInReview()) ?? $monthRuns->last();
         $waiting = $runs->filter(fn ($r) => $r->isInReview() && $this->approvals->canApprove($user, $r))->values();
         $inReview = $runs->filter(fn ($r) => $r->isInReview())->values();
 
         $year = (int) $request->query('year', 0);
-        $history = $runs->when($year, fn ($c) => $c->filter(fn ($r) => $r->period_date?->year === $year))->values();
+        $status = (string) $request->query('status', '');
+        $history = $runs->when($year, fn ($c) => $c->filter(fn ($r) => $r->period_date?->year === $year))
+            ->when($status, fn ($c) => $c->filter(fn ($r) => $r->statusTone() === $status))->values();
         $years = $runs->map(fn ($r) => $r->period_date?->year)->filter()->unique()->sortDesc()->values();
+        $months = $history->groupBy(fn ($r) => $r->period_date?->format('Y-m') ?? $r->period)->map(fn ($g) => $g->sortBy('id')->values());
 
         return view('dashboard.payroll.flow.index', [
             'current'      => $current,
+            'monthRuns'    => $monthRuns,
             'currentStep'  => $current ? $this->approvals->currentStep($current) : null,
             'waiting'      => $waiting,
             'inReview'     => $inReview,
-            'history'      => $history,
+            'months'       => $months,
+            'counts'       => $runs->groupBy(fn ($r) => $r->statusTone())->map->count(),
             'years'        => $years,
             'year'         => $year,
+            'status'       => $status,
             'preview'      => $current ? null : $this->insights->preview(now()),
             'hiddenCount'  => PayrollRun::hiddenOnly()->count(),
             'trashedCount' => PayrollRun::onlyTrashed()->count(),
@@ -65,18 +74,40 @@ class PayrollFlowController extends Controller
     public function create(Request $request)
     {
         $month = $this->month($request->query('month')) ?? now()->startOfMonth();
-        $existing = PayrollRun::all()->filter(fn ($r) => $r->period_date)->keyBy(fn ($r) => $r->period_date->format('Y-m'));
+        $all = PayrollRun::withCount('payrolls')->get()->filter(fn ($r) => $r->period_date);
+        $byMonth = $all->groupBy(fn ($r) => $r->period_date->format('Y-m'));
 
         $months = collect(range(-3, 2))->map(fn ($i) => now()->startOfMonth()->addMonths($i))
-            ->map(fn ($m) => ['value' => $m->format('Y-m'), 'label' => $m->format('M Y'), 'run' => $existing->get($m->format('Y-m'))]);
+            ->map(function ($m) use ($byMonth) {
+                $runs = $byMonth->get($m->format('Y-m'), collect());
+
+                return ['value' => $m->format('Y-m'), 'label' => $m->format('M Y'), 'runs' => $runs,
+                    'note' => $runs->isEmpty() ? 'Not started' : ($runs->count() === 1 ? $runs->first()->statusLabel() : $runs->count() . ' pay runs')];
+            });
+
+        $inMonth = $byMonth->get($month->format('Y-m'), collect())->sortBy('id')->values();
+        $continue = $request->filled('run')
+            ? $inMonth->firstWhere('id', (int) $request->query('run'))
+            : ($request->query('new') ? null : $inMonth->first(fn ($r) => $r->isEditable()));
+        if ($continue && ! $continue->isEditable()) {
+            $continue = null;
+        }
+
+        $employees = Employee::where('employment_status', 'Active')->orderBy('first_name')->get(['id', 'first_name', 'last_name', 'department', 'employee_id', 'net_salary']);
+        $lockedIds = \App\Models\Payroll::whereIn('payroll_run_id', $inMonth->filter(fn ($r) => $r->isLocked())->pluck('id'))->pluck('employee_id')->unique();
 
         return view('dashboard.payroll.flow.start', [
-            'month'    => $month,
-            'months'   => $months,
-            'existing' => $existing->get($month->format('Y-m')),
-            'preview'  => $this->insights->preview($month),
-            'chain'    => $this->approvals->chain(),
-            'approvals' => $this->approvals,
+            'month'       => $month,
+            'months'      => $months,
+            'inMonth'     => $inMonth,
+            'continue'    => $continue,
+            'employees'   => $employees,
+            'departments' => $employees->groupBy(fn ($e) => $e->department ?: 'No department')->map->count()->sortKeys(),
+            'alreadyPaid' => $lockedIds->count(),
+            'preview'     => $this->insights->preview($month),
+            'chain'       => $this->approvals->chain(),
+            'approvals'   => $this->approvals,
+            'types'       => PayrollRun::TYPES,
         ]);
     }
 
@@ -86,23 +117,60 @@ class PayrollFlowController extends Controller
             'period'           => 'required|date_format:Y-m',
             'alias'            => 'nullable|string|max:120',
             'include_overtime' => 'nullable|boolean',
+            'run_id'           => 'nullable|integer',
+            'new_run'          => 'nullable|boolean',
+            'run_type'         => 'nullable|in:' . implode(',', array_keys(PayrollRun::TYPES)),
+            'coverage'         => 'nullable|in:all,departments,people',
+            'departments'      => 'required_if:coverage,departments|array',
+            'departments.*'    => 'string|max:120',
+            'employees'        => 'required_if:coverage,people|array',
+            'employees.*'      => 'integer',
+        ], [
+            'departments.required_if' => 'Pick at least one department.',
+            'employees.required_if'   => 'Pick at least one person.',
         ]);
-
-        $existing = PayrollRun::where('period', $data['period'])->latest('id')->first();
-        if ($existing && ! $existing->isEditable()) {
-            return redirect()->route('payroll.runs.show', $existing)
-                ->with('info', 'This month\'s payroll is already ' . strtolower($existing->statusLabel()) . '.');
-        }
 
         $month = Carbon::createFromFormat('Y-m', $data['period'])->startOfMonth();
-        $run = $existing ?? PayrollRun::create([
-            'period'     => $data['period'],
-            'alias'      => ($data['alias'] ?? null) ?: $month->format('F Y') . ' payroll',
-            'created_by' => $request->user()->id,
-            'status'     => PayrollRun::DRAFT,
-        ]);
-        $run->update(['include_overtime' => $request->boolean('include_overtime', true)] + (filled($data['alias'] ?? null) ? ['alias' => $data['alias']] : []));
+        $coverage = $data['coverage'] ?? 'all';
+        $scope = match ($coverage) {
+            'departments' => ['mode' => 'departments', 'departments' => array_values(array_unique($data['departments']))],
+            'people'      => ['mode' => 'people', 'employees' => array_values(array_unique(array_map('intval', $data['employees'])))],
+            default       => null,
+        };
 
+        // Without an explicit "new run", carry on with the month's run that's still being prepared (avoids double-submits).
+        if (empty($data['run_id']) && ! $request->boolean('new_run')) {
+            $data['run_id'] = PayrollRun::where('period', $data['period'])->get()->first(fn ($r) => $r->isEditable())?->id;
+        }
+
+        if (! empty($data['run_id'])) {
+            $run = PayrollRun::findOrFail($data['run_id']);
+            if (! $run->isEditable()) {
+                return redirect()->route('payroll.runs.show', $run)
+                    ->with('info', $run->displayName() . ' is ' . strtolower($run->statusLabel()) . '. Start a new pay run instead, or unlock it.');
+            }
+        } else {
+            $count = PayrollRun::where('period', $data['period'])->count();
+            $type = $data['run_type'] ?? 'regular';
+            $run = new PayrollRun([
+                'period'     => $data['period'],
+                'alias'      => $month->format('F Y') . ($count || $type !== 'regular' ? ' · ' . PayrollRun::TYPES[$type] . ($count ? ' #' . ($count + 1) : '') : ' payroll'),
+                'created_by' => $request->user()->id,
+                'status'     => PayrollRun::DRAFT,
+            ]);
+        }
+
+        $run->fill([
+            'run_type'         => $data['run_type'] ?? $run->run_type ?? 'regular',
+            'scope'            => $scope,
+            'include_overtime' => $request->boolean('include_overtime', true),
+        ] + (filled($data['alias'] ?? null) ? ['alias' => $data['alias']] : []));
+
+        if ($run->employeesQuery()->count() === 0) {
+            return back()->withInput()->with('error', 'Nobody active matches who you picked for this pay run.');
+        }
+
+        $run->save();
         $hr->generatePayroll($run, $request->user());
 
         return redirect()->route('payroll.runs.show', $run)
@@ -174,6 +242,7 @@ class PayrollFlowController extends Controller
             'canPrepare' => $user->hasPermission('payroll.run'),
             'canEdit'    => $run->isEditable() && $user->hasPermission('payroll.run'),
             'canApprove' => $this->approvals->canApprove($user, $run),
+            'canUnlock'  => $run->isLocked() && $user->hasPermission('payroll.finalize'),
             'whyNot'     => $run->isInReview() ? $this->approvals->whyCantApprove($user, $run) : null,
             'current'    => $this->approvals->currentStep($run),
         ]);
@@ -218,6 +287,18 @@ class PayrollFlowController extends Controller
     {
         return $this->attempt(fn () => $this->approvals->markPaid($run, $request->user(), $request->input('comment')),
             $run, 'Marked as paid. Well done! 🎉', true);
+    }
+
+    /** Re-open an approved/paid run for corrections (approvers only; reason required, audited). */
+    public function unlock(Request $request, PayrollRun $run)
+    {
+        $request->validate(['reason' => 'required|string|min:5|max:1000'], [
+            'reason.required' => 'Say why it is being unlocked — this goes into the audit trail.',
+            'reason.min'      => 'Say a little more about why it is being unlocked.',
+        ]);
+
+        return $this->attempt(fn () => $this->approvals->unlock($run, $request->user(), $request->input('reason')),
+            $run, 'Unlocked. Make your corrections, recalculate, then submit it for approval again.');
     }
 
     /** Switch approved overtime on/off for this run and recalculate. */

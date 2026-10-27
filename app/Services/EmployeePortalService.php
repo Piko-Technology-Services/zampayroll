@@ -47,7 +47,7 @@ class EmployeePortalService
     /**
      * @return array{0: User, 1: string} the account and its temporary password
      */
-    public function grant(Employee $employee, User $grantedBy): array
+    public function grant(Employee $employee, User $grantedBy, string $role = User::ROLE_EMPLOYEE): array
     {
         if ($problem = $this->eligibilityProblem($employee)) {
             throw new RuntimeException("{$employee->full_name} {$problem}.");
@@ -63,7 +63,7 @@ class EmployeePortalService
             'phone'                => $employee->primary_phone,
             'position'             => $employee->position,
             'password'             => Hash::make($password),
-            'role'                 => User::ROLE_EMPLOYEE,
+            'role'                 => $role,
             'must_change_password' => true,
             // Credentials go to this mailbox; signing in with them proves ownership.
             'email_verified_at'    => now(),
@@ -101,7 +101,11 @@ class EmployeePortalService
 
     public function revoke(Employee $employee): void
     {
-        $employee->user?->delete();
+        $user = $employee->user;
+        if ($user && $user->isStaff()) {
+            throw new RuntimeException("{$employee->full_name} also has {$user->roleName()} access. Remove that in Settings → Team & roles first.");
+        }
+        $user?->delete();
     }
 
     private function sendWelcome(User $user, string $password, User $grantedBy): void

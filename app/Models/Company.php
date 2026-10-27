@@ -62,6 +62,12 @@ class Company extends Model
         'subdomain_requested_at',
         'requested_subdomain',
         'billing_notes',
+
+        // Partner programme
+        'partner_id',
+        'partner_code',
+        'referred_at',
+        'payslip_settings',
     ];
 
     public const MODE_SHARED = 'shared';
@@ -145,18 +151,28 @@ class Company extends Model
         'billing_anchor' => 'date',
         'last_billed_at' => 'datetime',
         'subdomain_requested_at' => 'datetime',
+        'referred_at' => 'datetime',
+        'payslip_settings' => 'array',
         'payroll_allow_self_approval' => 'boolean',
     ];
 
-    /** Every new company starts with a free trial. */
+    /**
+     * Every new company starts on the free plan (up to `free_limit` active employees).
+     * The free trial starts only when they go over the limit — see Subscriptions::syncFreeTier().
+     */
     protected static function booted(): void
     {
         static::creating(function (Company $company) {
-            if (! $company->trial_ends_at) {
-                $company->trial_ends_at = now()->addDays((int) \App\Services\Billing\PlatformSettings::get('trial_days'));
-                $company->subscription_status = $company->subscription_status ?: 'trialing';
+            if (! $company->subscription_status || ($company->subscription_status === 'trialing' && ! $company->trial_ends_at)) {
+                $company->subscription_status = 'free';
             }
         });
+    }
+
+    /** The partner (reseller) who referred this company, if any. Lives in the central database. */
+    public function partner()
+    {
+        return $this->belongsTo(Partner::class);
     }
 
     /**

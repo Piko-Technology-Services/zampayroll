@@ -7,8 +7,9 @@
 */
 return [
     'currency'            => 'ZMW',
-    'trial_days'          => 7,
-    'prepaid_limit'       => 10,     // up to this many active employees → Starter (pay up front)
+    'free_limit'          => 10,     // up to this many active employees → free, no time limit
+    'trial_days'          => 7,      // free trial that starts when a company goes over free_limit
+    'prepaid_limit'       => 10,     // legacy Starter plan (pre-paid) — no longer offered to new companies
 
     'starter_monthly'     => 350,    // Starter: flat price per month
     'starter_annual'      => 3500,   // Starter: flat price per year
@@ -22,6 +23,11 @@ return [
     'invoice_due_days'    => 7,      // post-paid invoices are due this many days after issue
     'grace_days'          => 7,      // days after a due date before the account is limited
     'renewal_notice_days' => 5,      // pre-paid renewal invoice is sent this many days early
+
+    // Partner programme (resellers)
+    'partner_commission_rate'   => 20, // % of each paid invoice (before VAT) from a referred company
+    'partner_commission_months' => 0,  // commission is paid for this many months after sign-up (0 = for as long as they pay)
+    'partner_auto_approve'      => 1,  // 1 = partners get their code straight away, 0 = ZamPayroll reviews each application
 
     'company_name'        => env('BILLING_COMPANY_NAME', 'ZamPayroll'),
     'company_address'     => env('BILLING_COMPANY_ADDRESS', 'Lusaka, Zambia'),

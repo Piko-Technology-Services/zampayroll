@@ -31,6 +31,8 @@ class BillingMail extends Mailable
             'reminder' => "Reminder: invoice {$n} is overdue",
             'trial'    => ($this->data['days_left'] ?? 0) > 0 ? 'Your ZamPayroll free trial ends in ' . $this->data['days_left'] . ' days' : 'Your ZamPayroll free trial has ended',
             'limited'  => 'Your ZamPayroll account has been limited',
+            'trial_started' => 'Your ' . ($this->data['days'] ?? 7) . '-day ZamPayroll trial has started',
+            'free'     => 'You\'re back on the free ZamPayroll plan',
             'workspace' => 'Your private ZamPayroll workspace is ready',
             default    => 'ZamPayroll billing',
         });

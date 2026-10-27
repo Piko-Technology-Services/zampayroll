@@ -23,11 +23,16 @@ use Illuminate\Validation\Rules\Password;
  */
 class RegistrationController extends Controller
 {
-    public function show()
+    public function show(Request $request)
     {
         abort_if(Tenancy::isDedicated(), 404); // sign-ups happen on the main domain
 
+        $partnerCode = \App\Services\Partners\PartnerProgramme::normalise($request->query('partner', $request->cookie(\App\Services\Partners\PartnerProgramme::COOKIE)));
+
         return view('auth.register', [
+            'partnerCode' => $partnerCode,
+            'partner'     => $partnerCode ? app(\App\Services\Partners\PartnerProgramme::class)->findActive($partnerCode) : null,
+            'freeLimit'   => \App\Services\Billing\PlatformSettings::get('free_limit'),
             'ranges'      => config('tenancy.employee_ranges'),
             'limit'       => config('tenancy.shared_employee_limit'),
             'industries'  => Company::INDUSTRIES,
@@ -99,6 +104,13 @@ class RegistrationController extends Controller
             'interested_modules.*'   => [Rule::in(array_keys(Company::MODULES))],
             'heard_about_us'         => ['nullable', 'string', 'max:100'],
 
+            // Partner (reseller) who referred them — optional
+            'partner_code'           => ['nullable', 'string', 'max:20', function ($attr, $value, $fail) {
+                if (filled($value) && ! app(\App\Services\Partners\PartnerProgramme::class)->findActive($value)) {
+                    $fail('We couldn\'t find an active partner with that code. Check it, or leave it empty.');
+                }
+            }],
+
             'terms' => ['accepted'],
         ], [
             'terms.accepted'     => 'Please accept the terms to create your workspace.',
@@ -154,6 +166,15 @@ class RegistrationController extends Controller
                 'role'       => 'company_admin',
             ]);
         });
+
+        // Link to the partner whose code was typed in, or whose link they followed.
+        $programme = app(\App\Services\Partners\PartnerProgramme::class);
+        $typed = $programme->findActive($validated['partner_code'] ?? null);
+        $viaLink = $typed ? null : $programme->findActive($request->cookie(\App\Services\Partners\PartnerProgramme::COOKIE));
+        if ($partner = $typed ?? $viaLink) {
+            $programme->attach($user->company, $partner, $typed ? 'code' : 'link');
+            \Illuminate\Support\Facades\Cookie::queue(\Illuminate\Support\Facades\Cookie::forget(\App\Services\Partners\PartnerProgramme::COOKIE));
+        }
 
         try {
             $user->sendEmailVerificationNotification();

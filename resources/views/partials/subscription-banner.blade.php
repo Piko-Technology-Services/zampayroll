@@ -11,22 +11,25 @@
             report($e);
         }
     }
-    $showBanner = $bs && ($bs['status'] === 'trialing' || in_array($bs['tone'], ['warn', 'bad'], true)) && ! request()->routeIs('billing.*');
+    $atFreeLimit = $bs && $bs['status'] === 'free' && $bs['employees'] >= $bs['free_limit'] && ! $bs['limited'];
+    $showBanner = $bs && ($bs['status'] === 'trialing' || $atFreeLimit || in_array($bs['tone'], ['warn', 'bad'], true)) && ! request()->routeIs('billing.*');
     $canBill = $bu?->hasPermission('billing.manage');
 @endphp
 @if($showBanner)
 <div class="zp-subbar {{ $bs['tone'] }}" role="status">
-    <i class="bi {{ $bs['limited'] ? 'bi-lock' : ($bs['status'] === 'trialing' ? 'bi-gift' : 'bi-hourglass-split') }}"></i>
+    <i class="bi {{ $bs['limited'] ? 'bi-lock' : (in_array($bs['status'], ['trialing', 'free'], true) ? 'bi-gift' : 'bi-hourglass-split') }}"></i>
     <div class="txt">
         <b>{{ $bs['limited'] ? ($bs['headline'] . ' — read-only for now') : $bs['headline'] }}</b>
-        @if($bs['countdown_to'] && ! $bs['limited'])
+        @if($atFreeLimit)
+            <span>{{ $bs['employees'] }} of {{ $bs['free_limit'] }} free employees used. {{ $bs['trial_used'] ? 'More than ' . $bs['free_limit'] . ' needs the Business plan.' : 'Adding more starts your free ' . \App\Services\Billing\PlatformSettings::get('trial_days') . '-day trial — nothing to pay today.' }}</span>
+        @elseif($bs['countdown_to'] && ! $bs['limited'])
             <span><span class="zp-countdown" data-to="{{ $bs['countdown_to']->toIso8601String() }}" data-short="1"></span> {{ $bs['countdown_label'] }}</span>
         @elseif($bs['limited'])
             <span>Your data is safe. {{ $canBill ? 'Pay to unlock everything.' : 'Ask your administrator to renew.' }}</span>
         @endif
     </div>
     @if($canBill)
-        <a href="{{ route('billing.index') }}" class="go">{{ $bs['status'] === 'trialing' && ! $bs['limited'] ? 'Choose a plan' : 'Pay now' }} <i class="bi bi-arrow-right"></i></a>
+        <a href="{{ route('billing.index') }}" class="go">{{ $atFreeLimit ? 'See plans' : ($bs['status'] === 'trialing' && ! $bs['limited'] ? 'Choose a plan' : ($bs['open_invoices']->isNotEmpty() ? 'Pay now' : 'Choose a plan')) }} <i class="bi bi-arrow-right"></i></a>
     @endif
 </div>
 

@@ -48,6 +48,9 @@ class BillingController extends Controller
         $company = $this->subs->company();
         $state = $this->subs->state($company);
 
+        if ($state['employees'] <= PlatformSettings::get('free_limit')) {
+            return back()->with('success', 'Good news — with ' . $state['employees'] . ' active employees you\'re on the free plan. Nothing to pay.');
+        }
         if ($state['employees'] > PlatformSettings::get('prepaid_limit')) {
             return back()->with('error', 'You have ' . $state['employees'] . ' active employees, so the Business plan applies.');
         }
@@ -62,6 +65,9 @@ class BillingController extends Controller
     {
         $request->validate(['accept' => 'accepted'], ['accept.accepted' => 'Please accept the post-paid terms.']);
         $company = $this->subs->company();
+        if ($this->subs->activeEmployees($company) <= PlatformSettings::get('free_limit') && ! $company->billing_type) {
+            return back()->with('success', 'You\'re on the free plan — nothing to start until you have more than ' . PlatformSettings::get('free_limit') . ' active employees.');
+        }
         $this->subs->startPostpaid($company);
 
         return redirect()->route('billing.index')->with('success', 'Business plan started. Your first invoice arrives on ' . $this->subs->nextPostpaidBillDate($company->fresh())->format('j M Y') . '.');
@@ -84,8 +90,8 @@ class BillingController extends Controller
         $state = $this->subs->state($company);
         abort_if($company->isDedicated(), 422, 'You already have a private workspace.');
 
-        if ($state['recommended'] !== 'business' && $company->plan !== 'business') {
-            return back()->with('error', 'Private workspaces are for companies with more than ' . PlatformSettings::get('prepaid_limit') . ' employees.');
+        if (! $this->subs->qualifiesForPrivate($company, $state['employees'])) {
+            return back()->with('error', 'Private workspaces are for companies with more than ' . PlatformSettings::get('free_limit') . ' employees.');
         }
 
         $request->merge(['subdomain' => Str::lower(trim((string) $request->input('subdomain')))]);

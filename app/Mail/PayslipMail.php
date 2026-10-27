@@ -36,22 +36,10 @@ class PayslipMail extends Mailable
     {
         $employee = $this->payroll->employee;
 
-        // Reuse the exact same template/data shape as the PDF download route —
-        // single-employee run, built the same way as PayrollController::downloadPdf()
-        $run = $this->payroll->run;
-        $run->setRelation('payrolls', collect([$this->payroll]));
-
-        $pdf = Pdf::loadView('dashboard.payroll.runs.payslip_pdf', [
-            'run'         => $run,
-            'companyName' => $this->companyName,
-            'companyLogo' => CompanyLogoResolver::resolve(),
-        ])->setPaper('a4', 'portrait');
-
-        $filename = sprintf(
-            'payslip-%s-%s.pdf',
-            $employee->employee_id,
-            str_replace(' ', '-', strtolower($this->payroll->pay_period))
-        );
+        // The exact same template as every payslip screen and download.
+        $payslips = app(\App\Services\Payslips\Payslips::class);
+        $pdf = $payslips->pdf($this->payroll);
+        $filename = $payslips->filename($this->payroll);
 
         return $this->subject("Your Payslip — {$this->payroll->pay_period}")
             ->markdown('emails.payslip', [

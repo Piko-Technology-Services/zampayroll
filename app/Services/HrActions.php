@@ -99,9 +99,9 @@ class HrActions
 
         $engine = app(PayrollEngine::class);
         $loanService = app(LoanRepaymentService::class);
-        $active = Employee::where('employment_status', 'Active')->get();
+        $active = $run->employeesQuery()->get();
 
-        // People who are no longer active drop out of an unapproved run.
+        // People who are no longer active (or no longer covered by this run) drop out of an unapproved run.
         $run->payrolls()->whereNotIn('employee_id', $active->pluck('id'))->get()->each(function ($p) {
             $p->items()->delete();
             $p->delete();

@@ -35,6 +35,13 @@ class EnsureStaff
                 : redirect()->route('platform.dashboard');
         }
 
+        // Partners (resellers) only see their partner dashboard, never a company's data.
+        if ($user && $user->isPartner()) {
+            return $request->expectsJson()
+                ? response()->json(['message' => 'Partner accounts use the partner dashboard.'], 403)
+                : redirect()->route('partner.dashboard');
+        }
+
         // A staff account must belong to a company.
         if ($user && ! $user->company_id) {
             abort(403, 'This account is not linked to a company.');

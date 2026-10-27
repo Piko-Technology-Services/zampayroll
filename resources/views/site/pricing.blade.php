@@ -43,10 +43,12 @@
             </div>
             <div class="plan">
                 <h3>Business</h3>
-                <div class="price" style="font-size:1.9rem">Talk to us</div>
-                <div class="per">for 11 or more employees</div>
+                <div class="price" style="font-size:1.9rem">K{{ number_format(\App\Services\Billing\PlatformSettings::get('business_per_employee')) }}</div>
+                <div class="per">per active employee a month, for {{ \App\Services\Billing\PlatformSettings::get('free_limit') + 1 }} or more employees · minimum K{{ number_format(\App\Services\Billing\PlatformSettings::get('business_minimum')) }}</div>
                 <ul>
+                    <li><i class="bi bi-check2"></i> {{ \App\Services\Billing\PlatformSettings::get('trial_days') }}-day free trial starts when you add employee {{ \App\Services\Billing\PlatformSettings::get('free_limit') + 1 }}</li>
                     <li><i class="bi bi-check2"></i> Everything in Free</li>
+                    <li><i class="bi bi-check2"></i> Pay after each month, only for active employees</li>
                     <li><i class="bi bi-check2"></i> Dedicated workspace — yourcompany.zampayroll.com</li>
                     <li><i class="bi bi-check2"></i> Your own separate database</li>
                     <li><i class="bi bi-check2"></i> Help moving data from your current system</li>
@@ -55,15 +57,15 @@
                 <a href="{{ route('home') }}#demo" class="btn btn-line">Get a quote</a>
             </div>
             <div class="plan" id="resellers">
-                <h3>Resellers &amp; accountants</h3>
-                <div class="price" style="font-size:1.9rem">Partner</div>
-                <div class="per">for firms running payroll for clients</div>
+                <h3>Partners</h3>
+                <div class="price" style="font-size:1.9rem">Earn {{ rtrim(rtrim(number_format(\App\Services\Billing\PlatformSettings::get('partner_commission_rate'), 2), '0'), '.') }}%</div>
+                <div class="per">HR firms, HR practitioners, HR students &amp; freelancers</div>
                 <ul>
-                    <li><i class="bi bi-check2"></i> Onboard and support your clients on ZamPayroll</li>
-                    <li><i class="bi bi-check2"></i> Training and demo material</li>
-                    <li><i class="bi bi-check2"></i> Earn on every client you bring</li>
+                    <li><i class="bi bi-check2"></i> Your own partner code and sign-up link</li>
+                    <li><i class="bi bi-check2"></i> A dashboard of your clients and commission</li>
+                    <li><i class="bi bi-check2"></i> Earn on every invoice your clients pay</li>
                 </ul>
-                <a href="https://wa.me/{{ config('site.contact.whatsapp') }}?text={{ urlencode('Hi ZamPayroll, I am interested in becoming a reseller.') }}" target="_blank" rel="noopener" class="btn btn-line"><i class="bi bi-whatsapp"></i> Talk to us</a>
+                <a href="{{ route('partners.show') }}" class="btn btn-line"><i class="bi bi-person-badge"></i> Become a partner</a>
             </div>
         </div>
     </div>

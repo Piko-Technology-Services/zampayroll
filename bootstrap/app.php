@@ -27,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'employee'       => \App\Http\Middleware\EnsureEmployee::class,
             'force.password' => \App\Http\Middleware\ForcePasswordChange::class,
             'platform'       => \App\Http\Middleware\EnsurePlatformAdmin::class,
+            'partner'        => \App\Http\Middleware\EnsurePartner::class,
         ]);
 
         $middleware->redirectGuestsTo(fn () => route('login'));

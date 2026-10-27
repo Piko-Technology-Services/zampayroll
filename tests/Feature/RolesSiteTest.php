@@ -36,6 +36,14 @@ class RolesSiteTest extends TestCase
     public function test_roles_restrict_access_and_admin_can_edit(): void
     {
         $admin = $this->admin();
+        // The matrix save below rewrites every role; put them back afterwards so other tests aren't affected.
+        $before = DB::table('company_roles')->where('company_id', $admin->company_id)->pluck('permissions', 'key');
+        $this->beforeApplicationDestroyed(function () use ($admin, $before) {
+            foreach ($before as $key => $perms) {
+                DB::table('company_roles')->where('company_id', $admin->company_id)->where('key', $key)->update(['permissions' => $perms]);
+            }
+            DB::table('company_roles')->where('company_id', $admin->company_id)->whereNotIn('key', $before->keys())->delete();
+        });
         $manager = User::create(['company_id' => $admin->company_id, 'name' => 'Mo Manager', 'email' => 'mo@pikozm.com', 'password' => bcrypt('x12345678'), 'role' => 'manager', 'email_verified_at' => now()]);
 
         // manager: can approve leave, cannot see payroll, settings or team

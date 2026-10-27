@@ -23,6 +23,14 @@
 
         <div class="navbar-actions ms-auto">
 
+        @if(auth()->user()?->canSwitchDashboards())
+            {{-- Team member who is also an employee: switch between their role's dashboard and their own portal --}}
+            <div class="zp-switch" role="group" aria-label="Switch dashboard">
+                <a href="{{ route('dashboard') }}" class="on" aria-current="page"><i class="bi bi-briefcase"></i><span class="d-none d-sm-inline">{{ auth()->user()->roleName() }}</span></a>
+                <a href="{{ route('portal.dashboard') }}"><i class="bi bi-person-badge"></i><span class="d-none d-sm-inline">My portal</span></a>
+            </div>
+        @endif
+
         @include('partials.translate', ['variant' => 'light'])
 
         {{-- Theme Toggle --}}
@@ -62,6 +70,10 @@
 
                 <ul class="dropdown-menu dropdown-menu-end">
 
+                    @if(auth()->user()?->canSwitchDashboards())
+                        <li><a class="dropdown-item" href="{{ route('portal.dashboard') }}"><i class="bi bi-person-badge me-2"></i>Switch to my employee portal</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                    @endif
                     <li>
                         <a class="dropdown-item" href="{{ route('profile.index') }}">
                             Profile

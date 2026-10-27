@@ -24,6 +24,7 @@ class PayrollRunEvent extends Model
         'recalled'   => 'Recalled to draft',
         'locked'     => 'Approved & locked',
         'paid'       => 'Marked as paid',
+        'unlocked'   => 'Unlocked for changes',
     ];
 
     public function user()

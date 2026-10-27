@@ -185,7 +185,11 @@ class LeaveService
      */
     public function apply(Employee $employee, array $data, ?array $documents = null, ?User $by = null, bool $notify = true): LeaveRequest
     {
-        $byHr = $by && ! $by->isEmployee();
+        if ($employee->isBoardMember()) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['leave_type' => "{$employee->full_name} is a board member — board members don't take leave."]);
+        }
+        // Someone asking for themselves (even HR, via their own portal) is never "HR recording it".
+        $byHr = $by && ! $by->isEmployee() && (int) $by->employee_id !== (int) $employee->id;
         $c = $this->check($employee, $data['leave_type'], $data['start_date'], $data['end_date'], count($documents ?? []), null, $byHr);
 
         $leave = DB::transaction(function () use ($employee, $data, $documents, $by, $byHr, $c) {

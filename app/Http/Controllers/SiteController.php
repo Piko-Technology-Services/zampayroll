@@ -44,6 +44,7 @@ class SiteController extends Controller
             ['/features', '0.9', 'monthly'],
             ['/ai-assistant', '0.8', 'monthly'],
             ['/pricing', '0.9', 'monthly'],
+            ['/partners', '0.8', 'monthly'],
             ['/register', '0.7', 'yearly'],
             ['/login', '0.5', 'yearly'],
             ['/terms', '0.3', 'yearly'],

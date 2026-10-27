@@ -48,7 +48,7 @@ class LoanService
                 'reason'             => $data['reason'] ?? null,
                 'documents'          => $documents ?: null,
                 'status'             => 'pending',
-                'recorded_by'        => $by && ! $by->isEmployee() ? $by->id : null,
+                'recorded_by'        => $by && ! $by->isEmployee() && (int) $by->employee_id !== (int) $employee->id ? $by->id : null,
             ]);
         });
 

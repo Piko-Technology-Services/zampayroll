@@ -11,7 +11,7 @@
 <ol class="pr-track" aria-label="Payroll progress">
     @foreach($labels as $n => [$t, $s, $ic])
         @php $state = ($stage === 5 || $n < $stage) ? 'done' : ($n === $stage ? 'now' : ''); @endphp
-        <li class="{{ $state }}" @if($state === 'now') aria-current="step" @endif>
+        <li class="{{ $state }}" @if($state === 'now') aria-current="step" @endif data-walkthrough="{{ $n - 1 }}" title="What happens at this step?" style="cursor:pointer">
             <span class="dot"><i class="bi {{ $state === 'done' ? 'bi-check-lg' : $ic }}"></i></span>
             {{ $t }}<small>{{ $s }}</small>
         </li>

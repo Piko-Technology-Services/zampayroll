@@ -15,18 +15,19 @@
 @endphp
 
 @section('content')
-<div class="pr pp">
+<div class="pr pp" data-walkthrough-auto>
     <div class="pr-head">
         <div>
             <h1>Payroll</h1>
             <p>Calculate, check, get it approved, pay. We'll walk you through each step.</p>
         </div>
         <div class="pr-head-actions">
+            <button type="button" class="pp-btn pp-btn-ghost" data-walkthrough><i class="bi bi-play-circle"></i> How payroll works</button>
             @if($u->hasPermission('payroll.finalize'))
                 <a href="{{ route('payroll-approvals.index') }}" class="pp-btn pp-btn-ghost"><i class="bi bi-diagram-3"></i> Approval chain</a>
             @endif
             @if($canRun)
-                <a href="{{ route('payroll.runs.create') }}" class="pp-btn pp-btn-primary"><i class="bi bi-play-fill"></i> Start a payroll</a>
+                <a href="{{ route('payroll.runs.create') }}" class="pp-btn pp-btn-primary"><i class="bi bi-plus-lg"></i> New pay run</a>
             @endif
         </div>
     </div>
@@ -60,6 +61,14 @@
                 <div style="margin-top:1.3rem">
                     @include('dashboard.payroll.flow._track', ['stage' => $current ? $current->stage() : 1])
                 </div>
+                @if($monthRuns->count() > 1)
+                    <div class="pr-counts" style="margin-top:.9rem">
+                        <span style="background:var(--zp-mist)">{{ $monthRuns->count() }} pay runs this month</span>
+                        @foreach($monthRuns->where('id', '!=', $current->id) as $o)
+                            <a href="{{ route('payroll.runs.show', $o) }}" class="pr-pill {{ $o->statusTone() }}" title="{{ $o->statusLabel() }}">{{ $o->displayName() }}</a>
+                        @endforeach
+                    </div>
+                @endif
             </div>
             <div>
                 @if($current)
@@ -90,37 +99,54 @@
         </div>
     </section>
 
-    {{-- History --}}
+    {{-- History, grouped by month --}}
     <section class="pr-card">
         <div class="pr-card-head">
-            <div><h2>All payrolls</h2><div class="sub">Every run, newest first.</div></div>
+            <div><h2>All pay runs</h2><div class="sub">Grouped by month. A month can have several runs — a main payroll plus bonus, backpay or leaver runs.</div></div>
             <div class="pr-years">
-                <a href="{{ route('payroll.runs.index') }}" class="{{ $year ? '' : 'on' }}">All</a>
+                <a href="{{ route('payroll.runs.index', array_filter(['status' => $status])) }}" class="{{ $year ? '' : 'on' }}">All years</a>
                 @foreach($years as $y)
-                    <a href="{{ route('payroll.runs.index', ['year' => $y]) }}" class="{{ $year === $y ? 'on' : '' }}">{{ $y }}</a>
+                    <a href="{{ route('payroll.runs.index', array_filter(['year' => $y, 'status' => $status])) }}" class="{{ $year === $y ? 'on' : '' }}">{{ $y }}</a>
                 @endforeach
             </div>
         </div>
-        @if($history->isEmpty())
-            <div class="pr-empty"><i class="bi bi-cash-stack"></i>No payrolls yet. Start your first one above.</div>
+        <div class="pr-years" style="margin:-.3rem 0 1rem">
+            @foreach(['' => 'Any status', 'draft' => 'Being prepared', 'review' => 'In approval', 'locked' => 'Approved · locked', 'paid' => 'Paid'] as $v => $label)
+                <a href="{{ route('payroll.runs.index', array_filter(['year' => $year, 'status' => $v])) }}" class="{{ $status === $v ? 'on' : '' }}">{{ $label }}@if($v) <small>{{ $counts[$v] ?? 0 }}</small>@endif</a>
+            @endforeach
+        </div>
+        @if($months->isEmpty())
+            <div class="pr-empty"><i class="bi bi-cash-stack"></i>{{ $status || $year ? 'No pay runs match.' : 'No payrolls yet. Start your first one above.' }}</div>
         @else
-            <div class="pr-tablewrap">
-                <table class="pr-table pr-hist">
-                    <thead><tr><th>Month</th><th>Status</th><th style="text-align:right">People</th><th style="text-align:right">Take-home</th><th>Approved</th><th></th></tr></thead>
-                    <tbody>
-                    @foreach($history as $r)
-                        <tr onclick="location.href='{{ route('payroll.runs.show', $r) }}'">
-                            <td><b>{{ $r->displayName() }}</b><br><small class="pp-muted">{{ $r->period }}</small></td>
-                            <td><span class="pr-pill {{ $r->statusTone() }}">{{ $r->statusLabel() }}</span></td>
-                            <td class="num">{{ $r->payrolls_count }}</td>
-                            <td class="num"><b>{{ $k($r->net_pay ?: $r->payrolls_sum_net_pay) }}</b></td>
-                            <td>@if($r->finalized_at){{ $r->finalized_at->format('j M Y') }}<br><small class="pp-muted">{{ $r->finalizedBy?->name }}</small>@else<span class="pp-muted">—</span>@endif</td>
-                            <td style="text-align:right"><i class="bi bi-chevron-right pp-muted"></i></td>
-                        </tr>
+            @foreach($months as $period => $group)
+                @php
+                    $first = $group->first();
+                    $c = $group->groupBy(fn ($r) => $r->statusTone())->map->count();
+                    $sum = $group->sum(fn ($r) => (float) ($r->net_pay ?: $r->payrolls_sum_net_pay));
+                @endphp
+                <div class="pr-mgroup">
+                    <div class="pr-mgroup-head">
+                        <h3>{{ $first->period_date ? $first->period_date->format('F Y') : $period }}</h3>
+                        <div class="pr-counts">
+                            @foreach(['draft' => 'being prepared', 'review' => 'in approval', 'locked' => 'locked', 'paid' => 'paid'] as $tone => $word)
+                                @if($c[$tone] ?? 0)<span class="{{ $tone }}">{{ $c[$tone] }} {{ $word }}</span>@endif
+                            @endforeach
+                        </div>
+                        <span class="tot">{{ $group->count() }} {{ $group->count() === 1 ? 'run' : 'runs' }} · take-home <b>{{ $k($sum) }}</b></span>
+                    </div>
+                    @foreach($group as $r)
+                        <a class="pr-mrun" href="{{ route('payroll.runs.show', $r) }}">
+                            <div class="t"><b>{{ $r->displayName() }}</b><small>{{ $r->typeLabel() }} · {{ $r->coverageSummary() }}@if($r->unlock_count) · <i class="bi bi-unlock"></i> unlocked {{ $r->unlock_count }}×@endif</small></div>
+                            <span class="pr-pill {{ $r->statusTone() }}">{{ $r->statusLabel() }}</span>
+                            <div class="n hide-sm"><b>{{ $r->payrolls_count }}</b>people</div>
+                            <div class="n"><b>{{ $k($r->net_pay ?: $r->payrolls_sum_net_pay) }}</b>{{ $r->finalized_at ? 'approved ' . $r->finalized_at->format('j M') : 'take-home' }}</div>
+                        </a>
                     @endforeach
-                    </tbody>
-                </table>
-            </div>
+                    @if($canRun && $first->period_date)
+                        <a class="pr-mgroup-add" href="{{ route('payroll.runs.create', ['month' => $first->period_date->format('Y-m'), 'new' => 1]) }}"><i class="bi bi-plus-lg"></i> Add another pay run for {{ $first->period_date->format('F') }}</a>
+                    @endif
+                </div>
+            @endforeach
         @endif
         <div style="display:flex;gap:1rem;margin-top:.9rem;font-size:.82rem">
             <a class="pp-link" href="{{ route('payroll.runs.hidden') }}"><i class="bi bi-eye-slash"></i> Hidden ({{ $hiddenCount }})</a>
@@ -128,4 +154,5 @@
         </div>
     </section>
 </div>
+@include('dashboard.payroll.flow._walkthrough')
 @endsection

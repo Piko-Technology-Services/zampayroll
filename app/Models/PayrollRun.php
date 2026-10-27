@@ -32,6 +32,11 @@ class PayrollRun extends Model
         'paid_by',
         'include_overtime',
         'approval_chain',
+        'run_type',
+        'scope',
+        'unlocked_at',
+        'unlocked_by',
+        'unlock_count',
     ];
 
     protected $casts = [
@@ -41,6 +46,8 @@ class PayrollRun extends Model
         'paid_at'          => 'datetime',
         'include_overtime' => 'boolean',
         'approval_chain'   => 'array',
+        'scope'            => 'array',
+        'unlocked_at'      => 'datetime',
     ];
 
     /*
@@ -103,6 +110,60 @@ class PayrollRun extends Model
             $this->isInReview() => 'review',
             default => 'draft',
         };
+    }
+
+    public const TYPES = [
+        'regular'       => 'Regular payroll',
+        'supplementary' => 'Supplementary',
+        'bonus'         => 'Bonus / incentive',
+        'backpay'       => 'Arrears / backpay',
+        'final'         => 'Final dues (leavers)',
+    ];
+
+    public function typeLabel(): string
+    {
+        return self::TYPES[$this->run_type ?? 'regular'] ?? ucfirst((string) $this->run_type);
+    }
+
+    /** Who this run covers: everyone (null), some departments, or picked people. */
+    public function coverageMode(): string
+    {
+        return $this->scope['mode'] ?? 'all';
+    }
+
+    public function coverageSummary(): string
+    {
+        $s = $this->scope ?? [];
+
+        return match ($s['mode'] ?? 'all') {
+            'departments' => implode(', ', array_map(fn ($d) => $d === '__none__' ? 'No department' : $d, $s['departments'] ?? [])) ?: 'No departments',
+            'people'      => count($s['employees'] ?? []) . ' selected ' . (count($s['employees'] ?? []) === 1 ? 'person' : 'people'),
+            default       => 'Everyone active',
+        };
+    }
+
+    /** Active employees this run pays. */
+    public function employeesQuery()
+    {
+        $q = Employee::query()->where('employment_status', 'Active');
+        $s = $this->scope ?? [];
+
+        return match ($s['mode'] ?? 'all') {
+            'departments' => $q->where(function ($w) use ($s) {
+                $deps = $s['departments'] ?? [];
+                $w->whereIn('department', array_diff($deps, ['__none__']));
+                if (in_array('__none__', $deps, true)) {
+                    $w->orWhereNull('department')->orWhere('department', '');
+                }
+            }),
+            'people'      => $q->whereIn('id', $s['employees'] ?? []),
+            default       => $q,
+        };
+    }
+
+    public function unlockedBy()
+    {
+        return $this->belongsTo(User::class, 'unlocked_by');
     }
 
     public function displayName(): string

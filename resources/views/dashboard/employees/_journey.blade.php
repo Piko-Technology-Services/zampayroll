@@ -117,10 +117,16 @@
                             <input class="pp-input" id="f_pos" name="position" value="{{ $v('position') }}" list="ppPositions" data-live="position" placeholder="e.g. Accountant">
                             <datalist id="ppPositions">@foreach($positions as $p)<option value="{{ $p }}">@endforeach</datalist>
                         </div>
+                        @php $curDept = $v('department'); $known = collect($departments)->contains(fn ($p) => mb_strtolower($p) === mb_strtolower((string) $curDept)); @endphp
                         <div class="pp-field">
-                            <label for="f_dep">Department</label>
-                            <input class="pp-input" id="f_dep" name="department" value="{{ $v('department') }}" list="ppDepts" data-live="department" placeholder="e.g. Finance">
-                            <datalist id="ppDepts">@foreach($departments as $p)<option value="{{ $p }}">@endforeach</datalist>
+                            <label for="f_dep_pick">Department</label>
+                            <select class="pp-select" id="f_dep_pick" aria-describedby="f_dep_hint">
+                                <option value="">No department</option>
+                                @foreach($departments as $p)<option value="{{ $p }}" @selected(mb_strtolower($p) === mb_strtolower((string) $curDept))>{{ $p }}</option>@endforeach
+                                <option value="__new" @selected($curDept && ! $known)>+ Add a new department…</option>
+                            </select>
+                            <input class="pp-input" id="f_dep" name="department" value="{{ $curDept }}" data-live="department" placeholder="New department name, e.g. Logistics" maxlength="100" style="margin-top:.5rem" @if(! $curDept || $known) hidden @endif>
+                            <small id="f_dep_hint" class="pp-muted" style="font-size:.75rem">New names are added to <a href="{{ route('departments.index') }}" target="_blank">Departments</a> automatically.</small>
                         </div>
                         <div class="pp-field">
                             <label for="f_br">Branch / site</label>
@@ -411,6 +417,17 @@
             if (step < TOTAL) $('#ppNext').click(); else form.requestSubmit();
         }
     });
+
+    /* ----- department: pick one, or add a new one ----- */
+    (function () {
+        const pick = document.getElementById('f_dep_pick'), box = document.getElementById('f_dep');
+        if (!pick || !box) return;
+        pick.addEventListener('change', () => {
+            if (pick.value === '__new') { box.hidden = false; box.value = ''; box.focus(); }
+            else { box.hidden = true; box.value = pick.value; }
+            box.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+    })();
 
     /* ----- live card + completeness ----- */
     function initials() { return ((val('first_name')[0] || '') + (val('last_name')[0] || '')).toUpperCase() || '?'; }

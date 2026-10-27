@@ -64,7 +64,9 @@ class PlatformController extends Controller
         return view('platform.dashboard', [
             'counts' => [
                 'companies' => $companies->count(),
+                'free'      => $companies->where('subscription_status', 'free')->count(),
                 'trialing'  => $companies->where('subscription_status', 'trialing')->count(),
+                'partners'  => \App\Models\Partner::query()->where('status', 'active')->count(),
                 'active'    => $companies->where('subscription_status', 'active')->count(),
                 'trouble'   => $companies->whereIn('subscription_status', ['past_due', 'suspended'])->count(),
                 'dedicated' => $companies->where('tenancy_mode', Company::MODE_DEDICATED)->count(),
@@ -158,7 +160,7 @@ class PlatformController extends Controller
                 break;
 
             case 'status':
-                $data = $request->validate(['status' => 'required|in:trialing,active,past_due,suspended,cancelled']);
+                $data = $request->validate(['status' => 'required|in:free,trialing,active,past_due,suspended,cancelled']);
                 $company->forceFill(['subscription_status' => $data['status']])->save();
                 $msg = 'Status changed to ' . $data['status'] . '.';
                 break;
@@ -169,6 +171,17 @@ class PlatformController extends Controller
                     null, null, now()->addDays((int) ($data['due_days'] ?? 7)));
                 $this->subs->email($inv, 'invoice');
                 $msg = "Invoice {$inv->number} created and emailed.";
+                break;
+
+            case 'set_partner':
+                $code = \App\Services\Partners\PartnerProgramme::normalise($request->input('partner_code'));
+                $programme = app(\App\Services\Partners\PartnerProgramme::class);
+                $partner = $code === '' ? null : \App\Models\Partner::query()->where('code', $code)->first();
+                if ($code !== '' && ! $partner) {
+                    return back()->with('error', "No partner has the code {$code}.");
+                }
+                $programme->reassign($company, $partner);
+                $msg = $partner ? "Linked to partner {$partner->code} ({$partner->name}). Commission applies to invoices paid from now on." : 'Partner link removed.';
                 break;
 
             case 'notes':

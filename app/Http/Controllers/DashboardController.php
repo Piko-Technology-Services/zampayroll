@@ -20,8 +20,8 @@ class DashboardController extends Controller
         | EMPLOYEE STATS
         |--------------------------------------------------------------------------
         */
-        $totalEmployees   = Employee::count();
-        $activeEmployees  = Employee::where('employment_status', 'Active')->count();
+        $totalEmployees   = Employee::workforce()->count();
+        $activeEmployees  = Employee::workforce()->where('employment_status', 'Active')->count();
 
         // Unique departments and branches from the employees table
         $departments = Employee::whereNotNull('department')
@@ -33,7 +33,7 @@ class DashboardController extends Controller
             ->count('branch');
 
         // New hires this calendar month
-        $newThisMonth = Employee::whereMonth('created_at', now()->month)
+        $newThisMonth = Employee::workforce()->whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year)
             ->count();
 
@@ -88,7 +88,7 @@ class DashboardController extends Controller
         | DEPARTMENT BREAKDOWN
         |--------------------------------------------------------------------------
         */
-        $departmentBreakdown = Employee::where('employment_status', 'Active')
+        $departmentBreakdown = Employee::workforce()->where('employment_status', 'Active')
             ->whereNotNull('department')
             ->selectRaw('department, COUNT(*) as count')
             ->groupBy('department')
