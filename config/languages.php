@@ -8,6 +8,7 @@ return [
     'en'    => ['label' => 'English',    'native' => 'English'],
     'zh-CN' => ['label' => 'Chinese',    'native' => '中文'],
     'fr'    => ['label' => 'French',     'native' => 'Français'],
+    'ko'    => ['label' => 'Korean',     'native' => '한국어'],
     'pt'    => ['label' => 'Portuguese', 'native' => 'Português'],
     'so'    => ['label' => 'Somali',     'native' => 'Soomaali'],
     'ar'    => ['label' => 'Arabic',     'native' => 'العربية'],
