@@ -1,5 +1,5 @@
 @php
-    // Five places, one job each. Sub-pages live in tabs at the top of each module.
+    // One place per job. Sub-pages live in tabs at the top of each module.
     $u = auth()->user();
     $can = fn ($p) => $u?->hasPermission($p);
     $pendingLeave = $can('leave.approve') ? \App\Models\LeaveRequest::whereIn('status', \App\Models\LeaveRequest::OPEN)->count() : null;
@@ -14,18 +14,21 @@
     $navCompanyName = $u?->company?->name;
 
     // The Payroll module opens on the first of its tabs this role can see.
-    $payRoute = collect(['payroll.view' => 'payroll.runs.index', 'overtime.approve' => 'overtime.dashboard', 'loans.view' => 'loan.dashboard', 'reports.view' => 'payroll.reports.index'])
+    $payRoute = collect(['payroll.view' => 'payroll.runs.index', 'overtime.approve' => 'overtime.dashboard', 'loans.view' => 'loan.dashboard'])
         ->first(fn ($route, $perm) => $can($perm));
 
+    // [route, active-match, exclude-match, icon, label, hint, badge]
     $nav = array_filter([
-        ['dashboard', 'dashboard', 'bi-house-door', 'Home', 'Today at a glance', null],
-        $can('employees.view') ? ['employees.index', 'employees.*', 'bi-people', 'People', 'Employees & onboarding', null] : null,
-        $can('employees.view') ? ['departments.index', 'departments.*', 'bi-diagram-3', 'Departments', 'Teams & headcount', null] : null,
-        $can('attendance.view') ? ['attendance.calendar', 'attendance.*', 'bi-clock-history', 'Attendance', 'Who is in today', null] : null,
-        $can('leave.view') ? ['leave.dashboard', 'leave.*', 'bi-calendar2-heart', 'Leave', 'Requests & balances', $pendingLeave] : null,
-        $payRoute ? ($can('payroll.view') || $can('reports.view')
-            ? [$payRoute, ['payroll.*', 'overtime.*', 'loan.*'], 'bi-cash-stack', 'Payroll', 'Pay, overtime, loans, returns', $pendingPay]
-            : [$payRoute, ['overtime.*', 'loan.*'], $can('overtime.approve') ? 'bi-alarm' : 'bi-cash-coin', $can('overtime.approve') ? 'Overtime' : 'Loans', $can('overtime.approve') && $can('loans.view') ? 'Overtime & loan requests' : 'Requests to review', $pendingPay]) : null,
+        ['dashboard', 'dashboard', [], 'bi-house-door', 'Home', 'See what\'s happening today', null],
+        $can('employees.view') ? ['employees.index', 'employees.*', [], 'bi-people', 'Team', 'Employees & onboarding', null] : null,
+        $can('employees.view') ? ['departments.index', 'departments.*', [], 'bi-diagram-3', 'Departments', 'Teams & headcount', null] : null,
+        $can('attendance.view') ? ['attendance.calendar', 'attendance.*', [], 'bi-clock-history', 'Attendance', 'Who is in today', null] : null,
+        $can('leave.view') ? ['leave.dashboard', 'leave.*', [], 'bi-calendar2-heart', 'Leave', 'Requests & balances', $pendingLeave] : null,
+        $payRoute ? ($can('payroll.view')
+            ? [$payRoute, ['payroll.*', 'overtime.*', 'loan.*'], ['payroll.reports.*'], 'bi-cash-stack', 'Payroll', 'Payslips, overtime, gratuity & loans', $pendingPay]
+            : [$payRoute, ['overtime.*', 'loan.*'], [], $can('overtime.approve') ? 'bi-alarm' : 'bi-cash-coin', $can('overtime.approve') ? 'Overtime' : 'Loans', $can('overtime.approve') && $can('loans.view') ? 'Overtime & loan requests' : 'Requests to review', $pendingPay]) : null,
+        $can('reports.view') ? ['payroll.reports.index', 'payroll.reports.*', [], 'bi-file-earmark-text', 'Taxes & Statutory Returns', 'PAYE, NAPSA, NHIMA & internal reports', null] : null,
+        $can('billing.manage') ? ['billing.index', 'billing.*', [], 'bi-credit-card-2-front', 'Billing', 'My subscription & payment plans', null] : null,
     ]);
     $settingsRoute = $can('settings.company') ? 'company.settings' : ($can('team.manage') ? 'team.index' : 'profile.index');
 @endphp
@@ -42,8 +45,8 @@
     </div>
 
     <nav class="sidebar-nav" aria-label="Main">
-        @foreach($nav as [$route, $match, $icon, $label, $hint, $badge])
-            @php $active = request()->routeIs(...(array) $match); @endphp
+        @foreach($nav as [$route, $match, $except, $icon, $label, $hint, $badge])
+            @php $active = request()->routeIs(...(array) $match) && ! ($except && request()->routeIs(...$except)); @endphp
             <a class="nav-link zp-nav {{ $active ? 'active' : '' }}" href="{{ route($route) }}" @if($active) aria-current="page" @endif>
                 <i class="bi {{ $icon }} nav-icon"></i>
                 <span class="nav-text">
@@ -71,13 +74,13 @@
         @endphp
         <a class="nav-link zp-nav {{ $helpActive ? 'active' : '' }}" href="{{ route('support.index') }}">
             <i class="bi bi-life-preserver nav-icon"></i>
-            <span class="nav-text">Help<small class="zp-nav-hint">Talk to ZamPayroll</small></span>
+            <span class="nav-text">Help<small class="zp-nav-hint">Talk to the ZamPayroll team</small></span>
             @if($helpBadge)<span class="zp-nav-badge" title="New reply from support">{{ $helpBadge }}</span>@endif
         </a>
-        @php $settingsActive = request()->routeIs('company.*', 'bank-templates.*', 'profile.*', 'settings.*', 'team.*', 'billing.*', 'payroll-approvals.*'); @endphp
+        @php $settingsActive = request()->routeIs('company.*', 'bank-templates.*', 'profile.*', 'settings.*', 'team.*', 'payroll-approvals.*'); @endphp
         <a class="nav-link zp-nav {{ $settingsActive ? 'active' : '' }}" href="{{ route($settingsRoute) }}">
             <i class="bi bi-gear nav-icon"></i>
-            <span class="nav-text">Settings<small class="zp-nav-hint">{{ $u?->roleName() }}</small></span>
+            <span class="nav-text">Company Settings<small class="zp-nav-hint">Settings & policies</small></span>
         </a>
     </div>
 </aside>

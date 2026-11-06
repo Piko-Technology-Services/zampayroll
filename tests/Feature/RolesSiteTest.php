@@ -82,7 +82,7 @@ class RolesSiteTest extends TestCase
         $this->get('http://localhost/')->assertOk()
             ->assertSee('Zambian payroll, done in minutes', false)
             ->assertSee('application/ld+json', false)->assertSee('FAQPage')->assertSee('og:image', false)
-            ->assertSee('wa.me/260776136965', false)->assertSee('data-zp-lang', false)
+            ->assertSee('wa.me/260952992844', false)->assertSee('data-zp-lang', false)
             ->assertSee('<link rel="canonical" href="https://zampayroll.com/">', false);
         foreach (['/features', '/ai-assistant', '/pricing', '/terms', '/privacy'] as $p) {
             $this->get('http://localhost' . $p)->assertOk()->assertSee('rel="canonical"', false);

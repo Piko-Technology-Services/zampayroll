@@ -100,7 +100,13 @@ class SupportController extends Controller
     private function notifySupport(SupportTicket $ticket, string $kind): void
     {
         try {
-            Mail::to(config('billing.support_email'))->send(new SupportTicketMail($ticket->fresh('messages'), $kind));
+            $support = config('billing.support_email');
+            $admins = array_values(array_diff(\App\Support\AdminAlert::recipients(), [$support]));
+            $mail = Mail::to($support);
+            if ($admins) {
+                $mail->cc($admins);
+            }
+            $mail->send(new SupportTicketMail($ticket->fresh('messages'), $kind));
         } catch (\Throwable $e) {
             report($e);
         }

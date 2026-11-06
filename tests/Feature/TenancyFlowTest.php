@@ -108,7 +108,7 @@ class TenancyFlowTest extends TestCase
         $user = User::where('email', 'boss@acme.zm')->firstOrFail();
         $company = $user->company;
         $this->assertTrue($company->isShared(), 'every company starts on the shared workspace');
-        $this->assertSame('free', $company->subscription_status, 'new companies start on the free plan');
+        $this->assertSame('trialing', $company->subscription_status, 'new companies start on the free experience');
 
         $url = null;
         Notification::assertSentTo($user, VerifyEmailNotification::class, function ($n) use ($user, &$url) {

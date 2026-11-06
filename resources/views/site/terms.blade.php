@@ -14,7 +14,7 @@
     <h2>4. Acceptable use</h2>
     <p>You may not use ZamPayroll unlawfully, attempt to access other customers' data, interfere with the service, or resell it without a partner agreement.</p>
     <h2>5. Plans and payment</h2>
-    <p>Companies with up to 10 employees may use the Free plan. Larger companies use a paid plan agreed in writing. We may suspend a workspace for non-payment after notice.</p>
+    <p>Companies with up to 10 active employees may use the Free Experience for their first 2 months. After that, and for larger companies, a paid plan is required, billed monthly or annually as shown on our pricing page. Companies with more than 300 employees use a plan agreed in writing. We may limit a workspace to read-only for non-payment after notice.</p>
     <h2>6. Availability and support</h2>
     <p>We work to keep ZamPayroll available and backed up, but it is provided "as is" without guarantees of uninterrupted service. Planned maintenance is announced in advance where possible.</p>
     <h2>7. Liability</h2>

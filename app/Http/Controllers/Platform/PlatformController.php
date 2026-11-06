@@ -145,22 +145,22 @@ class PlatformController extends Controller
             case 'extend_paid':
                 $days = (int) $request->validate(['days' => 'required|integer|min:1|max:400'])['days'];
                 $from = $company->paid_until && $company->paid_until->isFuture() ? $company->paid_until : now();
-                $company->forceFill(['paid_until' => $from->copy()->addDays($days), 'subscription_status' => 'active', 'billing_type' => $company->billing_type ?: 'prepaid', 'plan' => $company->plan ?: 'starter'])->save();
+                $company->forceFill(['paid_until' => $from->copy()->addDays($days), 'subscription_status' => 'active', 'billing_type' => $company->billing_type ?: 'prepaid', 'plan' => $company->plan ?: 'tikula'])->save();
                 $msg = "Paid access extended to {$company->paid_until->format('j M Y')}.";
                 break;
 
             case 'set_plan':
-                $data = $request->validate(['plan' => 'required|in:starter,business', 'billing_cycle' => 'nullable|in:monthly,annual']);
+                $data = $request->validate(['plan' => 'required|in:tikula,medium,corporate,business', 'billing_cycle' => 'nullable|in:monthly,annual']);
                 if ($data['plan'] === 'business') {
-                    $this->subs->startPostpaid($company);
+                    $this->subs->startPostpaid($company); // legacy per-employee accounts only
                 } else {
-                    $company->forceFill(['plan' => 'starter', 'billing_type' => 'prepaid', 'billing_cycle' => $data['billing_cycle'] ?? 'monthly'])->save();
+                    $company->forceFill(['plan' => $data['plan'], 'billing_type' => 'prepaid', 'billing_cycle' => $data['billing_cycle'] ?? 'monthly'])->save();
                 }
-                $msg = 'Plan set to ' . ucfirst($data['plan']) . '.';
+                $msg = 'Plan set to ' . ($data['plan'] === 'business' ? 'Business (legacy)' : \App\Services\Billing\Plans::name($data['plan'])) . '.';
                 break;
 
             case 'status':
-                $data = $request->validate(['status' => 'required|in:free,trialing,active,past_due,suspended,cancelled']);
+                $data = $request->validate(['status' => 'required|in:trialing,active,past_due,suspended,cancelled']);
                 $company->forceFill(['subscription_status' => $data['status']])->save();
                 $msg = 'Status changed to ' . $data['status'] . '.';
                 break;
@@ -259,6 +259,7 @@ class PlatformController extends Controller
             'invoices' => Invoice::query()->with('company')->when($status === 'overdue', fn ($q) => $q->where('status', 'open')->whereDate('due_at', '<', now()))
                 ->when($status && $status !== 'overdue', fn ($q) => $q->where('status', $status))->latest('id')->paginate(40)->withQueryString(),
             'payments' => BillingPayment::query()->with('company', 'invoice')->latest('id')->take(30)->get(),
+            'proofs'   => BillingPayment::query()->with('company', 'invoice')->where('status', 'awaiting_review')->oldest('id')->get(),
             'status'   => $status,
         ]);
     }

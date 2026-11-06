@@ -1,12 +1,12 @@
 @php
     $faqs = [
-        ['Is ZamPayroll really free for small teams?', 'Yes. Companies with up to 10 employees use the full system free on our shared cloud — payroll, payslips, leave, attendance, overtime, loans, the employee portal and AI mode. Your data stays private to your company.'],
+        ['Can we try ZamPayroll for free?', 'Yes. Teams of up to 10 active employees get the full system free for 2 months: payroll, payslips, leave, attendance, overtime, loans, the employee portal and AI mode. After that, plans start at K799 a month. Your data stays private to your company.'],
         ['Does it calculate PAYE, NAPSA and NHIMA correctly?', 'ZamPayroll applies the ZRA PAYE bands, NAPSA (with its ceiling) and NHIMA automatically on every payslip, and produces the returns and bank payment files you need each month. Rates are kept up to date when the national budget changes them.'],
         ['We already use Excel or another payroll system. Is it hard to move?', 'No. Upload your employee list as Excel or CSV — ZamPayroll recognises common column names from other systems — or paste it into AI mode. Anything missing (like an NRC or NAPSA number) can be completed later.'],
         ['Can my staff see their own payslips?', 'Yes. With one click HR creates a self-service portal for each employee. They sign in on their phone to download payslips and apply for leave, overtime and loans.'],
         ['Can different people in our company have different access?', 'Yes. Everyone signs in with their own email and password. Your administrator decides what each role can do — for example a manager can approve leave but not see salaries.'],
         ['Does it work in other languages?', 'Yes. The whole system can be shown in Chinese, French, Portuguese, Somali, Arabic, Hindi, Gujarati, Urdu, Swahili, Nyanja and more using automatic translation.'],
-        ['What happens when we grow beyond 10 employees?', 'Larger companies get a dedicated workspace with their own web address (yourcompany.zampayroll.com) and their own database. Talk to us for pricing.'],
+        ['How much does it cost?', 'Tikula is K799 a month for 11–50 active employees, Medium Enterprise K1,499 for 51–150 and Corporate K2,499 for 151–300. Pay annually and get 2 months free. Companies with 301+ employees get tailored pricing.'],
     ];
 
     $seo = [
@@ -26,7 +26,10 @@
                 'description' => config('site.description'),
                 'areaServed' => ['@type' => 'Country', 'name' => 'Zambia'],
                 'offers' => [
-                    ['@type' => 'Offer', 'name' => 'Free — up to 10 employees', 'price' => '0', 'priceCurrency' => 'ZMW', 'url' => route('register')],
+                    ['@type' => 'Offer', 'name' => 'Free Experience — 2 months, up to 10 employees', 'price' => '0', 'priceCurrency' => 'ZMW', 'url' => route('register')],
+                    ['@type' => 'Offer', 'name' => 'Tikula — 11 to 50 employees', 'price' => '799', 'priceCurrency' => 'ZMW', 'url' => route('site.pricing')],
+                    ['@type' => 'Offer', 'name' => 'Medium Enterprise — 51 to 150 employees', 'price' => '1499', 'priceCurrency' => 'ZMW', 'url' => route('site.pricing')],
+                    ['@type' => 'Offer', 'name' => 'Corporate — 151 to 300 employees', 'price' => '2499', 'priceCurrency' => 'ZMW', 'url' => route('site.pricing')],
                 ],
                 'featureList' => 'ZRA PAYE, NAPSA and NHIMA calculations; payslips; employee self-service portal; leave management; attendance; overtime; staff loans; bank payment files; AI assistant; multilingual',
             ],
@@ -46,7 +49,7 @@
 <section class="hero">
     <div class="wrap hero-grid">
         <div>
-            <span class="hero-badge"><i>★</i> Free for teams of up to 10 employees</span>
+            <span class="hero-badge"><i>★</i> 2 months free for teams of up to 10</span>
             <h1>Zambian payroll, done in minutes — not days.</h1>
             <p class="hero-sub">PAYE, NAPSA and NHIMA calculated for you. Payslips on every employee's phone. Leave, attendance, overtime and loans flowing straight into payroll. And an assistant you can simply ask.</p>
             <div class="hero-ctas">
@@ -295,8 +298,8 @@
     <div class="wrap">
         <div class="cta-band">
             <div>
-                <h2>Free for up to 10 employees. Forever.</h2>
-                <p>Bigger team? Get a dedicated workspace with your own web address and database.</p>
+                <h2>Plans from K799 a month.</h2>
+                <p>Try it free for 2 months with up to 10 employees. Pay by mobile money, card or invoice.</p>
             </div>
             <div style="display:flex;gap:.6rem;flex-wrap:wrap">
                 <a href="{{ route('register') }}" class="btn btn-copper">Start free</a>

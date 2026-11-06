@@ -28,6 +28,12 @@ class PlatformSettings
         'partner_commission_rate'   => ['Partners: commission on referred invoices (%)', 'money'],
         'partner_commission_months' => ['Partners: pay commission for this many months (0 = always)', 'int'],
         'partner_auto_approve'      => ['Partners: approve applications automatically (1 = yes, 0 = review first)', 'int'],
+        'plan_tikula_monthly'       => ['Tikula (11–50 employees): per month (K)', 'money'],
+        'plan_tikula_annual'        => ['Tikula (11–50 employees): per year (K)', 'money'],
+        'plan_medium_monthly'       => ['Medium Enterprise (51–150 employees): per month (K)', 'money'],
+        'plan_medium_annual'        => ['Medium Enterprise (51–150 employees): per year (K)', 'money'],
+        'plan_corporate_monthly'    => ['Corporate (151–300 employees): per month (K)', 'money'],
+        'plan_corporate_annual'     => ['Corporate (151–300 employees): per year (K)', 'money'],
     ];
 
     public static function get(string $key)

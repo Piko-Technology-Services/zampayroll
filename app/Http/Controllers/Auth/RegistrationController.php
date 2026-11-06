@@ -182,6 +182,29 @@ class RegistrationController extends Controller
             report($e);
         }
 
+        $company = $user->company;
+        $ranges = config('tenancy.employee_ranges');
+        \App\Support\AdminAlert::send(
+            'New company sign-up: ' . $company->name,
+            'New sign-up',
+            $company->name . ' has signed up',
+            'A new company has created a ZamPayroll workspace.',
+            [
+                'Company'      => $company->name,
+                'Company code' => $company->company_code,
+                'Industry'     => Company::INDUSTRIES[$company->industry]['label'] ?? $company->industry,
+                'Employees'    => $ranges[$company->employee_count_range]['label'] ?? $company->employee_count_range,
+                'City'         => trim(($company->city ?? '') . ($company->province ? ', ' . $company->province : ''), ', '),
+                'Signed up by' => $user->name . ($user->position ? ' (' . $user->position . ')' : ''),
+                'Email'        => $user->email,
+                'Phone'        => $user->phone,
+                'Partner'      => $partner?->code,
+                'Heard about us' => $company->heard_about_us,
+            ],
+            route('platform.companies.show', $company),
+            'View company',
+        );
+
         $request->session()->put('registered_email', $user->email);
 
         return redirect()->route('verification.notice');

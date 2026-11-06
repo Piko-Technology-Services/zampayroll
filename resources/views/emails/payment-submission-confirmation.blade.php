@@ -56,7 +56,7 @@
               <p style="margin:6px 0 0;font-size:14px;">
                 <a href="mailto:info@zampayroll.com" style="color:#2F7D40;text-decoration:none;font-weight:600;">info@zampayroll.com</a>
                 &nbsp;&middot;&nbsp;
-                <a href="tel:+260776136965" style="color:#2F7D40;text-decoration:none;font-weight:600;">+260 776 136 965</a>
+                <a href="tel:+260952992844" style="color:#2F7D40;text-decoration:none;font-weight:600;">+260 952 992 844</a>
               </p>
             </td>
           </tr>

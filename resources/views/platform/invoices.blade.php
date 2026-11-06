@@ -8,6 +8,32 @@
         <a href="{{ route('platform.invoices', array_filter(['status' => $v])) }}" class="{{ (string) $status === $v ? 'on' : '' }}">{{ $l }}</a>
     @endforeach
 </div>
+<section class="pr-card" style="margin-bottom:16px">
+    <div class="pr-card-head"><div><h2>Payment proofs to check</h2><div class="sub">Manual payments sent by companies. Check the money has arrived, then confirm it or decline it with a reason.</div></div></div>
+    @forelse($proofs as $p)
+        <div class="pl-row" style="align-items:flex-start;gap:14px;padding:14px 0;border-top:1px solid var(--line, #e7e2d6)">
+            <i class="bi bi-file-earmark-check" style="font-size:1.4rem"></i>
+            <div class="grow">
+                <b>{{ $p->company?->name }} · {{ $k($p->amount) }}</b>
+                <small>{{ $p->invoice?->number }} · {{ $p->invoice?->title() }} · sent {{ $p->created_at->format('j M Y H:i') }}{{ $p->reference ? ' · ref: ' . $p->reference : '' }}</small>
+                <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+                    <a class="pp-btn pp-btn-ghost pp-btn-sm" href="{{ route('platform.proofs.file', $p) }}" target="_blank"><i class="bi bi-paperclip"></i> View proof</a>
+                    <form method="POST" action="{{ route('platform.proofs.confirm', $p) }}" onsubmit="return confirm('Confirm this payment has arrived? The plan will be activated.')">
+                        @csrf
+                        <button class="pp-btn pp-btn-primary pp-btn-sm"><i class="bi bi-check2-circle"></i> Confirm receipt</button>
+                    </form>
+                    <form method="POST" action="{{ route('platform.proofs.decline', $p) }}" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                        @csrf
+                        <input name="reason" class="pp-input" placeholder="Reason for declining" required minlength="5" maxlength="500" style="min-width:260px">
+                        <button class="pp-btn pp-btn-ghost pp-btn-sm"><i class="bi bi-x-circle"></i> Decline</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @empty
+        <div class="pr-empty"><i class="bi bi-inbox"></i>No proofs waiting for review.</div>
+    @endforelse
+</section>
 <div class="pr-layout" style="grid-template-columns:minmax(0,1fr) 380px">
     <section class="pr-card">
         <div class="pr-tablewrap"><table class="pr-table pr-hist">

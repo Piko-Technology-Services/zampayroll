@@ -10,9 +10,10 @@ class BillingPayment extends Model
     use Concerns\BelongsToCompany, Concerns\UsesLandlordDatabase;
 
     protected $fillable = ['company_id', 'invoice_id', 'provider', 'method', 'amount', 'currency', 'status', 'trans_token', 'trans_ref',
-        'phone', 'network', 'result_code', 'result_explanation', 'reference', 'user_id', 'paid_at', 'last_checked_at'];
+        'phone', 'network', 'result_code', 'result_explanation', 'reference', 'user_id', 'paid_at', 'last_checked_at',
+        'proof_path', 'reviewed_at', 'reviewed_by'];
 
-    protected $casts = ['amount' => 'decimal:2', 'paid_at' => 'datetime', 'last_checked_at' => 'datetime'];
+    protected $casts = ['amount' => 'decimal:2', 'paid_at' => 'datetime', 'last_checked_at' => 'datetime', 'reviewed_at' => 'datetime'];
 
     public function invoice()
     {

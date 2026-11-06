@@ -79,7 +79,7 @@
         <section class="pr-card" id="commission">
             <div class="pr-card-head"><div><h2>Commission</h2><div class="sub">{{ $rate }}% of each paid invoice, before VAT. Earned the moment your client pays.</div></div></div>
             @if($commissions->isEmpty())
-                <p class="pp-muted" style="margin:0">Nothing yet. Clients on the free plan (up to {{ \App\Services\Billing\PlatformSettings::get('free_limit') }} employees) don't pay, so commission starts when they grow onto a paid plan.</p>
+                <p class="pp-muted" style="margin:0">Nothing yet. Clients on the 2-month free experience don't pay yet, so commission starts when they pay for a plan.</p>
             @else
                 <div class="pr-tablewrap">
                     <table class="pr-table pr-hist">
@@ -123,7 +123,7 @@
             <div class="pr-card-head" style="margin-bottom:.4rem"><h2 style="font-size:1.05rem"><i class="bi bi-lightbulb" style="color:var(--zp-copper)"></i> Getting clients</h2></div>
             <ul class="pa-tips">
                 <li>Start with companies already paying you for HR work — offer to move their payroll for them.</li>
-                <li>It's free for up to {{ \App\Services\Billing\PlatformSettings::get('free_limit') }} employees, so small firms can start with no risk.</li>
+                <li>Plans start at K799 a month, and teams of up to {{ \App\Services\Billing\PlatformSettings::get('free_limit') }} can try it free for 2 months.</li>
                 <li>Help each new client paste in their staff list and run the first payroll in week one.</li>
                 <li>Ask us on WhatsApp for posters, videos and a demo login for your pitch.</li>
             </ul>

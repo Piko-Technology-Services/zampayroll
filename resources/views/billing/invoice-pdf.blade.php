@@ -83,7 +83,24 @@
             @php $p = $invoice->payments()->withoutGlobalScopes()->where('status', 'paid')->latest('paid_at')->first(); @endphp
             @if($p) by {{ str_replace('_', ' ', (string) $p->method) }}{{ $p->trans_ref ? ' (ref ' . $p->trans_ref . ')' : ($p->reference ? ' (ref ' . $p->reference . ')' : '') }}@endif.
         @else
-            <b>How to pay:</b> sign in to ZamPayroll → Settings → Billing → <b>Pay now</b>. Pay by Airtel Money, MTN MoMo, Zamtel Kwacha or card.
+            <b>How to pay</b><br>
+            @php $bank = config('billing.bank'); $momo = collect(config('billing.mobile_money'))->filter(fn ($m) => ! empty($m['number'])); @endphp
+            <table style="width:100%;margin-top:6px"><tr>
+                <td style="vertical-align:top;width:50%">
+                    <b>Bank transfer</b><br>
+                    {{ $bank['name'] ?: 'Bank name to be confirmed' }}<br>
+                    Account name: {{ $bank['account_name'] ?: 'ZamPayroll' }}<br>
+                    Account number: {{ $bank['account_number'] ?: 'to be confirmed' }}<br>
+                    @if(! empty($bank['branch']))Branch: {{ $bank['branch'] }}<br>@endif
+                    @if(! empty($bank['swift']))SWIFT: {{ $bank['swift'] }}<br>@endif
+                </td>
+                <td style="vertical-align:top">
+                    <b>Mobile money</b><br>
+                    @forelse($momo as $m){{ $m['network'] }}: {{ $m['number'] }}<br>@empty Shared on request.<br>@endforelse
+                </td>
+            </tr></table>
+            <div style="margin-top:8px">Use <b>{{ $invoice->number }}</b> as your payment reference. Then upload your proof of payment under <b>Settings → Billing</b>.</div>
+            <div style="margin-top:6px">Pay online instead: <b>{{ config('billing.online_payment_url') }}</b></div>
             Questions? {{ config('billing.support_email') }}
         @endif
     </div>

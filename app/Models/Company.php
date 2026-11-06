@@ -157,14 +157,18 @@ class Company extends Model
     ];
 
     /**
-     * Every new company starts on the free plan (up to `free_limit` active employees).
-     * The free trial starts only when they go over the limit — see Subscriptions::syncFreeTier().
+     * Every new company starts its free experience straight away: `trial_months`
+     * (2 by default) for up to `free_limit` active employees. A paid plan is
+     * needed after that — see Subscriptions::startTrial().
      */
     protected static function booted(): void
     {
         static::creating(function (Company $company) {
-            if (! $company->subscription_status || ($company->subscription_status === 'trialing' && ! $company->trial_ends_at)) {
-                $company->subscription_status = 'free';
+            if (! $company->subscription_status || $company->subscription_status === 'free') {
+                $company->subscription_status = 'trialing';
+            }
+            if ($company->subscription_status === 'trialing' && ! $company->trial_ends_at) {
+                $company->trial_ends_at = now()->addMonthsNoOverflow((int) config('billing.trial_months', 2));
             }
         });
     }

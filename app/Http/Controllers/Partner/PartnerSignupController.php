@@ -73,6 +73,26 @@ class PartnerSignupController extends Controller
             report($e);
         }
 
+        \App\Support\AdminAlert::send(
+            'New partner registration: ' . $data['name'],
+            'Partner programme',
+            $data['name'] . ' wants to become a partner',
+            $partner->isActive() ? 'A new partner has joined and was approved automatically.' : 'A new partner application is waiting for your review.',
+            [
+                'Name'   => $data['name'],
+                'Type'   => Partner::TYPES[$data['partner_type']] ?? $data['partner_type'],
+                'Firm'   => $data['firm_name'] ?? null,
+                'City'   => $data['city'] ?? null,
+                'Email'  => $data['email'],
+                'Phone'  => $data['phone'],
+                'Code'   => $partner->code,
+                'Status' => $partner->isActive() ? 'Active' : 'Pending review',
+                'Pitch'  => $data['pitch'] ?? null,
+            ],
+            route('platform.partners.show', $partner),
+            'Review partner',
+        );
+
         $request->session()->put('registered_email', $partner->email);
 
         return redirect()->route('verification.notice')->with('status', $partner->isActive()

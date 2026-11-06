@@ -9,7 +9,7 @@
         ['Who can become a partner?', 'HR consultancy firms, HR practitioners, HR students, freelancers, accountants and payroll bureaus — anyone who talks to Zambian employers about people and pay.'],
         ['How do clients get linked to me?', 'You get a unique code (like ZP-CHANDA25) and a sign-up link. When a company signs up through your link, or types your code on the sign-up form, it is linked to you for good.'],
         ['How much do I earn?', $rateTxt . '% of every ZamPayroll invoice your clients pay (before VAT)' . ($months > 0 ? ', for their first ' . $months . ' months.' : ', for as long as they keep paying.') . ' Your dashboard shows every commission as it is earned.'],
-        ['What if my client is on the free plan?', 'Companies with up to ' . $freeLimit . ' employees use ZamPayroll free, so there is no commission yet. As soon as they grow and start paying, you start earning.'],
+        ['What if my client is on the free experience?', 'Teams of up to ' . $freeLimit . ' employees can try ZamPayroll free for 2 months, so there is no commission yet. As soon as they pay for a plan, you start earning.'],
         ['How and when am I paid?', 'Add your mobile money number or bank account on your dashboard. ZamPayroll pays out commission that is due and marks it paid, with a reference, so you can always check.'],
         ['Can I see my clients\' payroll?', 'No. Your dashboard shows each client\'s name, team size and plan, but never salaries or employee details. If a client wants your help inside ZamPayroll, they can invite you to their team.'],
     ];
@@ -57,7 +57,7 @@
                     <li>Commission earned, waiting and paid out</li>
                 </ul>
             </div>
-            <div class="mod"><i class="bi bi-gift ic"></i><h3>Easy to sell</h3><p>Free for up to {{ $freeLimit }} employees, so clients can try it with no risk.</p></div>
+            <div class="mod"><i class="bi bi-gift ic"></i><h3>Easy to sell</h3><p>Plans from K799 a month, and teams of up to {{ $freeLimit }} can try it free for 2 months.</p></div>
             <div class="mod"><i class="bi bi-person-video3 ic"></i><h3>Demo &amp; training</h3><p>A demo company to show the real thing, plus posters and videos for your pitch.</p></div>
             <div class="mod"><i class="bi bi-shield-check ic"></i><h3>We do the tech</h3><p>Hosting, updates, statutory changes and technical support are on us.</p></div>
             <div class="mod"><i class="bi bi-link-45deg ic"></i><h3>Clients stay yours</h3><p>A company that signs up with your code stays linked to you{{ $months > 0 ? ' for ' . $months . ' months' : '' }}.</p></div>

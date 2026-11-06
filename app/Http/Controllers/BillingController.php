@@ -7,11 +7,13 @@ use App\Models\BillingPayment;
 use App\Models\Company;
 use App\Models\Invoice;
 use App\Services\Billing\DpoClient;
+use App\Services\Billing\Plans;
 use App\Services\Billing\PlatformSettings;
 use App\Services\Billing\Subscriptions;
 use App\Support\Audit;
 use App\Support\Tenancy;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -28,59 +30,187 @@ class BillingController extends Controller
     {
         $company = $this->subs->company();
         $state = $this->subs->state($company);
+        $invoices = Invoice::query()->latest('id')->get();
+        $awaiting = BillingPayment::query()->where('status', 'awaiting_review')->get()->keyBy('invoice_id');
+        $declined = BillingPayment::query()->where('status', 'declined')->latest('id')->get()->unique('invoice_id')->keyBy('invoice_id');
 
         return view('billing.index', [
-            'company'   => $company,
-            'state'     => $state,
-            'invoices'  => Invoice::query()->latest('id')->get(),
-            'payments'  => BillingPayment::query()->latest('id')->take(20)->get(),
-            'prices'    => PlatformSettings::all(),
-            'networks'  => config('dpo.networks'),
-            'dpoReady'  => $this->dpo->configured(),
-            'payInvoice' => $request->query('pay') ? Invoice::query()->find($request->query('pay')) : null,
+            'company'     => $company,
+            'state'       => $state,
+            'invoices'    => $invoices,
+            'payments'    => BillingPayment::query()->latest('id')->take(20)->get(),
+            'prices'      => PlatformSettings::all(),
+            'plans'       => Plans::cards(),
+            'method'      => $request->query('method') === 'online' ? 'online' : 'manual',
+            'cycle'       => $request->query('cycle') === 'annual' ? 'annual' : 'monthly',
+            'awaiting'    => $awaiting,
+            'declined'    => $declined,
+            'bank'        => config('billing.bank'),
+            'mobileMoney' => collect(config('billing.mobile_money'))->filter(fn ($m) => ! empty($m['number']))->values(),
         ]);
     }
 
-    /** Starter (pre-paid): create the invoice and open the payment window. */
-    public function prepaid(Request $request)
+    /**
+     * Step 2 and 3 of paying: confirm the details for the receipt and choose how to pay.
+     * Manual invoice is selected by default.
+     */
+    public function checkoutForm(Request $request, string $plan)
     {
-        $request->validate(['cycle' => 'required|in:monthly,annual']);
+        abort_unless(isset(Plans::TIERS[$plan]), 404);
         $company = $this->subs->company();
-        $state = $this->subs->state($company);
+        $cycle = $request->query('cycle') === 'annual' ? 'annual' : 'monthly';
 
-        if ($state['employees'] <= PlatformSettings::get('free_limit')) {
-            return back()->with('success', 'Good news — with ' . $state['employees'] . ' active employees you\'re on the free plan. Nothing to pay.');
-        }
-        if ($state['employees'] > PlatformSettings::get('prepaid_limit')) {
-            return back()->with('error', 'You have ' . $state['employees'] . ' active employees, so the Business plan applies.');
-        }
-
-        $invoice = $this->subs->prepaidInvoice($company, $request->input('cycle'));
-
-        return redirect()->route('billing.index', ['pay' => $invoice->id]);
+        return view('billing.checkout', [
+            'company'      => $company,
+            'planKey'      => $plan,
+            'plan'         => Plans::cards()[$plan],
+            'cycle'        => $cycle,
+            'contactName'  => $request->user()?->name,
+            'billingEmail' => $company->billing_email ?: $request->user()?->email,
+        ]);
     }
 
-    /** Business (post-paid): start now, pay after each month. */
+    /**
+     * Pay for a plan. Manual: the invoice (with our bank details) is emailed straight away and the
+     * customer pays, then uploads proof on the billing page. Online: off to the secure payment page.
+     */
+    public function checkout(Request $request)
+    {
+        $data = $request->validate([
+            'plan'          => 'required|in:' . implode(',', array_keys(Plans::TIERS)),
+            'cycle'         => 'required|in:monthly,annual',
+            'method'        => 'required|in:manual,online',
+            'contact_name'  => 'nullable|string|max:120',
+            'billing_email' => 'nullable|required_if:method,manual|email|max:180',
+        ], ['billing_email.required_if' => 'Enter the email address for your invoice and receipt.']);
+        $company = $this->subs->company();
+
+        try {
+            $invoice = $this->subs->checkoutInvoice($company, $data['plan'], $data['cycle'], $data['method']);
+        } catch (\DomainException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        if (! empty($data['billing_email'])) {
+            $this->saveBillingContact($company, $data['billing_email'], $data['contact_name'] ?? null, 'Checkout for ' . $invoice->number);
+        }
+        if (! empty($data['contact_name'])) {
+            $invoice->forceFill(['meta' => ['contact_name' => $data['contact_name']] + ($invoice->meta ?? [])])->save();
+        }
+
+        if ($data['method'] === 'online') {
+            return redirect()->away(Plans::onlineCheckoutUrl($data['plan'], $data['cycle'], array_filter([
+                'invoice'      => $invoice->number,
+                'amount'       => number_format((float) $invoice->total, 2, '.', ''),
+                'currency'     => $invoice->currency,
+                'company'      => $company->name,
+                'company_code' => $company->company_code,
+                'name'         => $data['contact_name'] ?? null,
+                'email'        => $data['billing_email'] ?? $company->billing_email,
+            ])));
+        }
+
+        $this->subs->email($invoice, 'invoice');
+        Audit::record('billing.invoice_sent', $invoice, "Invoice {$invoice->number} emailed to {$data['billing_email']}", [], $company->id);
+
+        return redirect()->to(route('billing.index') . '#pay')
+            ->with('success', "Invoice {$invoice->number} is on its way to {$data['billing_email']}. Pay it using the details below, then upload your proof of payment.");
+    }
+
+    /** Manual: confirm the email the invoice goes to. */
+    public function confirmManual(Invoice $invoice)
+    {
+        abort_if($invoice->status !== 'open', 422, 'This invoice is already ' . $invoice->status . '.');
+        $company = $this->subs->company();
+
+        return view('billing.checkout-confirm', [
+            'company'      => $company,
+            'invoice'      => $invoice,
+            'billingEmail' => $company->billing_email ?: (DB::table('users')->where('company_id', $company->id)->where('role', 'company_admin')->value('email')),
+            'bank'         => config('billing.bank'),
+            'mobileMoney'  => collect(config('billing.mobile_money'))->filter(fn ($m) => ! empty($m['number']))->values(),
+        ]);
+    }
+
+    /** Manual: save the billing email and email the invoice (PDF with bank details). */
+    public function sendManual(Request $request, Invoice $invoice)
+    {
+        abort_if($invoice->status !== 'open', 422, 'This invoice is already ' . $invoice->status . '.');
+        $data = $request->validate(['billing_email' => 'required|email|max:180'], ['billing_email.required' => 'Enter the email address the invoice should go to.']);
+
+        $company = $this->subs->company();
+        $this->saveBillingContact($company, $data['billing_email'], null, 'Invoice ' . $invoice->number);
+        $this->subs->email($invoice, 'invoice');
+        Audit::record('billing.invoice_sent', $invoice, "Invoice {$invoice->number} emailed to {$data['billing_email']}", [], $company->id);
+
+        return redirect()->route('billing.index')->with('success', "Invoice {$invoice->number} has been sent to {$data['billing_email']}. Pay it, then upload your proof of payment below.");
+    }
+
+    /** Manual: the customer uploads proof of payment for an open invoice. */
+    public function submitProof(Request $request, Invoice $invoice)
+    {
+        $data = $request->validate([
+            'proof'     => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120',
+            'reference' => 'nullable|string|max:120',
+        ], [
+            'proof.required' => 'Attach your proof of payment (a screenshot or PDF of the transfer).',
+            'proof.mimes'    => 'Proof of payment must be a JPG, PNG or PDF file.',
+            'proof.max'      => 'Proof of payment must be smaller than 5MB.',
+        ]);
+
+        try {
+            $this->subs->submitProof($invoice, $request->file('proof'), $data['reference'] ?? null, $request->user()?->id);
+        } catch (\DomainException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return redirect()->route('billing.index')->with('success', 'Thank you — your proof of payment has been sent. We\'ll confirm it once the money has arrived.');
+    }
+
+    /** Business (post-paid) is no longer offered to new companies. */
     public function postpaid(Request $request)
     {
-        $request->validate(['accept' => 'accepted'], ['accept.accepted' => 'Please accept the post-paid terms.']);
-        $company = $this->subs->company();
-        if ($this->subs->activeEmployees($company) <= PlatformSettings::get('free_limit') && ! $company->billing_type) {
-            return back()->with('success', 'You\'re on the free plan — nothing to start until you have more than ' . PlatformSettings::get('free_limit') . ' active employees.');
-        }
-        $this->subs->startPostpaid($company);
-
-        return redirect()->route('billing.index')->with('success', 'Business plan started. Your first invoice arrives on ' . $this->subs->nextPostpaidBillDate($company->fresh())->format('j M Y') . '.');
+        return back()->with('error', 'The Business plan has been replaced. Choose a plan below.');
     }
 
     public function details(Request $request)
     {
         $data = $request->validate(['billing_email' => 'nullable|email|max:180']);
         $company = $this->subs->company();
-        $company->forceFill(['billing_email' => $data['billing_email'] ?? null])->save();
+        $this->saveBillingContact($company, $data['billing_email'] ?? null, null, 'Billing settings');
         Audit::record('billing.details_updated', $company, 'Billing email set to ' . ($data['billing_email'] ?? '—'), [], $company->id);
 
         return back()->with('success', 'Billing email saved.');
+    }
+
+    /** Save the company's billing email and tell the ZamPayroll team when it changes. */
+    private function saveBillingContact($company, ?string $email, ?string $contactName, string $where): void
+    {
+        $old = $company->billing_email;
+        $company->forceFill(['billing_email' => $email])->save();
+
+        if (strcasecmp((string) $old, (string) $email) === 0) {
+            return;
+        }
+
+        $user = request()->user();
+        \App\Support\AdminAlert::send(
+            'Billing contact updated: ' . $company->name,
+            'Billing',
+            $company->name . ' changed their billing contact',
+            'A client has updated the email address their invoices and receipts go to.',
+            [
+                'Company'       => $company->name,
+                'Company code'  => $company->company_code,
+                'New email'     => $email ?: '(removed)',
+                'Previous email'=> $old ?: '(none)',
+                'Contact name'  => $contactName,
+                'Changed by'    => $user ? $user->name . ' · ' . $user->email : null,
+                'Where'         => $where,
+            ],
+            route('platform.companies.show', $company),
+            'View company',
+        );
     }
 
     /** Premium companies (over the Starter limit) can ask for their own private sub-domain. */

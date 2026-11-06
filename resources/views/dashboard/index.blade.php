@@ -267,7 +267,7 @@
 /* ── Quick actions ── */
 .quick-actions {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
     gap: 1rem;
     margin-bottom: 1rem;
 }
@@ -382,6 +382,12 @@
             <span class="qa-icon"><i class="bi bi-bar-chart-fill"></i></span>
             View Reports
         </a>
+        @if(auth()->user()->hasPermission('billing.manage'))
+        <a href="{{ route('billing.index') }}" class="hrd-card qa-btn">
+            <span class="qa-icon"><i class="bi bi-credit-card-2-front-fill"></i></span>
+            Billing
+        </a>
+        @endif
     </div>
 
         {{-- ===== RECENT PAYROLL RUN ===== --}}

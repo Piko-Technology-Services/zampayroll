@@ -143,11 +143,11 @@ class PartnerProgrammeTest extends TestCase
         $this->assertNull(Company::where('name', 'Direct Ltd')->value('partner_id'));
 
         // New companies start on the free plan
-        $this->assertSame('free', $typed->subscription_status);
+        $this->assertSame('trialing', $typed->subscription_status);
 
         // Dashboard lists the clients (name, size, plan only)
         $this->actingAs($partner->user->fresh())->get('http://localhost/partner')->assertOk()
-            ->assertSee('Typed Code Ltd')->assertSee('Via Link Ltd')->assertDontSee('Direct Ltd')->assertSee('Free plan');
+            ->assertSee('Typed Code Ltd')->assertSee('Via Link Ltd')->assertDontSee('Direct Ltd')->assertSee('Free trial');
 
         // Suspended partner: code stops working
         $this->post('http://localhost/logout');
@@ -231,7 +231,7 @@ class PartnerProgrammeTest extends TestCase
 
     public function test_public_pages_mention_partners_and_free_plan(): void
     {
-        $this->get('http://localhost/pricing')->assertOk()->assertSee('Become a partner')->assertSee('7-day free trial starts when you add employee 11');
+        $this->get('http://localhost/pricing')->assertOk()->assertSee('Become a partner')->assertSee('Free Experience')->assertSee('for 2 months');
         $this->get('http://localhost/')->assertOk()->assertSee(route('partners.show'));
         $this->get('http://localhost/sitemap.xml')->assertOk()->assertSee('/partners');
     }

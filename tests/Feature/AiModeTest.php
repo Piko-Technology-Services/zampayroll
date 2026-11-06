@@ -116,6 +116,6 @@ class AiModeTest extends TestCase
             ->assertSee('Ask ZamPayroll AI')->assertDontSee('Public Forms');
         $this->actingAs($this->admin())->get('http://localhost/employees')->assertOk()->assertSee('zp-tabs', false)->assertSee('Add with AI');
         $this->actingAs($this->admin())->get('http://localhost/leave/dashboard/requests')->assertOk()->assertSee('Leave sheet');
-        $this->actingAs($this->admin())->get('http://localhost/payroll/runs/all')->assertOk()->assertSee('Reports &amp; returns', false);
+        $this->actingAs($this->admin())->get('http://localhost/payroll/runs/all')->assertOk()->assertSee('Taxes &amp; Statutory Returns', false)->assertSee(route('payroll.reports.index'), false);
     }
 }

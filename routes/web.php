@@ -122,6 +122,9 @@ Route::middleware(['auth', 'platform'])->prefix('platform')->name('platform.')->
     Route::post('/companies/{company}/action', [$c, 'companyAction'])->name('companies.action');
     Route::get('/billing', [$c, 'invoices'])->name('invoices');
     Route::post('/invoices/{invoice}/action', [$c, 'invoiceAction'])->name('invoices.action');
+    Route::get('/payment-proofs/{payment}/file', [\App\Http\Controllers\Platform\PaymentProofController::class, 'file'])->name('proofs.file');
+    Route::post('/payment-proofs/{payment}/confirm', [\App\Http\Controllers\Platform\PaymentProofController::class, 'confirm'])->name('proofs.confirm');
+    Route::post('/payment-proofs/{payment}/decline', [\App\Http\Controllers\Platform\PaymentProofController::class, 'decline'])->name('proofs.decline');
     Route::get('/invoices/{invoice}/pdf', [\App\Http\Controllers\BillingController::class, 'pdf'])->name('invoices.pdf');
     Route::get('/tickets', [$c, 'tickets'])->name('tickets');
     Route::get('/tickets/{ticket}', [$c, 'ticket'])->name('tickets.show');
@@ -200,13 +203,15 @@ Route::post('/payroll/runs/{run}/email-all', [PayslipMailController::class, 'sen
 // ZamPayroll subscription & billing (company side)
 Route::prefix('settings/billing')->name('billing.')->group(function () {
     Route::get('/', [\App\Http\Controllers\BillingController::class, 'index'])->name('index');
-    Route::post('/prepaid', [\App\Http\Controllers\BillingController::class, 'prepaid'])->name('prepaid');
+    Route::get('/pay/{plan}', [\App\Http\Controllers\BillingController::class, 'checkoutForm'])->name('checkout.form');
+    Route::post('/checkout', [\App\Http\Controllers\BillingController::class, 'checkout'])->name('checkout');
+    Route::get('/checkout/confirm/{invoice}', [\App\Http\Controllers\BillingController::class, 'confirmManual'])->name('checkout.confirm');
+    Route::post('/invoices/{invoice}/send', [\App\Http\Controllers\BillingController::class, 'sendManual'])->name('invoices.send');
+    Route::post('/invoices/{invoice}/proof', [\App\Http\Controllers\BillingController::class, 'submitProof'])->name('invoices.proof')->middleware('throttle:10,1');
     Route::post('/postpaid', [\App\Http\Controllers\BillingController::class, 'postpaid'])->name('postpaid');
     Route::post('/details', [\App\Http\Controllers\BillingController::class, 'details'])->name('details');
     Route::post('/private-workspace', [\App\Http\Controllers\BillingController::class, 'requestPrivate'])->name('private');
     Route::get('/invoices/{invoice}/pdf', [\App\Http\Controllers\BillingController::class, 'pdf'])->name('invoices.pdf');
-    Route::post('/invoices/{invoice}/mobile', [\App\Http\Controllers\BillingController::class, 'payMobile'])->name('pay.mobile')->middleware('throttle:6,1');
-    Route::post('/invoices/{invoice}/card', [\App\Http\Controllers\BillingController::class, 'payCard'])->name('pay.card')->middleware('throttle:10,1');
     Route::get('/payments/{payment}', [\App\Http\Controllers\BillingController::class, 'status'])->name('payments.status');
 });
 

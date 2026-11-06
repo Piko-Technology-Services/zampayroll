@@ -10,49 +10,47 @@
 
 @php
     $k = fn ($n) => 'K ' . number_format((float) $n, 2);
-    $limit = $prices['free_limit'];
-    $onPlan = in_array($state['status'], ['active', 'past_due'], true) || ($state['status'] === 'suspended' && $company->billing_type);
+    $limit = $state['free_limit'];
     $statusLabel = [
-        'free' => 'Free plan', 'trialing' => 'Free trial', 'active' => 'Active', 'past_due' => 'Payment overdue',
+        'trialing' => 'Free experience', 'active' => 'Active', 'past_due' => 'Payment overdue',
         'suspended' => 'Limited (read-only)', 'cancelled' => 'Cancelled',
-    ][$state['status']] ?? ucfirst($state['status']);
-    $planLabel = $company->plan === 'business' ? 'Business · post-paid' : ($company->plan === 'starter' ? 'Starter · pre-paid ' . ($company->billing_cycle === 'annual' ? 'yearly' : 'monthly') : ($state['status'] === 'free' ? 'Up to ' . $limit . ' employees' : 'No plan yet'));
-    $tooBig = $state['employees'] > $limit;
+    ][$state['status']] ?? ucfirst(str_replace('_', ' ', $state['status']));
+    $isLegacy = in_array($company->plan, ['starter', 'business'], true) && $company->billing_type;
+    $planName = $company->billing_type === 'prepaid' && \App\Services\Billing\Plans::isPaid($company->plan)
+        ? \App\Services\Billing\Plans::name($company->plan) . ' · ' . ($company->billing_cycle === 'annual' ? 'yearly' : 'monthly')
+        : ($isLegacy ? ($company->plan === 'business' ? 'Business · post-paid (legacy)' : 'Starter · pre-paid (legacy)') : 'No paid plan yet');
+    $recommended = $state['recommended'];
+    $openInvoices = $state['open_invoices'];
 @endphp
 
 @section('content')
-<div class="pr pp bl" id="blPage" data-csrf="{{ csrf_token() }}">
+<div class="pr pp bl" id="blPage">
     <div class="pr-head">
         <div>
             <h1>Billing &amp; subscription</h1>
-            <p>Your plan, what's due, invoices and receipts. Pay by mobile money or card without leaving ZamPayroll.</p>
+            <p>Your plan, what's due, invoices and receipts. Prices are in Zambian Kwacha.</p>
         </div>
         <div class="pr-head-actions">
             <a href="{{ route('support.index') }}" class="pp-btn pp-btn-ghost"><i class="bi bi-life-preserver"></i> Billing help</a>
         </div>
     </div>
 
-    {{-- ============ STATUS + COUNTDOWN ============ --}}
+    {{-- ============ STATUS ============ --}}
     <section class="bl-hero {{ $state['tone'] }}">
         <div>
-            <div class="pp-eyebrow">{{ $statusLabel }} · {{ $planLabel }}</div>
+            <div class="pp-eyebrow">{{ $statusLabel }} · {{ $planName }}</div>
             <h2>{{ $state['headline'] ?? $statusLabel }}</h2>
             <p>
-                @if($state['limited'])
-                    Your account is read-only — nothing has been deleted. {{ $state['open_invoices']->isNotEmpty() ? 'Pay the open invoice below to unlock everything instantly.' : 'Choose a plan below to unlock everything instantly.' }}
-                @elseif($state['status'] === 'free')
-                    You have {{ $state['employees'] }} of {{ $limit }} free employees.
-                    @if($state['trial_used'])
-                        You've already had your free trial, so adding employee {{ $limit + 1 }} means choosing the Business plan.
-                    @else
-                        Add more than {{ $limit }} and your {{ $prices['trial_days'] }}-day free trial of the Business plan starts automatically. Nothing to pay today.
-                    @endif
-                @elseif($state['status'] === 'trialing')
-                    You have {{ $state['employees'] }} active employees — more than the free plan's {{ $limit }} — so your {{ $prices['trial_days'] }}-day free trial is running. Start the Business plan any time: your first invoice comes a month after the trial ends.
-                @elseif($company->billing_type === 'postpaid')
-                    {{ $state['employees'] }} active employees · estimated next invoice <b>{{ $k($state['estimate'] ?? 0) }}</b>, due {{ $prices['invoice_due_days'] }} days after it's sent.
+                @if($state['status'] === 'trialing' && ! $company->billing_type && ! $state['limited'])
+                    You're on the free experience until {{ optional($company->trial_ends_at)->format('j M Y') }}. You can subscribe to any plan now, whatever your team size.
+                @elseif($state['limited'] && $state['employees'] > $limit && $state['status'] === 'trialing')
+                    The free experience covers up to {{ $limit }} active employees. You have {{ $state['employees'] }}, so choose a plan below to carry on.
+                @elseif($state['limited'])
+                    Your account is read-only, and nothing has been deleted. Pay an invoice below, or choose a plan, to unlock everything.
+                @elseif($isLegacy)
+                    Your account is on an earlier plan. You can carry on as you are, or switch to one of the plans below at any time.
                 @else
-                    Your subscription renews {{ optional($company->paid_until)->format('j M Y') }}. We'll email the renewal invoice {{ $prices['renewal_notice_days'] }} days before.
+                    Your plan renews on {{ optional($company->paid_until)->format('j M Y') }}. We'll email the renewal invoice {{ $prices['renewal_notice_days'] }} days before.
                 @endif
             </p>
         </div>
@@ -69,28 +67,77 @@
         @endif
     </section>
 
-    @unless($dpoReady)
-        <div class="pp-callout" style="margin:0 0 1rem"><i class="bi bi-info-circle"></i><div>Online payments are being switched on. You can still choose a plan; we'll email your invoice.</div></div>
-    @endunless
-
-    {{-- ============ OPEN INVOICES ============ --}}
-    @if($state['open_invoices']->isNotEmpty())
+    {{-- ============ TO PAY / AWAITING PAYMENT ============ --}}
+    @if($openInvoices->isNotEmpty())
         <section class="pr-card">
-            <div class="pr-card-head"><div><h2>To pay</h2><div class="sub">Pay now by mobile money or card.</div></div></div>
+            <div class="pr-card-head" id="pay"><div><h2>Awaiting payment</h2><div class="sub">Pay the invoice, then upload your proof of payment here.</div></div></div>
             <div class="bl-due">
-                @foreach($state['open_invoices'] as $inv)
-                    <div class="bl-due-row {{ $inv->isOverdue() ? 'late' : '' }}">
+                @foreach($openInvoices as $inv)
+                    @php
+                        $method = $inv->meta['method'] ?? 'manual';
+                        $proof = $awaiting->get($inv->id);
+                        $rejected = $declined->get($inv->id);
+                    @endphp
+                    <div class="bl-due-row {{ $inv->isOverdue() ? 'late' : '' }}" style="flex-wrap:wrap">
                         <span class="ic"><i class="bi bi-receipt"></i></span>
                         <div class="main">
                             <b>{{ $inv->title() }}</b>
-                            <small>{{ $inv->number }} · {{ $inv->isOverdue() ? 'overdue since' : 'due' }} {{ optional($inv->due_at)->format('j M Y') }}</small>
+                            <small>{{ $inv->number }} · {{ $inv->isOverdue() ? 'overdue since' : 'due' }} {{ optional($inv->due_at)->format('j M Y') }}{{ $inv->emailed_at ? ' · sent ' . $inv->emailed_at->format('j M Y') : '' }}</small>
                         </div>
                         <span class="amt">{{ $k($inv->total) }}</span>
-                        <a class="pp-btn pp-btn-ghost pp-btn-sm" href="{{ route('billing.invoices.pdf', $inv) }}" target="_blank"><i class="bi bi-file-earmark-pdf"></i></a>
-                        <button type="button" class="pp-btn pp-btn-primary pp-btn-sm" data-pay="{{ $inv->id }}" data-number="{{ $inv->number }}" data-amount="{{ $k($inv->total) }}"
-                                data-mobile="{{ route('billing.pay.mobile', $inv) }}" data-card="{{ route('billing.pay.card', $inv) }}" @disabled(! $dpoReady)>
-                            <i class="bi bi-lightning-charge"></i> Pay now
-                        </button>
+                        <a class="pp-btn pp-btn-ghost pp-btn-sm" href="{{ route('billing.invoices.pdf', $inv) }}" target="_blank"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+
+                        <div style="flex-basis:100%;margin-top:.8rem">
+                            @if($method === 'online')
+                                <form method="POST" action="{{ route('billing.checkout') }}" style="margin:0">
+                                    @csrf
+                                    <input type="hidden" name="plan" value="{{ $inv->meta['plan'] ?? '' }}">
+                                    <input type="hidden" name="cycle" value="{{ $inv->meta['cycle'] ?? 'monthly' }}">
+                                    <input type="hidden" name="method" value="online">
+                                    <button class="pp-btn pp-btn-primary pp-btn-sm"><i class="bi bi-box-arrow-up-right"></i> Continue to online payment</button>
+                                    @if(isset(\App\Services\Billing\Plans::TIERS[$inv->meta['plan'] ?? '']))
+                                        <a class="pp-btn pp-btn-ghost pp-btn-sm" href="{{ route('billing.checkout.form', ['plan' => $inv->meta['plan'], 'cycle' => $inv->meta['cycle'] ?? 'monthly']) }}">Pay by bank transfer instead</a>
+                                    @endif
+                                </form>
+                            @elseif($proof)
+                                <div class="pp-callout" style="margin:0"><i class="bi bi-hourglass-split"></i><div>Proof of payment received {{ $proof->created_at->format('j M Y, H:i') }}. We're checking that the money has arrived and will email you once it's confirmed.</div></div>
+                            @elseif(! $inv->emailed_at)
+                                <p class="pp-muted" style="margin:0 0 .6rem;font-size:.88rem">This invoice hasn't been sent yet. Confirm the email address and we'll send it with our bank and mobile money details.</p>
+                                <a class="pp-btn pp-btn-primary pp-btn-sm" href="{{ route('billing.checkout.confirm', $inv) }}"><i class="bi bi-envelope-check"></i> Confirm email and send invoice</a>
+                            @else
+                                @if($rejected)
+                                    <div class="pp-error" style="margin:0 0 .8rem">Your last proof of payment wasn't accepted: <b>{{ $rejected->result_explanation }}</b>. Please upload a new one.</div>
+                                @endif
+                                <div class="bl-paybox">
+                                    <div class="bl-paystep">
+                                        <span class="n">1</span>
+                                        <div>
+                                            <b>Pay {{ $k($inv->total) }} by bank transfer</b>
+                                            <dl class="bl-bank">
+                                                <dt>Bank</dt><dd>{{ $bank['name'] ?: 'To be confirmed' }}{{ ! empty($bank['branch']) ? ', ' . $bank['branch'] : '' }}</dd>
+                                                <dt>Account name</dt><dd>{{ $bank['account_name'] ?: 'ZamPayroll' }}</dd>
+                                                <dt>Account number</dt><dd>{{ $bank['account_number'] ?: 'To be confirmed' }}</dd>
+                                                @foreach($mobileMoney as $m)<dt>{{ $m['network'] }}</dt><dd>{{ $m['number'] }}</dd>@endforeach
+                                                <dt>Reference</dt><dd><b>{{ $inv->number }}</b></dd>
+                                            </dl>
+                                        </div>
+                                    </div>
+                                    <div class="bl-paystep">
+                                        <span class="n">2</span>
+                                        <div style="flex:1">
+                                            <b>Upload your proof of payment</b>
+                                            <form method="POST" action="{{ route('billing.invoices.proof', $inv) }}" enctype="multipart/form-data" class="bl-proof" style="display:grid;gap:.6rem;margin-top:.5rem">
+                                                @csrf
+                                                <input class="pp-input" type="file" id="proof-{{ $inv->id }}" name="proof" accept=".jpg,.jpeg,.png,.pdf" required aria-label="Proof of payment (JPG, PNG or PDF, up to 5MB)">
+                                                <input class="pp-input" type="text" id="ref-{{ $inv->id }}" name="reference" maxlength="120" value="{{ old('reference') }}" placeholder="Transaction reference (optional)" aria-label="Transaction reference">
+                                                <div><button class="pp-btn pp-btn-primary pp-btn-sm"><i class="bi bi-upload"></i> Send proof of payment</button></div>
+                                                <small class="pp-muted">Screenshot or PDF, up to 5MB. We email you as soon as your plan is active.</small>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
                     </div>
                 @endforeach
             </div>
@@ -98,51 +145,62 @@
     @endif
 
     {{-- ============ PLANS ============ --}}
-    @if(! $onPlan || in_array($state['status'], ['free', 'trialing'], true) || $state['limited'])
-        <section class="pr-card">
-            <div class="pr-card-head"><div><h2>Choose your plan</h2><div class="sub">You have {{ $state['employees'] }} active {{ \Illuminate\Support\Str::plural('employee', $state['employees']) }}. The plan follows your team size.</div></div></div>
-            <div class="bl-plans">
-                <div class="bl-plan {{ $state['recommended'] === 'free' ? 'rec' : '' }} {{ $tooBig ? 'off' : '' }}">
-                    @if($state['status'] === 'free')<span class="badge-rec">Your plan</span>@endif
-                    <h3>Free</h3>
-                    <p class="pp-muted">Up to {{ $limit }} active employees · no time limit</p>
-                    <div class="bl-price"><b>K 0</b> / month</div>
-                    <ul>
-                        <li><i class="bi bi-check2"></i> Payroll with PAYE, NAPSA &amp; NHIMA</li>
-                        <li><i class="bi bi-check2"></i> Employee self-service portal</li>
-                        <li><i class="bi bi-check2"></i> Leave, attendance, overtime &amp; loans</li>
-                        <li><i class="bi bi-check2"></i> Approval chain, audit trail &amp; AI mode</li>
-                    </ul>
-                    <div class="bl-plan-go">
-                        @if($tooBig)
-                            <p class="pp-muted" style="font-size:.82rem;margin:0">You have {{ $state['employees'] }} active employees. Set some to inactive to come back to the free plan.</p>
-                        @else
-                            <p class="pp-muted" style="font-size:.82rem;margin:0">Nothing to do — you're covered while you have {{ $limit }} or fewer active employees.</p>
-                        @endif
-                    </div>
-                </div>
-
-                <div class="bl-plan dark {{ $state['recommended'] === 'business' ? 'rec' : '' }}">
-                    @if($state['recommended'] === 'business')<span class="badge-rec">Recommended for you</span>@endif
-                    <h3>Business</h3>
-                    <p>More than {{ $limit }} employees · {{ $prices['trial_days'] }}-day free trial · pay after each month</p>
-                    <div class="bl-price"><b>{{ $k($prices['business_per_employee']) }}</b> per active employee / month</div>
-                    <small>Minimum {{ $k($prices['business_minimum']) }} a month · today that's about <b>{{ $k(max($prices['business_minimum'], max($state['employees'], 1) * $prices['business_per_employee'])) }}</b></small>
-                    <ul>
-                        <li><i class="bi bi-check2"></i> Everything in Free, for any team size</li>
-                        <li><i class="bi bi-check2"></i> Only pay for people you actually paid</li>
-                        <li><i class="bi bi-check2"></i> Option of your own private web address</li>
-                        <li><i class="bi bi-check2"></i> Priority support</li>
-                    </ul>
-                    <form method="POST" action="{{ route('billing.postpaid') }}" class="bl-plan-go">
-                        @csrf
-                        <label class="bl-accept"><input type="checkbox" name="accept" value="1" required> I agree to pay each monthly invoice within {{ $prices['invoice_due_days'] }} days.</label>
-                        <button class="pp-btn pp-btn-light" style="width:100%">Start Business plan</button>
-                    </form>
-                </div>
+    <section class="pr-card" id="plans">
+        <div class="pr-card-head">
+            <div>
+                <h2>Pay for your ZamPayroll subscription</h2>
+                <div class="sub">Choose your plan, then pay by mobile money, card or invoice. Prices are in Zambian Kwacha.</div>
             </div>
-        </section>
-    @endif
+        </div>
+
+        <ol class="bl-steps">
+            <li><span class="n">1</span><div><b>Choose your plan</b><small>Pick the plan for your number of active employees, billed monthly or annually.</small></div></li>
+            <li><span class="n">2</span><div><b>Enter your details</b><small>Company name, your name and the email for your receipt.</small></div></li>
+            <li><span class="n">3</span><div><b>Choose how to pay</b><small>Manual invoice by bank transfer, or a mobile money prompt or Visa/Mastercard online.</small></div></li>
+            <li><span class="n">4</span><div><b>Get confirmed</b><small>Confirmation appears on screen and by email, and your plan is activated.</small></div></li>
+        </ol>
+
+        <div class="bl-tabs bl-cycle" role="group" aria-label="Billing cycle">
+            <a href="{{ route('billing.index', ['cycle' => 'monthly']) }}#plans" class="{{ $cycle === 'monthly' ? 'on' : '' }}">Monthly</a>
+            <a href="{{ route('billing.index', ['cycle' => 'annual']) }}#plans" class="{{ $cycle === 'annual' ? 'on' : '' }}">Annually <em>2 months free</em></a>
+        </div>
+
+        <div class="bl-plans3">
+            @foreach($plans as $key => $p)
+                @php $isRec = $recommended === $key; $isCurrent = $company->billing_type === 'prepaid' && $company->plan === $key && $company->subscription_status === 'active'; @endphp
+                <div class="bl-plan {{ $key === 'medium' ? 'rec' : '' }}">
+                    <div class="bl-plan-top">
+                        <span class="bl-tag {{ $key === 'medium' ? 'hot' : '' }}">{{ $p['tagline'] }}</span>
+                        @if($isCurrent)<span class="bl-tag mine">Your plan</span>@elseif($isRec)<span class="bl-tag mine">Fits your team</span>@endif
+                    </div>
+                    <h3>{{ $p['name'] }}</h3>
+                    <p class="pp-muted" style="margin:.2rem 0 0">{{ $p['range'] }}</p>
+                    @if($cycle === 'annual')
+                        <div class="bl-price"><b>K{{ number_format($p['annual']) }}</b> / year</div>
+                        <small class="bl-alt">or K{{ number_format($p['monthly']) }} a month</small>
+                    @else
+                        <div class="bl-price"><b>K{{ number_format($p['monthly']) }}</b> / month</div>
+                        <small class="bl-alt">or K{{ number_format($p['annual']) }} a year · 2 months free</small>
+                    @endif
+                    <p class="bl-desc">{{ $p['description'] }}</p>
+                    <a class="pp-btn {{ $key === 'medium' ? 'pp-btn-primary' : 'pp-btn-ghost' }} bl-go" href="{{ route('billing.checkout.form', ['plan' => $key, 'cycle' => $cycle]) }}">Pay for this plan</a>
+                </div>
+            @endforeach
+        </div>
+
+        <div class="bl-lines">
+            <div><i class="bi bi-gift"></i><span><b>Free Experience</b> · Up to {{ $limit }} active employees · K0 for 2 months, then a paid plan from month three.</span></div>
+            <div><i class="bi bi-buildings"></i><span><b>Enterprise</b> · 301+ active employees · Tailored pricing, agreed with our team.</span>
+                <a href="mailto:{{ config('billing.support_email') }}?subject={{ rawurlencode('Enterprise plan for ' . $company->name) }}">Talk to our team</a></div>
+        </div>
+        <p class="bl-fine">Every paid plan includes the complete ZamPayroll platform and standard support. You only pay more as your workforce grows.
+            Card payments are processed securely by DPO Pay. Mobile money supports Airtel, MTN and Zamtel.</p>
+        <p class="bl-fine bl-links">
+            <a href="{{ config('billing.terms_url') }}" target="_blank" rel="noopener">Terms</a>
+            <a href="{{ config('billing.privacy_url') }}" target="_blank" rel="noopener">Privacy</a>
+            <a href="{{ config('billing.refunds_url') }}" target="_blank" rel="noopener">Refunds</a>
+        </p>
+    </section>
 
     <div class="pr-layout">
         <div>
@@ -160,7 +218,7 @@
                                 <tr onclick="window.open('{{ route('billing.invoices.pdf', $inv) }}','_blank')">
                                     <td><b>{{ $inv->number }}</b><br><small class="pp-muted">{{ $inv->created_at->format('j M Y') }}</small></td>
                                     <td>{{ $inv->period_start ? $inv->period_start->format('j M') . ' – ' . optional($inv->period_end)->format('j M Y') : '—' }}</td>
-                                    <td><span class="pr-pill {{ $inv->status === 'paid' ? 'locked' : ($inv->isOverdue() ? 'review' : 'draft') }}">{{ $inv->status === 'paid' ? 'Paid ' . optional($inv->paid_at)->format('j M') : ($inv->isOverdue() ? 'Overdue' : ucfirst($inv->status)) }}</span></td>
+                                    <td><span class="pr-pill {{ $inv->status === 'paid' ? 'locked' : ($inv->isOverdue() ? 'review' : 'draft') }}">{{ $inv->status === 'paid' ? 'Paid ' . optional($inv->paid_at)->format('j M') : ($inv->isOverdue() ? 'Overdue' : ($awaiting->has($inv->id) ? 'Proof sent' : ucfirst($inv->status))) }}</span></td>
                                     <td class="num"><b>{{ $k($inv->total) }}</b></td>
                                     <td style="text-align:right"><i class="bi bi-file-earmark-pdf pp-muted"></i></td>
                                 </tr>
@@ -207,10 +265,10 @@
                     <div class="pr-card-head" style="margin-bottom:.6rem"><h2 style="font-size:1.05rem">Recent payments</h2></div>
                     <ul class="pr-history">
                         @foreach($payments->take(6) as $p)
-                            <li class="{{ $p->status === 'paid' ? 'approved' : ($p->status === 'failed' ? 'sent_back' : '') }}">
-                                <i class="bi {{ $p->method === 'card' ? 'bi-credit-card' : 'bi-phone' }}"></i>
-                                <div><b>{{ $k($p->amount) }} · {{ ucfirst($p->status) }}</b>
-                                    <small>{{ $p->method === 'card' ? 'Card' : (config('dpo.networks.' . $p->network . '.label') ?? 'Mobile money') }} · {{ $p->created_at->format('j M, H:i') }}</small></div>
+                            <li class="{{ $p->status === 'paid' ? 'approved' : ($p->status === 'declined' || $p->status === 'failed' ? 'sent_back' : '') }}">
+                                <i class="bi {{ $p->method === 'card' ? 'bi-credit-card' : ($p->method === 'bank_transfer' ? 'bi-bank' : 'bi-phone') }}"></i>
+                                <div><b>{{ $k($p->amount) }} · {{ str_replace('_', ' ', ucfirst($p->status)) }}</b>
+                                    <small>{{ $p->method === 'bank_transfer' ? 'Bank transfer' : ($p->method === 'card' ? 'Card' : 'Mobile money') }} · {{ $p->created_at->format('j M, H:i') }}{{ $p->status === 'declined' && $p->result_explanation ? ' · ' . $p->result_explanation : '' }}</small></div>
                             </li>
                         @endforeach
                     </ul>
@@ -219,138 +277,4 @@
         </aside>
     </div>
 </div>
-
-{{-- ============ PAYMENT WINDOW ============ --}}
-@push('modals')
-<div class="pr pp">
-<div class="bl-modal-bg" id="blModalBg" hidden></div>
-<div class="bl-modal" id="blModal" hidden role="dialog" aria-modal="true" aria-labelledby="blModalTitle">
-    <button type="button" class="pr-drawer-x bl-x" id="blClose" aria-label="Close"><i class="bi bi-x-lg"></i></button>
-    <div class="bl-step" data-step="choose">
-        <div class="pp-eyebrow" style="color:var(--zp-green)">Pay invoice <span id="blNum"></span></div>
-        <h2 id="blModalTitle" class="bl-amount"></h2>
-        <div class="bl-tabs">
-            <button type="button" class="on" data-tab="mobile"><i class="bi bi-phone"></i> Mobile money</button>
-            <button type="button" data-tab="card"><i class="bi bi-credit-card"></i> Card</button>
-        </div>
-        <form id="blMobile" class="bl-pane" data-pane="mobile">
-            <div class="bl-nets">
-                @foreach($networks as $key => $n)
-                    <label class="bl-net {{ $key }}"><input type="radio" name="network" value="{{ $key }}" @checked($loop->first)><span>{{ $n['label'] }}</span></label>
-                @endforeach
-            </div>
-            <div class="pp-field" style="margin-top:.9rem"><label for="blPhone">Phone number</label>
-                <input class="pp-input" id="blPhone" name="phone" inputmode="tel" placeholder="097 123 4567" autocomplete="tel" required></div>
-            <button class="pp-btn pp-btn-primary" style="width:100%;margin-top:1rem;padding:.95rem"><i class="bi bi-send"></i> <span>Send payment prompt</span></button>
-            <p class="pp-muted" style="font-size:.78rem;margin:.6rem 0 0;text-align:center">You'll get a prompt on your phone — enter your PIN to approve.</p>
-        </form>
-        <div class="bl-pane" data-pane="card" hidden>
-            <p class="pp-muted" style="font-size:.88rem">Your card is entered on DPO's secure page in a small window — your card details never touch ZamPayroll.</p>
-            <button type="button" id="blCard" class="pp-btn pp-btn-primary" style="width:100%;padding:.95rem"><i class="bi bi-shield-lock"></i> <span>Pay securely by card</span></button>
-            <p class="pp-muted" style="font-size:.74rem;margin:.6rem 0 0;text-align:center"><i class="bi bi-lock"></i> Secured by DPO Pay · Visa · Mastercard</p>
-        </div>
-        <div class="pp-error" id="blErr" hidden style="margin:.8rem 0 0"></div>
-    </div>
-    <div class="bl-step" data-step="wait" hidden>
-        <div class="bl-spin"><i class="bi bi-phone-vibrate"></i></div>
-        <h2>Waiting for approval…</h2>
-        <p class="pp-muted" id="blWaitMsg">Approve the payment on your phone.</p>
-        <p class="pp-muted" style="font-size:.78rem">This updates automatically. Don't close this window.</p>
-    </div>
-    <div class="bl-step" data-step="done" hidden>
-        <div class="pp-done-badge" style="margin-bottom:.6rem"><i class="bi bi-check-lg"></i></div>
-        <h2>Payment received 🎉</h2>
-        <p class="pp-muted">Your receipt is on its way to your email.</p>
-        <button type="button" class="pp-btn pp-btn-primary" onclick="location.href='{{ route('billing.index') }}'">Done</button>
-    </div>
-    <div class="bl-step" data-step="fail" hidden>
-        <div class="bl-spin fail"><i class="bi bi-x-lg"></i></div>
-        <h2>Payment didn't go through</h2>
-        <p class="pp-muted" id="blFailMsg"></p>
-        <button type="button" class="pp-btn pp-btn-ghost" data-retry>Try again</button>
-    </div>
-</div>
-</div>
-@endpush
 @endsection
-
-@push('scripts')
-<script src="{{ asset('assets/js/zp-people.js') }}"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const page = document.getElementById('blPage');
-    const csrf = page.dataset.csrf;
-    const $ = (s) => document.querySelector(s);
-    const modal = $('#blModal'), bg = $('#blModalBg');
-    let cur = null, poll = null, popup = null;
-
-    // plan cycle toggle
-    document.querySelectorAll('input[name=cycle_pick]').forEach(r => r.addEventListener('change', () => { const c = document.getElementById('blCycle'); if (c) c.value = r.value; }));
-
-    const step = (name) => modal.querySelectorAll('.bl-step').forEach(s => s.hidden = s.dataset.step !== name);
-    const open = (btn) => {
-        cur = btn.dataset; $('#blNum').textContent = cur.number; $('#blModalTitle').textContent = cur.amount;
-        $('#blErr').hidden = true; step('choose'); modal.hidden = false; bg.hidden = false;
-        setTimeout(() => $('#blPhone').focus(), 50);
-    };
-    const close = () => { modal.hidden = true; bg.hidden = true; clearInterval(poll); };
-    document.querySelectorAll('[data-pay]').forEach(b => b.addEventListener('click', () => open(b)));
-    $('#blClose').addEventListener('click', close); bg.addEventListener('click', close);
-    modal.querySelector('[data-retry]').addEventListener('click', () => step('choose'));
-    modal.querySelectorAll('.bl-tabs button').forEach(t => t.addEventListener('click', () => {
-        modal.querySelectorAll('.bl-tabs button').forEach(x => x.classList.toggle('on', x === t));
-        modal.querySelectorAll('.bl-pane').forEach(p => p.hidden = p.dataset.pane !== t.dataset.tab);
-    }));
-
-    // guess the network from the number
-    const prefixes = @json(collect($networks)->map(fn ($n) => $n['prefixes']));
-    $('#blPhone').addEventListener('input', (e) => {
-        const d = e.target.value.replace(/\D/g, '').replace(/^260/, '0');
-        const local = d.length >= 9 && !d.startsWith('0') ? '0' + d : d;
-        for (const [net, list] of Object.entries(prefixes)) if (list.some(p => local.startsWith(p))) { const r = modal.querySelector('input[value=' + net + ']'); if (r) r.checked = true; }
-    });
-
-    const post = async (url, body) => {
-        const res = await fetch(url, { method: 'POST', headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.errors ? Object.values(data.errors)[0][0] : (data.message || 'Something went wrong.'));
-        return data;
-    };
-    const err = (m) => { const e = $('#blErr'); e.textContent = m; e.hidden = false; };
-    const watch = (url) => {
-        clearInterval(poll);
-        poll = setInterval(async () => {
-            const r = await fetch(url, { headers: { Accept: 'application/json' } }).then(r => r.json()).catch(() => null);
-            if (!r) return;
-            if (r.status === 'paid') { clearInterval(poll); step('done'); zpPeople.confetti(); popup && !popup.closed && popup.close(); }
-            else if (r.status === 'failed' || r.status === 'cancelled') { clearInterval(poll); $('#blFailMsg').textContent = r.message; step('fail'); }
-        }, 4000);
-    };
-
-    $('#blMobile').addEventListener('submit', async (e) => {
-        e.preventDefault(); e.stopPropagation();
-        const btn = e.target.querySelector('button'); btn.disabled = true;
-        try {
-            const d = await post(cur.mobile, { network: new FormData(e.target).get('network'), phone: $('#blPhone').value });
-            $('#blWaitMsg').textContent = d.message; step('wait'); watch(d.status_url);
-        } catch (x) { err(x.message); }
-        btn.disabled = false;
-    });
-
-    $('#blCard').addEventListener('click', async () => {
-        // open the window first (inside the click) so pop-up blockers allow it
-        popup = window.open('', 'dpo_pay', 'width=520,height=760');
-        try {
-            const d = await post(cur.card);
-            if (popup && !popup.closed) { popup.location = d.url; } else { location.href = d.url; return; }
-            $('#blWaitMsg').textContent = 'Complete the payment in the DPO window.'; step('wait'); watch(d.status_url);
-        } catch (x) { popup && popup.close(); err(x.message); }
-    });
-    window.addEventListener('message', (e) => { if (e.data === 'zp-dpo-done' && cur) { /* polling will pick up the result */ } });
-
-    @if($payInvoice)
-        const auto = document.querySelector('[data-pay="{{ $payInvoice->id }}"]'); if (auto && !auto.disabled) open(auto);
-    @endif
-});
-</script>
-@endpush

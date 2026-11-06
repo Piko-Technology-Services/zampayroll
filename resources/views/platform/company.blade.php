@@ -9,7 +9,7 @@
 </div>
 
 <div class="pl-kpis">
-    <div class="pr-kpi main"><span>Plan</span><b>{{ $company->plan ? ucfirst($company->plan) : ($company->subscription_status === 'free' ? 'Free' : 'Trial') }}</b><span class="pr-delta">{{ $company->billing_type ?: 'not chosen' }}{{ $company->billing_type === 'prepaid' ? ' · ' . $company->billing_cycle : '' }}</span></div>
+    <div class="pr-kpi main"><span>Plan</span><b>{{ \App\Services\Billing\Plans::isPaid($company->plan) ? \App\Services\Billing\Plans::name($company->plan) : ($company->plan === 'business' ? 'Business (legacy)' : 'Free experience') }}</b><span class="pr-delta">{{ $company->billing_type ?: 'not chosen' }}{{ $company->billing_type === 'prepaid' ? ' · ' . $company->billing_cycle : '' }}</span></div>
     <div class="pr-kpi"><span>{{ $company->subscription_status === 'trialing' ? 'Trial ends' : ($company->billing_type === 'postpaid' ? 'Next invoice' : 'Paid until') }}</span>
         <b>{{ $state['countdown_to'] ? $state['countdown_to']->format('j M Y') : '—' }}</b><span class="pr-delta">{{ $state['countdown_to'] ? $state['countdown_to']->diffForHumans() : '' }}</span></div>
     <div class="pr-kpi"><span>Open invoices</span><b>{{ $k($state['open_invoices']->sum('total')) }}</b></div>
@@ -97,12 +97,12 @@
                     <label>Give paid access (e.g. paid offline)</label><input class="pp-input" type="number" name="days" value="30" min="1" max="400"><button class="pp-btn pp-btn-ghost pp-btn-sm">+ days</button></form>
                 <form method="POST" action="{{ route('platform.companies.action', $company->id) }}">@csrf<input type="hidden" name="action" value="set_plan">
                     <label>Plan</label>
-                    <select class="pp-select" name="plan"><option value="starter" @selected($company->plan === 'starter')>Starter (pre-paid)</option><option value="business" @selected($company->plan === 'business')>Business (post-paid)</option></select>
+                    <select class="pp-select" name="plan">@foreach(\App\Services\Billing\Plans::TIERS as $pk => $pt)<option value="{{ $pk }}" @selected($company->plan === $pk)>{{ $pt['name'] }} (paid)</option>@endforeach<option value="business" @selected($company->plan === 'business')>Business (legacy, post-paid)</option></select>
                     <select class="pp-select" name="billing_cycle"><option value="monthly">Monthly</option><option value="annual" @selected($company->billing_cycle === 'annual')>Yearly</option></select>
                     <button class="pp-btn pp-btn-ghost pp-btn-sm">Set</button></form>
                 <form method="POST" action="{{ route('platform.companies.action', $company->id) }}">@csrf<input type="hidden" name="action" value="status">
                     <label>Status</label>
-                    <select class="pp-select" name="status">@foreach(['free', 'trialing', 'active', 'past_due', 'suspended', 'cancelled'] as $s)<option value="{{ $s }}" @selected($company->subscription_status === $s)>{{ str_replace('_', ' ', $s) }}</option>@endforeach</select>
+                    <select class="pp-select" name="status">@foreach(['trialing', 'active', 'past_due', 'suspended', 'cancelled'] as $s)<option value="{{ $s }}" @selected($company->subscription_status === $s)>{{ str_replace('_', ' ', $s) }}</option>@endforeach</select>
                     <button class="pp-btn pp-btn-ghost pp-btn-sm">Change</button></form>
                 <form method="POST" action="{{ route('platform.companies.action', $company->id) }}">@csrf<input type="hidden" name="action" value="invoice">
                     <label>One-off invoice (e.g. onboarding)</label>

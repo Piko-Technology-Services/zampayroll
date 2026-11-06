@@ -29,7 +29,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->makeQueueTenantAware();
 
-        // Free plan ↔ 7-day trial follows the number of active employees.
+        // Free experience (2 months, up to 10 active employees) follows the number of active employees.
         \App\Models\Employee::observe(\App\Observers\EmployeeBillingObserver::class);
         \App\Models\Employee::observe(\App\Observers\EmployeeDepartmentObserver::class);
 

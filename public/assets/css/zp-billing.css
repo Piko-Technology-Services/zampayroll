@@ -79,3 +79,51 @@
   .bl-plans { grid-template-columns: 1fr; }
 }
 @media (max-width: 480px) { .bl-clock .zp-countdown div { min-width: 0; flex: 1; } .bl-clock b { font-size: 1.5rem; } }
+
+/* ---- Pay for your subscription: steps, plan cards, pay box, checkout ---- */
+.bl-steps { list-style: none; padding: 0; margin: 0 0 1.2rem; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .8rem; }
+.bl-steps li { display: flex; gap: .65rem; align-items: flex-start; background: var(--zp-mist); border-radius: 14px; padding: .8rem .9rem; }
+.bl-steps .n, .bl-paystep .n, .bl-n { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--zp-forest); color: #fff; font-weight: 700; font-size: .85rem; display: inline-grid; place-items: center; }
+.bl-n { width: 26px; height: 26px; margin-right: .35rem; vertical-align: 2px; }
+.bl-steps b { display: block; font-size: .9rem; }
+.bl-steps small { color: var(--zp-ink-3); font-size: .8rem; line-height: 1.4; display: block; margin-top: .15rem; }
+.bl-cycle { max-width: 360px; }
+.bl-cycle a { text-align: center; }
+.bl-cycle em { font-style: normal; font-size: .72rem; font-weight: 700; color: var(--zp-copper); margin-left: .25rem; }
+.bl-plans3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.bl-plan-top { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: .6rem; min-height: 1.6rem; }
+.bl-tag { font-size: .72rem; font-weight: 700; letter-spacing: .02em; padding: .25rem .6rem; border-radius: 999px; background: var(--zp-mist); color: var(--zp-ink-2, #344); }
+.bl-tag.hot { background: var(--zp-forest); color: #fff; }
+.bl-tag.mine { background: var(--zp-green-50); color: var(--zp-green); }
+.bl-plan .bl-price { margin-top: .8rem; }
+.bl-alt { color: var(--zp-ink-3); font-size: .82rem; }
+.bl-desc { font-size: .88rem; color: var(--zp-ink-2, #344); line-height: 1.5; margin: .8rem 0 1rem; flex: 1; }
+.bl-go { width: 100%; text-align: center; display: block; }
+.bl-lines { margin-top: 1rem; display: grid; gap: .5rem; }
+.bl-lines div { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; font-size: .88rem; padding: .7rem .9rem; border: 1px dashed var(--zp-line); border-radius: 12px; }
+.bl-lines i { color: var(--zp-green); }
+.bl-lines span { flex: 1; min-width: 220px; }
+.bl-lines a, .bl-links a { font-weight: 700; color: var(--zp-green); }
+.bl-fine { font-size: .8rem; color: var(--zp-ink-3); margin: .9rem 0 0; line-height: 1.5; }
+.bl-links { display: flex; gap: 1rem; }
+.bl-paybox { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; }
+.bl-paystep { display: flex; gap: .7rem; align-items: flex-start; background: var(--zp-mist); border-radius: 14px; padding: .9rem 1rem; }
+.bl-bank { display: grid; grid-template-columns: auto 1fr; gap: .2rem .8rem; margin: .5rem 0 0; font-size: .86rem; }
+.bl-bank dt { color: var(--zp-ink-3); }
+.bl-bank dd { margin: 0; font-weight: 600; }
+.bl-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; }
+.bl-methods { display: grid; gap: .7rem; }
+.bl-method { display: flex; gap: .8rem; align-items: flex-start; border: 1.5px solid var(--zp-line); border-radius: 14px; padding: .9rem 1rem; cursor: pointer; background: #fff; }
+.bl-method:has(input:checked) { border-color: var(--zp-green); box-shadow: 0 0 0 3px var(--zp-green-50); }
+.bl-method input { margin-top: .35rem; accent-color: var(--zp-green); }
+.bl-method .ic { flex: none; width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; background: var(--zp-green-50); color: var(--zp-green); }
+.bl-method b { display: block; font-size: .95rem; }
+.bl-method small { color: var(--zp-ink-3); font-size: .84rem; line-height: 1.45; }
+.bl-submit { margin-top: 1rem; width: 100%; justify-content: center; }
+.bl-total { display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid var(--zp-line); padding-top: .8rem; margin-bottom: .3rem; }
+.bl-total b { font: 700 1.6rem var(--zp-font-display); }
+@media (max-width: 900px) { .bl-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } .bl-plans3 { grid-template-columns: 1fr; } .bl-paybox, .bl-fields { grid-template-columns: 1fr; } }
+.bl-tabs a { border-radius: 11px; padding: .6rem; font: 600 .86rem var(--zp-font); color: var(--zp-ink-2); text-decoration: none; text-align: center; }
+.bl-tabs a.on { background: #fff; color: var(--zp-ink); box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+.bl-summary .bl-cycle em { display: block; margin: 0; }
+.bl-fine a { color: var(--zp-green); font-weight: 600; }

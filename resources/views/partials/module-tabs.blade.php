@@ -5,7 +5,7 @@
     $modules = [
         'people' => [
             'match' => ['employees.*', 'departments.*'],
-            'title' => 'People',
+            'title' => 'Team',
             'tabs' => [
                 ['employees.index', 'All employees', 'bi-people', ['employees.index', 'employees.show', 'employees.edit'], 'employees.view'],
                 ['employees.create', 'Add employee', 'bi-person-plus', ['employees.create'], 'employees.manage'],
@@ -42,6 +42,16 @@
                 ['href' => route('leave.apply.form'), 'label' => 'Public form', 'icon' => 'bi-box-arrow-up-right', 'blank' => true],
             ],
         ],
+        'returns' => [
+            'match' => ['payroll.reports.*'],
+            'title' => 'Taxes & Statutory Returns',
+            'tabs' => [
+                ['payroll.reports.index', 'Returns & reports', 'bi-file-earmark-text', ['payroll.reports.*'], 'reports.view'],
+            ],
+            'actions' => [
+                ['ai' => 'What statutory returns are due and how much do we owe PAYE, NAPSA and NHIMA this month?', 'label' => 'Ask what is due', 'icon' => 'bi-stars', 'perm' => 'reports.view'],
+            ],
+        ],
         'payroll' => [
             'match' => ['payroll.*', 'overtime.*', 'loan.*'],
             'title' => 'Payroll',
@@ -49,20 +59,18 @@
                 ['payroll.runs.index', 'Payroll', 'bi-play-circle', ['payroll.runs.*', 'payroll.show', 'payroll.index'], 'payroll.view'],
                 ['overtime.dashboard', 'Overtime', 'bi-alarm', ['overtime.*'], 'overtime.approve'],
                 ['loan.dashboard', 'Loans', 'bi-cash-coin', ['loan.dashboard', 'loan.ledger.*'], 'loans.view'],
-                ['payroll.reports.index', 'Reports & returns', 'bi-file-earmark-bar-graph', ['payroll.reports.*'], 'reports.view'],
             ],
             'actions' => [
                 ['ai' => 'Prepare this month\'s payroll.', 'label' => 'Prepare with AI', 'icon' => 'bi-stars', 'perm' => 'payroll.run'],
             ],
         ],
         'settings' => [
-            'match' => ['company.*', 'bank-templates.*', 'profile.*', 'team.*', 'payroll-approvals.*', 'billing.*'],
-            'title' => 'Settings',
+            'match' => ['company.*', 'bank-templates.*', 'profile.*', 'team.*', 'payroll-approvals.*'],
+            'title' => 'Company Settings',
             'tabs' => array_values(([
                 ['company.settings', 'Company', 'bi-building', ['company.settings'], 'settings.company'],
                 ['team.index', 'Team & roles', 'bi-shield-lock', ['team.*'], 'team.manage'],
                 ['payroll-approvals.index', 'Payroll approvals', 'bi-diagram-3', ['payroll-approvals.*'], 'payroll.finalize'],
-                ['billing.index', 'Billing', 'bi-credit-card', ['billing.*'], 'billing.manage'],
                 ['bank-templates.index', 'Bank files', 'bi-bank', ['bank-templates.*'], 'settings.company'],
                 ['profile.index', 'My profile', 'bi-person-circle', ['profile.*'], null],
             ])),

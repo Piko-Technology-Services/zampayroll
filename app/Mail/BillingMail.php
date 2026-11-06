@@ -26,15 +26,16 @@ class BillingMail extends Mailable
         $n = $this->invoice?->number;
 
         return new Envelope(subject: match ($this->kind) {
-            'invoice'  => "Your ZamPayroll invoice {$n}",
-            'receipt'  => "Payment received — thank you ({$n})",
-            'reminder' => "Reminder: invoice {$n} is overdue",
-            'trial'    => ($this->data['days_left'] ?? 0) > 0 ? 'Your ZamPayroll free trial ends in ' . $this->data['days_left'] . ' days' : 'Your ZamPayroll free trial has ended',
-            'limited'  => 'Your ZamPayroll account has been limited',
-            'trial_started' => 'Your ' . ($this->data['days'] ?? 7) . '-day ZamPayroll trial has started',
-            'free'     => 'You\'re back on the free ZamPayroll plan',
-            'workspace' => 'Your private ZamPayroll workspace is ready',
-            default    => 'ZamPayroll billing',
+            'invoice'        => "Your ZamPayroll invoice {$n}",
+            'receipt'        => "Payment received — thank you ({$n})",
+            'reminder'       => "Reminder: invoice {$n} is overdue",
+            'proof_received' => "We've received your proof of payment ({$n})",
+            'proof_declined' => "Proof of payment not accepted for {$n}",
+            'trial'          => ($this->data['days_left'] ?? 0) > 0 ? 'Your ZamPayroll free experience ends in ' . $this->data['days_left'] . ' days' : 'Your ZamPayroll free experience has ended',
+            'limited'        => 'Your ZamPayroll account has been limited',
+            'trial_started'  => 'Your ' . ($this->data['months'] ?? 2) . '-month free ZamPayroll experience has started',
+            'workspace'      => 'Your private ZamPayroll workspace is ready',
+            default          => 'ZamPayroll billing',
         });
     }
 
@@ -45,7 +46,8 @@ class BillingMail extends Mailable
 
     public function attachments(): array
     {
-        if (! $this->invoice) {
+        // The PDF goes with invoices and receipts, not with status messages.
+        if (! $this->invoice || ! in_array($this->kind, ['invoice', 'receipt', 'reminder', 'proof_received'], true)) {
             return [];
         }
 

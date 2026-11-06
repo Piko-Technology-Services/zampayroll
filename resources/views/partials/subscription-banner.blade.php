@@ -11,17 +11,17 @@
             report($e);
         }
     }
-    $atFreeLimit = $bs && $bs['status'] === 'free' && $bs['employees'] >= $bs['free_limit'] && ! $bs['limited'];
+    $atFreeLimit = false;
     $showBanner = $bs && ($bs['status'] === 'trialing' || $atFreeLimit || in_array($bs['tone'], ['warn', 'bad'], true)) && ! request()->routeIs('billing.*');
     $canBill = $bu?->hasPermission('billing.manage');
 @endphp
 @if($showBanner)
 <div class="zp-subbar {{ $bs['tone'] }}" role="status">
-    <i class="bi {{ $bs['limited'] ? 'bi-lock' : (in_array($bs['status'], ['trialing', 'free'], true) ? 'bi-gift' : 'bi-hourglass-split') }}"></i>
+    <i class="bi {{ $bs['limited'] ? 'bi-lock' : ($bs['status'] === 'trialing' ? 'bi-gift' : 'bi-hourglass-split') }}"></i>
     <div class="txt">
         <b>{{ $bs['limited'] ? ($bs['headline'] . ' — read-only for now') : $bs['headline'] }}</b>
         @if($atFreeLimit)
-            <span>{{ $bs['employees'] }} of {{ $bs['free_limit'] }} free employees used. {{ $bs['trial_used'] ? 'More than ' . $bs['free_limit'] . ' needs the Business plan.' : 'Adding more starts your free ' . \App\Services\Billing\PlatformSettings::get('trial_days') . '-day trial — nothing to pay today.' }}</span>
+            <span>{{ $bs['employees'] }} of {{ $bs['free_limit'] }} free-experience employees used. You can subscribe to any plan at any time.</span>
         @elseif($bs['countdown_to'] && ! $bs['limited'])
             <span><span class="zp-countdown" data-to="{{ $bs['countdown_to']->toIso8601String() }}" data-short="1"></span> {{ $bs['countdown_label'] }}</span>
         @elseif($bs['limited'])

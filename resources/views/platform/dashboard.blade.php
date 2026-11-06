@@ -14,7 +14,7 @@
     <div class="pr-kpi"><span>Collected this month</span><b>{{ $k($thisMonth) }}</b></div>
     <div class="pr-kpi"><span>Outstanding invoices</span><b>{{ $k($outstanding) }}</b></div>
     <div class="pr-kpi"><span>Companies</span><b>{{ $counts['companies'] }}</b><span class="pr-delta">{{ $counts['dedicated'] }} private</span></div>
-    <div class="pr-kpi"><span>Free plan · on trial</span><b>{{ $counts['free'] }} · {{ $counts['trialing'] }}</b><span class="pr-delta">{{ $counts['partners'] }} active partners</span></div>
+    <div class="pr-kpi"><span>Paying · on trial</span><b>{{ $counts['active'] }} · {{ $counts['trialing'] }}</b><span class="pr-delta">{{ $counts['partners'] }} active partners</span></div>
     <div class="pr-kpi"><span>Overdue / limited</span><b style="color:{{ $counts['trouble'] ? 'var(--zp-red)' : 'inherit' }}">{{ $counts['trouble'] }}</b></div>
 </div>
 

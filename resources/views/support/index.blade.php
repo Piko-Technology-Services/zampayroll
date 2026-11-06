@@ -12,7 +12,7 @@
     <div class="pr-head">
         <div><h1>Help &amp; support</h1><p>Ask a question or report a problem. A real person at ZamPayroll replies — usually within one working day.</p></div>
         <div class="pr-head-actions">
-            <a class="pp-btn pp-btn-ghost" href="https://wa.me/{{ config('site.contact.whatsapp', '260776136965') }}" target="_blank" rel="noopener"><i class="bi bi-whatsapp"></i> WhatsApp us</a>
+            <a class="pp-btn pp-btn-ghost" href="https://wa.me/{{ config('site.contact.whatsapp', '260952992844') }}" target="_blank" rel="noopener"><i class="bi bi-whatsapp"></i> WhatsApp us</a>
         </div>
     </div>
     <div class="pr-layout">

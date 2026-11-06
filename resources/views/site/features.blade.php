@@ -101,7 +101,7 @@
 <section class="sec sec-white">
     <div class="wrap">
         <div class="cta-band">
-            <div><h2>Try it with your own team.</h2><p>Free for up to 10 employees. Set up in about 3 minutes.</p></div>
+            <div><h2>Try it with your own team.</h2><p>2 months free for teams of up to 10 employees. Set up in about 3 minutes.</p></div>
             <div style="display:flex;gap:.6rem;flex-wrap:wrap"><a href="{{ route('register') }}" class="btn btn-copper">Start free</a><a href="{{ route('home') }}#demo" class="btn btn-ghost-light">Book a demo</a></div>
         </div>
     </div>

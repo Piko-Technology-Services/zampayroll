@@ -13,7 +13,7 @@
      data-cancel-url="{{ url('ai/actions/__T__/cancel') }}"
      data-reset-url="{{ route('ai.reset') }}">
 
-    <button type="button" class="zpai-fab" id="zpaiFab" aria-haspopup="dialog" aria-controls="zpaiPanel" title="AI mode (Ctrl/⌘ + K)">
+    <button type="button" class="zpai-fab" id="zpaiFab" aria-haspopup="dialog" aria-controls="zpaiPanel" title="Ask ZamPayroll AI (Ctrl/⌘ + K)" aria-label="Ask ZamPayroll AI">
         <span class="orb">{!! $aiMark !!}</span>
         <span class="lbl">Ask ZamPayroll AI</span>
         <kbd id="zpaiKbd">Ctrl K</kbd>
