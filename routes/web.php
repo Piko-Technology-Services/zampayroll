@@ -577,6 +577,99 @@ Route::middleware(['auth', 'staff'])->group(function () {
     Route::delete('/employees/{employee}/portal', [EmployeePortalAccessController::class, 'destroy'])->name('employees.portal.destroy');
 });
 
+
+/*
+|--------------------------------------------------------------------------
+| COMPLIANCE CENTRE — contracts, policies, documents (permissions: Permissions::ROUTE_MAP)
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'staff'])->prefix('compliance')->name('compliance.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Compliance\OverviewController::class, 'index'])->name('index');
+    Route::post('/alerts/{key}/dismiss', [\App\Http\Controllers\Compliance\OverviewController::class, 'dismiss'])->name('alerts.dismiss');
+
+    // Settings: general, letterheads, approval workflows
+    Route::get('/settings', [\App\Http\Controllers\Compliance\SettingsController::class, 'index'])->name('settings');
+    Route::put('/settings', [\App\Http\Controllers\Compliance\SettingsController::class, 'update'])->name('settings.update');
+    Route::post('/letterheads', [\App\Http\Controllers\Compliance\LetterheadController::class, 'store'])->name('letterheads.store');
+    Route::post('/letterheads/preview', [\App\Http\Controllers\Compliance\LetterheadController::class, 'preview'])->name('letterheads.preview');
+    Route::get('/letterheads/{letterhead}/edit', [\App\Http\Controllers\Compliance\LetterheadController::class, 'edit'])->name('letterheads.edit');
+    Route::put('/letterheads/{letterhead}', [\App\Http\Controllers\Compliance\LetterheadController::class, 'update'])->name('letterheads.update');
+    Route::post('/letterheads/{letterhead}/default', [\App\Http\Controllers\Compliance\LetterheadController::class, 'makeDefault'])->name('letterheads.default');
+    Route::get('/letterheads/{letterhead}/sample', [\App\Http\Controllers\Compliance\LetterheadController::class, 'sample'])->name('letterheads.sample');
+    Route::delete('/letterheads/{letterhead}', [\App\Http\Controllers\Compliance\LetterheadController::class, 'destroy'])->name('letterheads.destroy');
+    Route::get('/workflows/create', [\App\Http\Controllers\Compliance\WorkflowController::class, 'create'])->name('workflows.create');
+    Route::post('/workflows', [\App\Http\Controllers\Compliance\WorkflowController::class, 'store'])->name('workflows.store');
+    Route::get('/workflows/{workflow}/edit', [\App\Http\Controllers\Compliance\WorkflowController::class, 'edit'])->name('workflows.edit');
+    Route::put('/workflows/{workflow}', [\App\Http\Controllers\Compliance\WorkflowController::class, 'update'])->name('workflows.update');
+    Route::delete('/workflows/{workflow}', [\App\Http\Controllers\Compliance\WorkflowController::class, 'destroy'])->name('workflows.destroy');
+
+    // Templates (contract templates need compliance.contracts, policy templates compliance.policies; checked in the controller)
+    Route::get('/templates', [\App\Http\Controllers\Compliance\TemplateController::class, 'index'])->name('templates.index');
+    Route::get('/templates/create', [\App\Http\Controllers\Compliance\TemplateController::class, 'create'])->name('templates.create');
+    Route::post('/templates', [\App\Http\Controllers\Compliance\TemplateController::class, 'store'])->name('templates.store');
+    Route::get('/templates/{template}', [\App\Http\Controllers\Compliance\TemplateController::class, 'show'])->name('templates.show');
+    Route::get('/templates/{template}/preview', [\App\Http\Controllers\Compliance\TemplateController::class, 'preview'])->name('templates.preview');
+    Route::post('/templates/{template}/duplicate', [\App\Http\Controllers\Compliance\TemplateController::class, 'duplicate'])->name('templates.duplicate');
+    Route::get('/templates/{template}/edit', [\App\Http\Controllers\Compliance\TemplateController::class, 'edit'])->name('templates.edit');
+    Route::put('/templates/{template}', [\App\Http\Controllers\Compliance\TemplateController::class, 'update'])->name('templates.update');
+    Route::post('/templates/{template}/toggle', [\App\Http\Controllers\Compliance\TemplateController::class, 'toggle'])->name('templates.toggle');
+
+    // Employment contracts
+    Route::get('/contracts', [\App\Http\Controllers\Compliance\ContractController::class, 'index'])->name('contracts.index');
+    Route::get('/contracts/create', [\App\Http\Controllers\Compliance\ContractController::class, 'create'])->name('contracts.create');
+    Route::post('/contracts', [\App\Http\Controllers\Compliance\ContractController::class, 'store'])->name('contracts.store');
+    Route::get('/contracts/{contract}', [\App\Http\Controllers\Compliance\ContractController::class, 'show'])->name('contracts.show');
+    Route::get('/contracts/{contract}/edit', [\App\Http\Controllers\Compliance\ContractController::class, 'edit'])->name('contracts.edit');
+    Route::put('/contracts/{contract}', [\App\Http\Controllers\Compliance\ContractController::class, 'update'])->name('contracts.update');
+    Route::get('/contracts/{contract}/preview', [\App\Http\Controllers\Compliance\ContractController::class, 'preview'])->name('contracts.preview');
+    Route::get('/contracts/{contract}/pdf', [\App\Http\Controllers\Compliance\ContractController::class, 'pdf'])->name('contracts.pdf');
+    Route::get('/contracts/{contract}/docx', [\App\Http\Controllers\Compliance\ContractController::class, 'docx'])->name('contracts.docx');
+    Route::post('/contracts/{contract}/send', [\App\Http\Controllers\Compliance\ContractController::class, 'send'])->name('contracts.send');
+    Route::post('/contracts/{contract}/comment', [\App\Http\Controllers\Compliance\ContractController::class, 'comment'])->name('contracts.comment');
+    Route::post('/contracts/{contract}/cancel', [\App\Http\Controllers\Compliance\ContractController::class, 'cancel'])->name('contracts.cancel');
+    Route::post('/contracts/{contract}/amend', [\App\Http\Controllers\Compliance\ContractController::class, 'amend'])->name('contracts.amend');
+
+    // Approvals inbox (who may act is decided by each workflow)
+    Route::get('/approvals', [\App\Http\Controllers\Compliance\ApprovalController::class, 'index'])->name('approvals.index');
+    Route::get('/approvals/{approval}', [\App\Http\Controllers\Compliance\ApprovalController::class, 'show'])->name('approvals.show');
+    Route::get('/approvals/{approval}/document', [\App\Http\Controllers\Compliance\ApprovalController::class, 'document'])->name('approvals.document');
+    Route::post('/approvals/{approval}', [\App\Http\Controllers\Compliance\ApprovalController::class, 'decide'])->name('approvals.decide');
+
+    // Policies
+    Route::get('/policies', [\App\Http\Controllers\Compliance\PolicyController::class, 'index'])->name('policies.index');
+    Route::get('/policies/library', [\App\Http\Controllers\Compliance\PolicyController::class, 'library'])->name('policies.library');
+    Route::post('/policies', [\App\Http\Controllers\Compliance\PolicyController::class, 'store'])->name('policies.store');
+    Route::get('/policies/{policy}', [\App\Http\Controllers\Compliance\PolicyController::class, 'show'])->name('policies.show');
+    Route::get('/policies/{policy}/edit', [\App\Http\Controllers\Compliance\PolicyController::class, 'edit'])->name('policies.edit');
+    Route::put('/policies/{policy}', [\App\Http\Controllers\Compliance\PolicyController::class, 'update'])->name('policies.update');
+    Route::get('/policies/{policy}/preview', [\App\Http\Controllers\Compliance\PolicyController::class, 'preview'])->name('policies.preview');
+    Route::get('/policies/{policy}/pdf', [\App\Http\Controllers\Compliance\PolicyController::class, 'pdf'])->name('policies.pdf');
+    Route::get('/policies/{policy}/docx', [\App\Http\Controllers\Compliance\PolicyController::class, 'docx'])->name('policies.docx');
+    Route::post('/policies/{policy}/submit', [\App\Http\Controllers\Compliance\PolicyController::class, 'submit'])->name('policies.submit');
+    Route::post('/policies/{policy}/revise', [\App\Http\Controllers\Compliance\PolicyController::class, 'revise'])->name('policies.revise');
+    Route::post('/policies/{policy}/archive', [\App\Http\Controllers\Compliance\PolicyController::class, 'archive'])->name('policies.archive');
+    Route::get('/acknowledgements', [\App\Http\Controllers\Compliance\PolicyController::class, 'acknowledgements'])->name('acknowledgements');
+
+    // Document repository
+    Route::get('/documents', [\App\Http\Controllers\Compliance\DocumentController::class, 'index'])->name('documents.index');
+    Route::get('/documents/upload', [\App\Http\Controllers\Compliance\DocumentController::class, 'create'])->name('documents.create');
+    Route::post('/documents', [\App\Http\Controllers\Compliance\DocumentController::class, 'store'])->name('documents.store');
+    Route::get('/documents/register', [\App\Http\Controllers\Compliance\DocumentController::class, 'register'])->name('documents.register');
+    Route::get('/documents/{document}', [\App\Http\Controllers\Compliance\DocumentController::class, 'show'])->name('documents.show');
+    Route::put('/documents/{document}', [\App\Http\Controllers\Compliance\DocumentController::class, 'update'])->name('documents.update');
+    Route::post('/documents/{document}/replace', [\App\Http\Controllers\Compliance\DocumentController::class, 'replace'])->name('documents.replace');
+    Route::get('/documents/{document}/download/{version?}', [\App\Http\Controllers\Compliance\DocumentController::class, 'download'])->name('documents.download');
+    Route::get('/documents/{document}/preview/{version?}', [\App\Http\Controllers\Compliance\DocumentController::class, 'preview'])->name('documents.preview');
+    Route::post('/documents/{document}/archive', [\App\Http\Controllers\Compliance\DocumentController::class, 'archive'])->name('documents.archive');
+    Route::post('/documents/{document}/restore', [\App\Http\Controllers\Compliance\DocumentController::class, 'restore'])->name('documents.restore');
+    Route::post('/categories', [\App\Http\Controllers\Compliance\DocumentController::class, 'storeCategory'])->name('categories.store');
+    Route::delete('/categories/{category}', [\App\Http\Controllers\Compliance\DocumentController::class, 'destroyCategory'])->name('categories.destroy');
+
+    // Reports
+    Route::get('/reports', [\App\Http\Controllers\Compliance\ReportController::class, 'index'])->name('reports.index');
+    Route::get('/reports/export', [\App\Http\Controllers\Compliance\ReportController::class, 'export'])->name('reports.export');
+});
+
 /*
 |--------------------------------------------------------------------------
 | EMPLOYEE SELF-SERVICE PORTAL
@@ -619,7 +712,19 @@ Route::middleware(['auth', 'employee', 'force.password'])->prefix('portal')->nam
     Route::get('/loans', [PortalRequestController::class, 'loans'])->name('loans');
     Route::post('/loans', [PortalRequestController::class, 'storeLoan'])->name('loans.store');
     Route::delete('/loans/{loanRequest}', [PortalRequestController::class, 'cancelLoan'])->name('loans.cancel');
+    // My employment documents & company policies
+    Route::get('/documents', [\App\Http\Controllers\Portal\PortalDocumentController::class, 'index'])->name('documents.index');
+    Route::get('/documents/contracts/{contract}', [\App\Http\Controllers\Portal\PortalDocumentController::class, 'contract'])->name('documents.contract');
+    Route::get('/documents/contracts/{contract}/pdf', [\App\Http\Controllers\Portal\PortalDocumentController::class, 'contractPdf'])->name('documents.contract.pdf');
+    Route::post('/documents/contracts/{contract}/sign', [\App\Http\Controllers\Portal\PortalDocumentController::class, 'sign'])->middleware('throttle:10,1')->name('documents.contract.sign');
+    Route::post('/documents/contracts/{contract}/decline', [\App\Http\Controllers\Portal\PortalDocumentController::class, 'decline'])->name('documents.contract.decline');
+    Route::post('/documents/contracts/{contract}/comment', [\App\Http\Controllers\Portal\PortalDocumentController::class, 'comment'])->middleware('throttle:10,1')->name('documents.contract.comment');
+    Route::get('/documents/policies/{policy}', [\App\Http\Controllers\Portal\PortalDocumentController::class, 'policy'])->name('documents.policy');
+    Route::get('/documents/policies/{policy}/pdf', [\App\Http\Controllers\Portal\PortalDocumentController::class, 'policyPdf'])->name('documents.policy.pdf');
+    Route::post('/documents/policies/{policy}/acknowledge', [\App\Http\Controllers\Portal\PortalDocumentController::class, 'acknowledge'])->name('documents.policy.acknowledge');
+    Route::get('/documents/files/{document}', [\App\Http\Controllers\Portal\PortalDocumentController::class, 'file'])->name('documents.file');
 });
+
 
 /*
 |--------------------------------------------------------------------------

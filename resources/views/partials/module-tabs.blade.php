@@ -42,6 +42,21 @@
                 ['href' => route('leave.apply.form'), 'label' => 'Public form', 'icon' => 'bi-box-arrow-up-right', 'blank' => true],
             ],
         ],
+        'compliance' => [
+            'match' => ['compliance.*'],
+            'title' => 'Compliance Centre',
+            'tabs' => [
+                ['compliance.index', 'Overview', 'bi-speedometer2', ['compliance.index'], 'compliance.view'],
+                ['compliance.contracts.index', 'Contracts', 'bi-file-earmark-person', ['compliance.contracts.*'], 'compliance.view'],
+                ['compliance.templates.index', 'Templates', 'bi-files', ['compliance.templates.*'], null],
+                ['compliance.policies.index', 'Policies', 'bi-journal-check', ['compliance.policies.*', 'compliance.acknowledgements'], 'compliance.view'],
+                ['compliance.documents.index', 'Documents', 'bi-folder2-open', ['compliance.documents.*'], 'compliance.documents.view'],
+                ['compliance.approvals.index', 'Approvals', 'bi-check2-square', ['compliance.approvals.*'], null],
+                ['compliance.reports.index', 'Reports', 'bi-bar-chart-line', ['compliance.reports.*'], 'compliance.view'],
+                ['compliance.settings', 'Settings', 'bi-sliders', ['compliance.settings*', 'compliance.letterheads.*', 'compliance.workflows.*'], 'compliance.settings'],
+            ],
+            'actions' => [],
+        ],
         'returns' => [
             'match' => ['payroll.reports.*'],
             'title' => 'Taxes & Statutory Returns',

@@ -11,10 +11,11 @@
         $isBoard ? null : ['portal.leave', 'bi-calendar2-heart', 'Leave'],
         $isBoard ? null : ['portal.overtime', 'bi-alarm', 'Overtime'],
         ['portal.loans', 'bi-cash-coin', 'Loans'],
+        ['portal.documents.index', 'bi-folder2-open', 'Documents'],
         $isBoard ? null : ['portal.attendance', 'bi-calendar-check', 'Attendance'],
     ]));
-    // The phone bar has room for five; attendance lives in the account menu there.
-    $mobileNav = array_values(array_filter($nav, fn ($n) => $n[0] !== 'portal.attendance'));
+    // The phone bar has room for five; attendance and overtime live in the account menu there.
+    $mobileNav = array_values(array_filter($nav, fn ($n) => ! in_array($n[0], ['portal.attendance', 'portal.overtime'], true)));
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -50,7 +51,7 @@
 
         <nav class="pt-nav" aria-label="Portal">
             @foreach($nav as [$route, $icon, $label])
-                <a href="{{ route($route) }}" class="{{ request()->routeIs($route . '*') ? 'active' : '' }}"><i class="bi {{ $icon }}"></i>{{ $label }}</a>
+                <a href="{{ route($route) }}" class="{{ request()->routeIs(\Illuminate\Support\Str::beforeLast($route, '.index') . '*') ? 'active' : '' }}"><i class="bi {{ $icon }}"></i>{{ $label }}</a>
             @endforeach
         </nav>
 
@@ -74,7 +75,8 @@
                     <li><hr class="dropdown-divider"></li>
                 @endif
                 <li><a class="dropdown-item" href="{{ route('portal.profile') }}"><i class="bi bi-person me-2"></i>My profile</a></li>
-                @unless($isBoard)<li><a class="dropdown-item" href="{{ route('portal.attendance') }}"><i class="bi bi-calendar-check me-2"></i>My attendance</a></li>@endunless
+                @unless($isBoard)<li><a class="dropdown-item" href="{{ route('portal.attendance') }}"><i class="bi bi-calendar-check me-2"></i>My attendance</a></li>
+                <li class="d-lg-none"><a class="dropdown-item" href="{{ route('portal.overtime') }}"><i class="bi bi-alarm me-2"></i>Overtime</a></li>@endunless
                 <li><a class="dropdown-item" href="{{ route('portal.password.edit') }}"><i class="bi bi-key me-2"></i>Change password</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li>
@@ -100,7 +102,7 @@
 
 <nav class="pt-tabbar" aria-label="Portal">
     @foreach($mobileNav as [$route, $icon, $label])
-        <a href="{{ route($route) }}" class="{{ request()->routeIs($route . '*') ? 'active' : '' }}"><i class="bi {{ $icon }}"></i>{{ $label }}</a>
+        <a href="{{ route($route) }}" class="{{ request()->routeIs(\Illuminate\Support\Str::beforeLast($route, '.index') . '*') ? 'active' : '' }}"><i class="bi {{ $icon }}"></i>{{ $label }}</a>
     @endforeach
 </nav>
 

@@ -9,3 +9,4 @@ Artisan::command('inspire', function () {
 
 // ZamPayroll subscription billing — run once a day (needs the Laravel scheduler cron).
 \Illuminate\Support\Facades\Schedule::command('billing:run')->dailyAt('06:30')->withoutOverlapping();
+\Illuminate\Support\Facades\Schedule::command('compliance:reminders')->dailyAt('07:10')->withoutOverlapping();

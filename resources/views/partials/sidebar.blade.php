@@ -2,6 +2,7 @@
     // One place per job. Sub-pages live in tabs at the top of each module.
     $u = auth()->user();
     $can = fn ($p) => $u?->hasPermission($p);
+    $complianceInbox = \App\Services\Compliance\Approvals::pendingCountFor($u ?? auth()->user());
     $pendingLeave = $can('leave.approve') ? \App\Models\LeaveRequest::whereIn('status', \App\Models\LeaveRequest::OPEN)->count() : null;
     $pendingPay = ($can('overtime.approve') ? \App\Models\OvertimeRequest::where('status', 'pending')->count() : 0)
         + ($can('loans.manage') ? \App\Models\LoanRequest::where('status', 'pending')->count() : 0);
@@ -28,6 +29,9 @@
             ? [$payRoute, ['payroll.*', 'overtime.*', 'loan.*'], ['payroll.reports.*'], 'bi-cash-stack', 'Payroll', 'Payslips, overtime, gratuity & loans', $pendingPay]
             : [$payRoute, ['overtime.*', 'loan.*'], [], $can('overtime.approve') ? 'bi-alarm' : 'bi-cash-coin', $can('overtime.approve') ? 'Overtime' : 'Loans', $can('overtime.approve') && $can('loans.view') ? 'Overtime & loan requests' : 'Requests to review', $pendingPay]) : null,
         $can('reports.view') ? ['payroll.reports.index', 'payroll.reports.*', [], 'bi-file-earmark-text', 'Taxes & Statutory Returns', 'PAYE, NAPSA, NHIMA & internal reports', null] : null,
+        ($can('compliance.view') || $can('compliance.contracts') || $can('compliance.policies') || $can('compliance.documents.view') || $complianceInbox)
+            ? [($can('compliance.view') ? 'compliance.index' : ($can('compliance.documents.view') ? 'compliance.documents.index' : 'compliance.approvals.index')),
+               'compliance.*', [], 'bi-shield-check', 'Compliance Centre', 'Contracts, policies & documents', $complianceInbox ?: null] : null,
         $can('billing.manage') ? ['billing.index', 'billing.*', [], 'bi-credit-card-2-front', 'Billing', 'My subscription & payment plans', null] : null,
     ]);
     $settingsRoute = $can('settings.company') ? 'company.settings' : ($can('team.manage') ? 'team.index' : 'profile.index');
