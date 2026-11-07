@@ -28,6 +28,15 @@
         .wrap { padding: 28px 16px 60px; }
         .sheet { width: 210mm; max-width: 100%; min-height: 297mm; margin: 0 auto 28px; background: #fff; padding: 12mm 13mm; box-shadow: 0 30px 60px -30px rgba(0,0,0,.35), 0 0 0 1px rgba(0,0,0,.05); }
         @media (max-width: 820px) { .sheet { min-height: 0; padding: 18px 14px; } .ps-head td.title { width: auto; } .ps-who td.net { width: auto; } }
+        @media (max-width: 560px) {
+            /* Phones: keep earnings and deductions side by side without running off the page */
+            .sheet { padding: 14px 10px; }
+            .ps-lines .code { display: none; }
+            .ps-lines th, .ps-lines td, .ps-lines tfoot td { padding-left: 4px; padding-right: 4px; }
+            .ps-lines th { letter-spacing: .6px; }
+            .ps-lines th.a, .ps-lines td.a { width: auto; }
+            .ps-lines th.gap, .ps-lines td.gap { width: 6px; }
+        }
         @media print {
             @page { size: A4 portrait; margin: 12mm 13mm; }
             body { background: #fff; }

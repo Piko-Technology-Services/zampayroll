@@ -480,10 +480,10 @@ Route::middleware(['auth', 'staff'])->prefix('payroll')->name('payroll.')->group
     Route::get('/create', [PayrollController::class, 'create'])->name('create');
     Route::post('/store', [PayrollController::class, 'store'])->name('store');
 
-    Route::get('/{payroll}', [PayrollController::class, 'show'])->name('show');
-    Route::get('/{payroll}/edit', [PayrollController::class, 'edit'])->name('edit');
-    Route::put('/{payroll}', [PayrollController::class, 'update'])->name('update');
-    Route::delete('/{payroll}', [PayrollController::class, 'destroy'])->name('destroy');
+    Route::get('/{payroll}', [PayrollController::class, 'show'])->name('show')->whereNumber('payroll');
+    Route::get('/{payroll}/edit', [PayrollController::class, 'edit'])->name('edit')->whereNumber('payroll');
+    Route::put('/{payroll}', [PayrollController::class, 'update'])->name('update')->whereNumber('payroll');
+    Route::delete('/{payroll}', [PayrollController::class, 'destroy'])->name('destroy')->whereNumber('payroll');
 
     Route::post('/{payroll}/process', [PayrollController::class, 'process'])->name('process');
     // Route::get('/payroll/{payroll}', [PayrollController::class, 'show'])->name('show');

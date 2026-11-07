@@ -311,7 +311,15 @@ class PayrollReportController extends Controller
         $unmatchedCount = $rows->filter(fn ($r) => !$r['matched_bank'])->count();
         $missingAccountCount = $rows->filter(fn ($r) => !$r['has_account_number'])->count();
 
-        return view('dashboard.company.bank-templates', compact('run', 'templates', 'banks', 'fields', 'genericColumns', 'rows', 'unmatchedCount', 'missingAccountCount'));
+        return view('dashboard.payroll.bank-preview', [
+            'run'                 => $run,
+            'templates'           => $templates,
+            'default'             => $templates->firstWhere('is_default', true) ?? $templates->first(),
+            'rows'                => $rows->map(fn ($r, $i) => $r + ['payroll' => $run->payrolls->values()[$i]])->sortBy(fn ($r) => $r['employee']?->first_name)->values(),
+            'unmatchedCount'      => $unmatchedCount,
+            'missingAccountCount' => $missingAccountCount,
+            'total'               => (float) $run->payrolls->sum('net_pay'),
+        ]);
     }
 
     public function exportBankPaymentsCsv(Request $request, PayrollRun $run)
